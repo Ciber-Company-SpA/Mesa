@@ -47,9 +47,12 @@ export default function TablesPage() {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <button className="flex-1 rounded-xl border border-zinc-700 px-3 py-2 text-sm transition hover:bg-zinc-800">
-                  Editar
-                </button>
+                <Link
+                href={`/admin/tables/${mesa.id}/edit`}
+                className="flex-1 rounded-xl border border-zinc-700 px-3 py-2 text-center text-sm transition hover:bg-zinc-800"
+              >
+                Editar
+              </Link>
 
                 <button className="flex-1 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold transition hover:bg-orange-600">
                   Descargar QR
