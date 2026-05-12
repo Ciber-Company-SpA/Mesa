@@ -2,6 +2,12 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+
+  return fallback
+}
+
 export function useDeleteTable() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -14,7 +20,6 @@ export function useDeleteTable() {
       setLoading(true)
       setError("")
 
-      // 1. Borrar mesa
       const { error: tableError } = await supabase
         .from("tables")
         .delete()
@@ -22,7 +27,6 @@ export function useDeleteTable() {
 
       if (tableError) throw tableError
 
-      // 2. Borrar QR asociado
       const { error: qrError } = await supabase
         .from("qr_codes")
         .delete()
@@ -31,9 +35,9 @@ export function useDeleteTable() {
       if (qrError) throw qrError
 
       return true
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("Error eliminando mesa", err)
-      setError(err instanceof Error ? err.message : "Error al eliminar mesa")
+      setError(getErrorMessage(err, "Error al eliminar mesa"))
       return false
     } finally {
       setLoading(false)

@@ -27,7 +27,7 @@ export function useTableList() {
     totalTables: visibleTables.length,
     loading,
     deleting,
-    error: error ?? deleteError,
+    error: error || deleteError,
     deleteTable: deleteVisibleTable
   }
 }

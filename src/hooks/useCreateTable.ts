@@ -6,7 +6,8 @@ import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { nanoid } from "nanoid"
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
+  if (error instanceof Error) return error.message
+  return fallback
 }
 
 export function useCreateTable() {
@@ -14,7 +15,6 @@ export function useCreateTable() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
 
   const [tableNumber, setTableNumber] = useState("")
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -35,7 +35,13 @@ export function useCreateTable() {
         throw new Error("No se encontró el restaurante")
       }
 
-      // 1. Crear QR code
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log("token:", session?.access_token)
+
+      if (!session) {
+        throw new Error("No hay sesión activa")
+      }
+
       const { data: qrData, error: qrError } = await supabase
         .from("qr_codes")
         .insert({
@@ -45,9 +51,8 @@ export function useCreateTable() {
         .select()
         .single()
 
-      if (qrError) throw qrError
+      if (qrError) throw new Error(qrError.message)
 
-      // 2. Crear mesa con el QR asociado
       const { error: tableError } = await supabase
         .from("tables")
         .insert({
@@ -56,7 +61,7 @@ export function useCreateTable() {
           qr_code_id: qrData.id
         })
 
-      if (tableError) throw tableError
+      if (tableError) throw new Error(tableError.message)
 
       router.replace("/admin/tables")
     } catch (err: unknown) {

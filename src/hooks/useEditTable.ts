@@ -4,7 +4,9 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
+  if (error instanceof Error) return error.message
+
+  return fallback
 }
 
 export function useEditTable() {
@@ -38,7 +40,6 @@ export function useEditTable() {
         if (!data) throw new Error("Mesa no encontrada")
 
         setTableNumber(String(data.table_number))
-
       } catch (err: unknown) {
         logger.error("Error cargando mesa", err)
         setLoadError(getErrorMessage(err, "Error al cargar mesa"))

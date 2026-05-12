@@ -4,6 +4,12 @@ import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import type { Table } from "@/types/table"
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message
+
+  return fallback
+}
+
 export function useTables() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
@@ -24,8 +30,10 @@ export function useTables() {
           .select(`
             *,
             qr_codes (
+              id,
               qr_code,
-              qr_active
+              qr_active,
+              created_at
             )
           `)
           .eq("restaurant_id", restaurantId)
@@ -34,9 +42,9 @@ export function useTables() {
         if (error) throw error
 
         setTables(data || [])
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error("Error cargando mesas", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        setError(getErrorMessage(err, "Error al cargar mesas"))
       } finally {
         setLoading(false)
       }
