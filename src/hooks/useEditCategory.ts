@@ -4,6 +4,10 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function useEditCategory() {
   const router = useRouter()
   const params = useParams()
@@ -13,47 +17,54 @@ export function useEditCategory() {
   const [categoryName, setCategoryName] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [error, setError] = useState("")
 
   useEffect(() => {
     async function loadCategory() {
       try {
         setLoading(true)
+        setLoadError("")
         setError("")
+
+        if (!categoryId) {
+          throw new Error("Categoría no encontrada")
+        }
 
         const { data, error } = await supabase
           .from("categories")
           .select("id, category_name")
           .eq("id", categoryId)
-          .single()
+          .maybeSingle()
 
         if (error) {
           throw error
         }
 
-        setCategoryName(data.category_name)
+        if (!data) {
+          throw new Error("Categoría no encontrada")
+        }
 
-      } catch (err: any) {
+        setCategoryName(data.category_name)
+      } catch (err: unknown) {
         console.log(err)
-        setError(err.message || "Error al cargar categoría")
+        setLoadError(getErrorMessage(err, "Error al cargar categoría"))
       } finally {
         setLoading(false)
       }
     }
 
-    if (categoryId) {
-      loadCategory()
-    }
+    loadCategory()
   }, [categoryId])
 
-  async function updateCategory(e: React.FormEvent) {
-    e.preventDefault()
+  async function updateCategory(trimmedName: string) {
+    if (saving) return
 
     try {
       setSaving(true)
       setError("")
 
-      const cleanCategoryName = categoryName.trim()
+      const cleanCategoryName = trimmedName.trim()
 
       if (!cleanCategoryName) {
         throw new Error("El nombre de la categoría es obligatorio")
@@ -71,10 +82,9 @@ export function useEditCategory() {
       }
 
       router.replace("/admin/categories")
-
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log(err)
-      setError(err.message || "Error al guardar cambios")
+      setError(getErrorMessage(err, "Error al guardar cambios"))
     } finally {
       setSaving(false)
     }
@@ -85,6 +95,7 @@ export function useEditCategory() {
     setCategoryName,
     loading,
     saving,
+    loadError,
     error,
     updateCategory
   }

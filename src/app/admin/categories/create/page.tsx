@@ -1,10 +1,11 @@
 "use client"
 
+import type { FormEvent } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useCreateCategory } from "@/hooks/useCreateCategory"
 
 export default function CreateCategoryPage() {
-
   const {
     categoryName,
     setCategoryName,
@@ -13,67 +14,87 @@ export default function CreateCategoryPage() {
     createCategory
   } = useCreateCategory()
 
+  const [localError, setLocalError] = useState("")
+  const inputError = localError || error
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (loading) return
+
+    const trimmedName = categoryName.trim()
+
+    if (!trimmedName) {
+      setLocalError("El nombre de la categoría es obligatorio")
+      return
+    }
+
+    await createCategory(trimmedName)
+  }
+
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-6">
-      <div className="mx-auto max-w-xl">
-
-        <div className="mb-8">
-
+    <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-6">
           <Link
             href="/admin/categories"
-            className="text-sm text-orange-500 hover:text-orange-400 transition"
+            className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
           >
-            ← Volver a categorías
+            Volver
           </Link>
 
-          <h1 className="text-3xl font-bold mt-4">
-            Nueva categoría
-          </h1>
-
-          <p className="text-zinc-400 mt-2">
-            Crea una nueva categoría para tu restaurante.
+          <p className="text-sm text-stone-600">Panel admin</p>
+          <h1 className="text-3xl font-bold tracking-tight">Nueva categoría</h1>
+          <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
+            Crea una sección para ordenar los productos de tu menú.
           </p>
-
-        </div>
+        </header>
 
         <form
-          onSubmit={createCategory}
-          className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 space-y-5"
+          onSubmit={handleSubmit}
+          className="space-y-5 rounded-[2rem] border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6"
         >
-
-          <div>
-
-            <label className="block text-sm text-zinc-300 mb-2">
+          <div className="rounded-3xl bg-stone-50 p-5 ring-1 ring-stone-200">
+            <label
+              htmlFor="category-name"
+              className="mb-2 block text-sm font-semibold text-stone-800"
+            >
               Nombre de la categoría
             </label>
 
             <input
+              id="category-name"
               type="text"
               required
               disabled={loading}
               value={categoryName}
-              onChange={(e) =>
-                setCategoryName(e.target.value)
-              }
+              onChange={(event) => {
+                setLocalError("")
+                setCategoryName(event.target.value)
+              }}
               placeholder="Ej: Hamburguesas"
-              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 outline-none focus:border-orange-500 disabled:opacity-50"
+              aria-invalid={Boolean(inputError)}
+              aria-describedby={inputError ? "category-name-error" : undefined}
+              className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-orange-300 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
+            {inputError && (
+              <p
+                id="category-name-error"
+                className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+              >
+                {inputError}
+              </p>
+            )}
           </div>
 
-          {error && (
-
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
-              {error}
-            </div>
-
-          )}
-
-          <div className="flex gap-3">
-
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/admin/categories"
-              className="rounded-xl border border-zinc-700 px-5 py-3 font-semibold hover:bg-zinc-800 transition"
+              aria-disabled={loading}
+              className={`rounded-2xl border border-stone-200 bg-stone-50 px-5 py-3 text-center font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 ${
+                loading ? "pointer-events-none opacity-60" : ""
+              }`}
             >
               Cancelar
             </Link>
@@ -81,17 +102,12 @@ export default function CreateCategoryPage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-600 transition disabled:opacity-50"
+              className="rounded-2xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Creando..."
-                : "Crear categoría"}
+              {loading ? "Creando..." : "Crear categoría"}
             </button>
-
           </div>
-
         </form>
-
       </div>
     </main>
   )

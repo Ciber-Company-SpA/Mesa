@@ -4,6 +4,10 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function useCreateCategory() {
   const router = useRouter()
 
@@ -11,14 +15,14 @@ export function useCreateCategory() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function createCategory(e: React.FormEvent) {
-    e.preventDefault()
+  async function createCategory(trimmedName: string) {
+    if (loading) return
 
     try {
       setLoading(true)
       setError("")
 
-      const cleanCategoryName = categoryName.trim()
+      const cleanCategoryName = trimmedName.trim()
 
       if (!cleanCategoryName) {
         throw new Error("El nombre de la categoría es obligatorio")
@@ -55,10 +59,9 @@ export function useCreateCategory() {
       }
 
       router.replace("/admin/categories")
-
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log(err)
-      setError(err.message || "Error al crear categoría")
+      setError(getErrorMessage(err, "Error al crear categoría"))
     } finally {
       setLoading(false)
     }
