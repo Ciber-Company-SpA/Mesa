@@ -1,3 +1,5 @@
+import type { Category } from "@/types/category"
+
 export type Product = {
   id: number
   product_name: string
@@ -8,7 +10,5 @@ export type Product = {
   category_id: number
   restaurant_id: number
   status_id: number
-  categories: {
-    category_name: string
-  }
+  categories: Category
 }
