@@ -104,7 +104,7 @@ export default function ProductsPage() {
                         </Link>
 
                         <button
-                          onClick={async () => await deleteProduct(product.id)}
+                          onClick={async () => await deleteProduct(product.id, product.product_image_public_id)}
                           className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition"
                         >
                           Eliminar

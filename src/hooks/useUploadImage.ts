@@ -1,12 +1,16 @@
-// src/hooks/useUploadImage.ts
 import { useState } from "react"
 import { logger } from "@/lib/logger"
+
+type UploadResult = {
+  secure_url: string
+  public_id: string
+} | null
 
 export function useUploadImage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
 
-  async function uploadImage(file: File, preset: string): Promise<string | null> {
+  async function uploadImage(file: File, preset: string): Promise<UploadResult> {
     try {
       setUploading(true)
       setError("")
@@ -26,7 +30,10 @@ export function useUploadImage() {
       if (!response.ok) throw new Error("Error al subir imagen")
 
       const data = await response.json()
-      return data.secure_url
+      return {
+        secure_url: data.secure_url,
+        public_id: data.public_id
+      }
 
     } catch (err) {
       logger.error("Error subiendo imagen", err)

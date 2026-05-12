@@ -20,6 +20,7 @@ export function useEditProduct() {
   const [productPrice, setProductPrice] = useState("")
   const [productImage, setProductImage] = useState<File | null>(null)
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
+  const [currentImagePublicId, setCurrentImagePublicId] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [statusId, setStatusId] = useState<number>(1)
 
@@ -34,9 +35,7 @@ export function useEditProduct() {
         setLoading(true)
         setLoadError("")
 
-        if (!productId) {
-          throw new Error("Producto no encontrado")
-        }
+        if (!productId) throw new Error("Producto no encontrado")
 
         const { data, error } = await supabase
           .from("products")
@@ -45,15 +44,13 @@ export function useEditProduct() {
           .maybeSingle()
 
         if (error) throw error
-
-        if (!data) {
-          throw new Error("Producto no encontrado")
-        }
+        if (!data) throw new Error("Producto no encontrado")
 
         setProductName(data.product_name)
         setProductDescription(data.product_description || "")
         setProductPrice(String(data.product_price))
         setCurrentImageUrl(data.product_image)
+        setCurrentImagePublicId(data.product_image_public_id)
         setCategoryId(data.category_id)
         setStatusId(data.status_id)
 
@@ -78,25 +75,33 @@ export function useEditProduct() {
       const cleanName = productName.trim()
       const cleanPrice = Number(productPrice)
 
-      if (!cleanName) {
-        throw new Error("El nombre del producto es obligatorio")
-      }
-
-      if (!cleanPrice || cleanPrice <= 0) {
-        throw new Error("El precio debe ser mayor a 0")
-      }
-
-      if (!categoryId) {
-        throw new Error("Debes seleccionar una categoría")
-      }
+      if (!cleanName) throw new Error("El nombre del producto es obligatorio")
+      if (!cleanPrice || cleanPrice <= 0) throw new Error("El precio debe ser mayor a 0")
+      if (!categoryId) throw new Error("Debes seleccionar una categoría")
 
       let imageUrl = currentImageUrl
+      let imagePublicId = currentImagePublicId
 
       if (productImage) {
-        imageUrl = await uploadImage(
+        // 1. Subir nueva imagen
+        const uploaded = await uploadImage(
           productImage,
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
+
+        if (uploaded) {
+          // 2. Borrar imagen vieja de Cloudinary
+          if (currentImagePublicId) {
+            await fetch("/api/cloudinary/delete", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ publicId: currentImagePublicId }),
+            })
+          }
+
+          imageUrl = uploaded.secure_url
+          imagePublicId = uploaded.public_id
+        }
       }
 
       const { error } = await supabase
@@ -106,6 +111,7 @@ export function useEditProduct() {
           product_description: productDescription.trim() || null,
           product_price: cleanPrice,
           product_image: imageUrl,
+          product_image_public_id: imagePublicId,
           category_id: categoryId,
           status_id: statusId
         })

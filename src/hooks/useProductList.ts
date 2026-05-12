@@ -12,8 +12,8 @@ export function useProductList() {
     (product) => !deletedProductIds.includes(product.id)
   )
 
-  async function deleteVisibleProduct(productId: number) {
-    const success = await deleteProduct(productId)
+  async function deleteVisibleProduct(productId: number, product_image_public_id: string | null) {
+    const success = await deleteProduct(productId, product_image_public_id ?? undefined)
 
     if (success) {
       setDeletedProductIds((prev) => [...prev, productId])

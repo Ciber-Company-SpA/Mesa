@@ -50,12 +50,17 @@ export function useCreateProduct() {
       }
 
       let imageUrl: string | null = null
+      let imagePublicId: string | null = null
 
       if (productImage) {
-        imageUrl = await uploadImage(
+        const result = await uploadImage(
           productImage,
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
+        if (result) {
+          imageUrl = result.secure_url
+          imagePublicId = result.public_id
+        }
       }
 
       const { error } = await supabase
@@ -65,6 +70,7 @@ export function useCreateProduct() {
           product_description: productDescription.trim() || null,
           product_price: cleanPrice,
           product_image: imageUrl,
+          product_image_public_id: imagePublicId,
           category_id: categoryId,
           restaurant_id: restaurantId,
           status_id: 1
