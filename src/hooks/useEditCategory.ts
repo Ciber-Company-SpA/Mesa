@@ -3,10 +3,12 @@ import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { decodeId } from "@/lib/hashids"
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
+const safeErrors = [
+  "Categoría no encontrada",
+  "El nombre de la categoría es obligatorio"
+]
 
 export function useEditCategory() {
   const router = useRouter()
@@ -49,14 +51,14 @@ export function useEditCategory() {
           message: err instanceof Error ? err.message : String(err),
           stack: err instanceof Error ? err.stack : undefined,
         })
-        setLoadError(getErrorMessage(err, "Error al cargar categoría"))
+        setLoadError(getSafeErrorMessage(err, "Error al cargar categoría", safeErrors))
       } finally {
         setLoading(false)
       }
     }
 
     loadCategory()
-  }, [categoryId])
+  }, [categoryId, params.id])
 
   async function updateCategory(trimmedName: string) {
     if (saving) return
@@ -87,7 +89,7 @@ export function useEditCategory() {
         message: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       })
-      setError(getErrorMessage(err, "Error al guardar cambios"))
+      setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
     } finally {
       setSaving(false)
     }

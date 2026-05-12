@@ -2,12 +2,6 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error) return error.message
-
-  return fallback
-}
-
 export function useDeleteTable() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -37,7 +31,7 @@ export function useDeleteTable() {
       return true
     } catch (err: unknown) {
       logger.error("Error eliminando mesa", err)
-      setError(getErrorMessage(err, "Error al eliminar mesa"))
+      setError("Error al eliminar mesa")
       return false
     } finally {
       setLoading(false)

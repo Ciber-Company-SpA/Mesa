@@ -4,12 +4,6 @@ import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import type { Table } from "@/types/table"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error) return error.message
-
-  return fallback
-}
-
 export function useTables() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
@@ -44,7 +38,7 @@ export function useTables() {
         setTables(data || [])
       } catch (err: unknown) {
         logger.error("Error cargando mesas", err)
-        setError(getErrorMessage(err, "Error al cargar mesas"))
+        setError("Error al cargar mesas")
       } finally {
         setLoading(false)
       }

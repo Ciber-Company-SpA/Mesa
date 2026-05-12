@@ -32,9 +32,9 @@ export function useProducts() {
         if (error) throw error
 
         setProducts(data || [])
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error("Error cargando productos", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        setError("Error al cargar productos")
       } finally {
         setLoading(false)
       }

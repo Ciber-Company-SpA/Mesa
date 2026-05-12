@@ -6,7 +6,7 @@ export function useDeleteProduct() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function deleteProduct(productId: number, product_image_public_id?: string) {
+  async function deleteProduct(productId: number, productImagePublicId?: string) {
     const confirmed = confirm("¿Seguro que quieres eliminar este producto?")
     if (!confirmed) return false
 
@@ -14,16 +14,14 @@ export function useDeleteProduct() {
       setLoading(true)
       setError("")
 
-      // 1. Borrar imagen de Cloudinary
-      if (product_image_public_id) {
+      if (productImagePublicId) {
         await fetch("/api/cloudinary/delete", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ publicId: product_image_public_id }),
+          body: JSON.stringify({ publicId: productImagePublicId }),
         })
       }
 
-      // 2. Borrar producto de Supabase
       const { error } = await supabase
         .from("products")
         .delete()
@@ -32,9 +30,9 @@ export function useDeleteProduct() {
       if (error) throw error
 
       return true
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("Error eliminando producto", err)
-      setError(err instanceof Error ? err.message : "Error al eliminar producto")
+      setError("Error al eliminar producto")
       return false
     } finally {
       setLoading(false)

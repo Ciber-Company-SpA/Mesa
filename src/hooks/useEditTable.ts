@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { decodeId } from "@/lib/hashids"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { decodeId } from "@/lib/hashids" 
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error) return error.message
-
-  return fallback
-}
+const safeErrors = [
+  "Mesa no encontrada",
+  "El número de mesa debe ser mayor a 0"
+]
 
 export function useEditTable() {
   const router = useRouter()
@@ -43,7 +43,7 @@ export function useEditTable() {
         setTableNumber(String(data.table_number))
       } catch (err: unknown) {
         logger.error("Error cargando mesa", err)
-        setLoadError(getErrorMessage(err, "Error al cargar mesa"))
+        setLoadError(getSafeErrorMessage(err, "Error al cargar mesa", safeErrors))
       } finally {
         setLoading(false)
       }
@@ -75,7 +75,7 @@ export function useEditTable() {
       router.replace("/admin/tables")
     } catch (err: unknown) {
       logger.error("Error actualizando mesa", err)
-      setError(getErrorMessage(err, "Error al guardar cambios"))
+      setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
     } finally {
       setSaving(false)
     }

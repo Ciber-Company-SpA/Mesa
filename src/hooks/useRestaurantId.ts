@@ -20,14 +20,16 @@ export function useRestaurantId() {
           .single()
 
         if (error) throw error
+
         setRestaurantId(profile.restaurant_id)
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error("Error obteniendo restaurante", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        setError("No se pudo obtener el restaurante")
       } finally {
         setLoading(false)
       }
     }
+
     load()
   }, [])
 

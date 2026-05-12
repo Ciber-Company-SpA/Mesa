@@ -4,10 +4,14 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
+const safeErrors = [
+  "El nombre del producto es obligatorio",
+  "El precio debe ser mayor a 0",
+  "Debes seleccionar una categoría",
+  "No se encontró el restaurante"
+]
 
 export function useCreateProduct() {
   const router = useRouter()
@@ -33,21 +37,10 @@ export function useCreateProduct() {
       const cleanName = productName.trim()
       const cleanPrice = Number(productPrice)
 
-      if (!cleanName) {
-        throw new Error("El nombre del producto es obligatorio")
-      }
-
-      if (!cleanPrice || cleanPrice <= 0) {
-        throw new Error("El precio debe ser mayor a 0")
-      }
-
-      if (!categoryId) {
-        throw new Error("Debes seleccionar una categoría")
-      }
-
-      if (!restaurantId) {
-        throw new Error("No se encontró el restaurante")
-      }
+      if (!cleanName) throw new Error("El nombre del producto es obligatorio")
+      if (!cleanPrice || cleanPrice <= 0) throw new Error("El precio debe ser mayor a 0")
+      if (!categoryId) throw new Error("Debes seleccionar una categoría")
+      if (!restaurantId) throw new Error("No se encontró el restaurante")
 
       let imageUrl: string | null = null
       let imagePublicId: string | null = null
@@ -57,6 +50,7 @@ export function useCreateProduct() {
           productImage,
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
+
         if (result) {
           imageUrl = result.secure_url
           imagePublicId = result.public_id
@@ -81,7 +75,7 @@ export function useCreateProduct() {
       router.replace("/admin/products")
     } catch (err: unknown) {
       logger.error("Error creando producto", err)
-      setError(getErrorMessage(err, "Error al crear producto"))
+      setError(getSafeErrorMessage(err, "Error al crear producto", safeErrors))
     } finally {
       setLoading(false)
     }

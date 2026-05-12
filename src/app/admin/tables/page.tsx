@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { useTableList } from "@/hooks/useTableList"
-import { encodeId } from "@/lib/hashids" 
+import { encodeId } from "@/lib/hashids"
 
 export default function TablesPage() {
   const {
@@ -28,11 +28,7 @@ export default function TablesPage() {
             </Link>
 
             <p className="text-sm text-stone-600">Panel admin</p>
-
-            <h1 className="text-3xl font-bold tracking-tight">
-              Mesas
-            </h1>
-
+            <h1 className="text-3xl font-bold tracking-tight">Mesas</h1>
             <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
               Gestiona las mesas del local y el código QR asociado a cada una.
             </p>
@@ -50,23 +46,15 @@ export default function TablesPage() {
         <section className="rounded-[2rem] border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-4 rounded-3xl bg-stone-50 px-5 py-4 ring-1 ring-stone-200">
             <div>
-              <p className="text-sm text-stone-600">
-                Mesas registradas
-              </p>
-
+              <p className="text-sm text-stone-600">Mesas registradas</p>
               <p className="mt-1 text-4xl font-bold leading-none tracking-tight">
                 {totalTables}
               </p>
             </div>
 
             <div className="rounded-2xl bg-orange-50 px-4 py-3 text-right">
-              <p className="text-sm font-bold text-orange-700">
-                QR
-              </p>
-
-              <p className="text-sm text-stone-600">
-                1 por mesa
-              </p>
+              <p className="text-sm font-bold text-orange-700">QR</p>
+              <p className="text-sm text-stone-600">1 por mesa</p>
             </div>
           </div>
 
@@ -107,20 +95,19 @@ export default function TablesPage() {
               {tables.map((table) => (
                 <article
                   key={table.id}
-                  className="rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                  className="min-w-0 rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
                 >
                   <div className="mb-5 flex items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <h2 className="text-lg font-bold text-stone-950">
                         Mesa {table.table_number}
                       </h2>
-
-                      <p className="mt-1 text-sm text-stone-600">
+                      <p className="mt-1 truncate text-sm text-stone-600">
                         Código: {table.qr_codes.qr_code}
                       </p>
                     </div>
 
-                    <div className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
+                    <div className="shrink-0 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
                       QR listo
                     </div>
                   </div>
@@ -138,10 +125,10 @@ export default function TablesPage() {
                     </p>
                   </div>
 
-                  <div className="mt-5 flex gap-2">
+                  <div className="mt-5 grid grid-cols-2 gap-2">
                     <Link
                       href={`/admin/tables/${encodeId(table.id)}/edit`}
-                      className="flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
                     >
                       Editar
                     </Link>
@@ -150,12 +137,9 @@ export default function TablesPage() {
                       type="button"
                       disabled={deleting}
                       onClick={async () => {
-                        await deleteTable(
-                          table.id,
-                          table.qr_code_id
-                        )
+                        await deleteTable(table.id, table.qr_code_id)
                       }}
-                      className="flex-1 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Eliminar
                     </button>

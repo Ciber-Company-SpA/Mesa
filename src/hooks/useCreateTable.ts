@@ -4,17 +4,19 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { nanoid } from "nanoid"
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error) return error.message
-  return fallback
-}
+const safeErrors = [
+  "El número de mesa debe ser mayor a 0",
+  "No se encontró el restaurante"
+]
 
 export function useCreateTable() {
   const router = useRouter()
   const { restaurantId, loading: loadingId } = useRestaurantId()
 
   const [tableNumber, setTableNumber] = useState("")
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -35,13 +37,6 @@ export function useCreateTable() {
         throw new Error("No se encontró el restaurante")
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log("token:", session?.access_token)
-
-      if (!session) {
-        throw new Error("No hay sesión activa")
-      }
-
       const { data: qrData, error: qrError } = await supabase
         .from("qr_codes")
         .insert({
@@ -51,7 +46,7 @@ export function useCreateTable() {
         .select()
         .single()
 
-      if (qrError) throw new Error(qrError.message)
+      if (qrError) throw qrError
 
       const { error: tableError } = await supabase
         .from("tables")
@@ -61,12 +56,12 @@ export function useCreateTable() {
           qr_code_id: qrData.id
         })
 
-      if (tableError) throw new Error(tableError.message)
+      if (tableError) throw tableError
 
       router.replace("/admin/tables")
     } catch (err: unknown) {
       logger.error("Error creando mesa", err)
-      setError(getErrorMessage(err, "Error al crear mesa"))
+      setError(getSafeErrorMessage(err, "Error al crear mesa", safeErrors))
     } finally {
       setLoading(false)
     }

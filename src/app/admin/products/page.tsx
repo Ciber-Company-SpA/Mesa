@@ -5,120 +5,173 @@ import { encodeId } from "@/lib/hashids"
 import { useProductList } from "@/hooks/useProductList"
 
 export default function ProductsPage() {
-  const { products, loading, error, deleteProduct } = useProductList()
+  const {
+    products,
+    totalProducts,
+    loading,
+    deleting,
+    error,
+    deleteProduct
+  } = useProductList()
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-6">
-      <div className="mx-auto max-w-6xl">
-
-        <div className="flex items-center justify-between mb-8">
+    <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Productos</h1>
-            <p className="text-zinc-400 mt-2">
-              Gestiona los productos de tu restaurante.
+            <Link
+              href="/admin"
+              className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
+            >
+              Volver
+            </Link>
+
+            <p className="text-sm text-stone-600">Panel admin</p>
+            <h1 className="text-3xl font-bold tracking-tight">Productos</h1>
+            <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
+              Gestiona los productos, precios, categorías e imágenes de tu menú.
             </p>
           </div>
 
           <Link
             href="/admin/products/create"
-            className="rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-600 transition"
+            aria-label="Crear producto"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-500 text-3xl font-semibold leading-none text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
           >
-            Nuevo producto
+            +
           </Link>
-        </div>
+        </header>
 
-        {loading && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-400">
-            Cargando productos...
+        <section className="rounded-[2rem] border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-4 rounded-3xl bg-stone-50 px-5 py-4 ring-1 ring-stone-200">
+            <div>
+              <p className="text-sm text-stone-600">Productos registrados</p>
+              <p className="mt-1 text-4xl font-bold leading-none tracking-tight">
+                {totalProducts}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-orange-50 px-4 py-3 text-right">
+              <p className="text-sm font-bold text-orange-700">Menú</p>
+              <p className="text-sm text-stone-600">con imágenes</p>
+            </div>
           </div>
-        )}
 
-        {error && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+          {loading && (
+            <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 text-sm text-stone-600 shadow-inner">
+              Cargando productos...
+            </div>
+          )}
 
-        {!loading && !error && products.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center">
-            <h2 className="text-2xl font-bold">No hay productos</h2>
-            <p className="text-zinc-400 mt-3 text-sm">
-              Crea tu primer producto para comenzar a armar el menú.
-            </p>
-            <Link
-              href="/admin/products/create"
-              className="mt-6 inline-block rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-600 transition"
-            >
-              Nuevo producto
-            </Link>
-          </div>
-        )}
+          {error && (
+            <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm font-medium text-red-600 shadow-sm">
+              {error}
+            </div>
+          )}
 
-        {!loading && !error && products.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-            <table className="w-full">
-              <thead className="border-b border-zinc-800 bg-zinc-900/50">
-                <tr className="text-left">
-                  <th className="p-4">Producto</th>
-                  <th className="p-4">Categoría</th>
-                  <th className="p-4">Precio</th>
-                  <th className="p-4">Estado</th>
-                  <th className="p-4">Acciones</th>
-                </tr>
-              </thead>
+          {!loading && !error && products.length === 0 && (
+            <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-8 text-center shadow-inner">
+              <h2 className="text-2xl font-bold tracking-tight">
+                No hay productos
+              </h2>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-stone-600">
+                Crea tu primer producto para comenzar a armar el menú de tu restaurante.
+              </p>
+              <Link
+                href="/admin/products/create"
+                aria-label="Crear primer producto"
+                className="mx-auto mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-3xl font-semibold leading-none text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-orange-600"
+              >
+                +
+              </Link>
+            </div>
+          )}
 
-              <tbody>
-                {products.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="border-b border-zinc-800 last:border-none"
-                  >
-                    <td className="p-4 font-medium">
-                      {product.product_name}
-                    </td>
+          {!loading && !error && products.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {products.map((product) => (
+                <article
+                  key={product.id}
+                  className="flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                >
+                  <div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-200">
+                    {product.product_image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.product_image}
+                        alt={product.product_name}
+                        className="h-full max-h-40 w-full object-contain p-3"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-stone-400">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                          📷
+                        </div>
+                        <p className="mt-3 text-sm font-semibold">
+                          Sin imagen
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                    <td className="p-4 text-zinc-400">
-                      {product.categories.category_name}
-                    </td>
+                  <div className="mt-4 flex min-w-0 flex-1 flex-col">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-lg font-bold text-stone-950">
+                          {product.product_name}
+                        </h2>
+                        <p className="mt-1 truncate text-sm text-stone-600">
+                          {product.categories.category_name}
+                        </p>
+                      </div>
 
-                    <td className="p-4">
-                      ${product.product_price.toLocaleString("es-CL")}
-                    </td>
-
-                    <td className="p-4">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
                         product.status_id === 1
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-stone-100 text-stone-600"
                       }`}>
                         {product.status_id === 1 ? "Activo" : "Oculto"}
                       </span>
-                    </td>
+                    </div>
 
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/admin/products/${encodeId(product.id)}/edit`}
-                          className="rounded-xl border border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-800 transition"
-                        >
-                          Editar
-                        </Link>
+                    {product.product_description && (
+                      <p className="mb-4 line-clamp-2 text-sm leading-6 text-stone-600">
+                        {product.product_description}
+                      </p>
+                    )}
 
-                        <button
-                          onClick={async () => await deleteProduct(product.id, product.product_image_public_id)}
-                          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    <div className="mb-4 rounded-3xl bg-stone-50 px-4 py-3 ring-1 ring-stone-200">
+                      <p className="text-sm text-stone-600">Precio</p>
+                      <p className="mt-1 text-2xl font-bold tracking-tight text-stone-950">
+                        ${product.product_price.toLocaleString("es-CL")}
+                      </p>
+                    </div>
 
+                    <div className="mt-auto grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/admin/products/${encodeId(product.id)}/edit`}
+                        className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        Editar
+                      </Link>
+
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={async () => {
+                          await deleteProduct(product.id, product.product_image_public_id)
+                        }}
+                        className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )

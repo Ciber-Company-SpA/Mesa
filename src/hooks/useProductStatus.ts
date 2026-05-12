@@ -20,10 +20,11 @@ export function useProductStatus() {
           .select("*")
 
         if (error) throw error
+
         setStatuses(data || [])
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error("Error cargando estados de producto", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        setError("Error al cargar estados de producto")
       } finally {
         setLoading(false)
       }

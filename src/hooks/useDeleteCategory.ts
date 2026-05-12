@@ -3,20 +3,15 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
 export function useDeleteCategory() {
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   async function deleteCategory(categoryId: number) {
-
-    const confirmed = confirm(
-      "¿Seguro que quieres eliminar esta categoría?"
-    )
+    const confirmed = confirm("¿Seguro que quieres eliminar esta categoría?")
 
     if (!confirmed) return false
 
     try {
-
       setLoading(true)
       setError("")
 
@@ -25,21 +20,14 @@ export function useDeleteCategory() {
         .delete()
         .eq("id", categoryId)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       return true
-
     } catch (err: unknown) {
-
       logger.error("Error eliminando categoría", err)
-      setError(err instanceof Error ? err.message : "Error al eliminar categoría")
-
+      setError("Error al eliminar categoría")
       return false
-
     } finally {
-
       setLoading(false)
     }
   }

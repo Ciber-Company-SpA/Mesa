@@ -12,34 +12,25 @@ export function useLogin() {
   const [error, setError] = useState("")
 
   async function login(e: React.FormEvent) {
-
     e.preventDefault()
 
     try {
-
       setLoading(true)
       setError("")
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       router.push("/admin")
-
     } catch (err: unknown) {
-
       logger.error("Error en login", err)
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
-
+      setError("No se pudo iniciar sesión")
     } finally {
-
       setLoading(false)
-
     }
   }
 

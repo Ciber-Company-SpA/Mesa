@@ -4,10 +4,14 @@ import { decodeId } from "@/lib/hashids"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
+const safeErrors = [
+  "Producto no encontrado",
+  "El nombre del producto es obligatorio",
+  "El precio debe ser mayor a 0",
+  "Debes seleccionar una categoría"
+]
 
 export function useEditProduct() {
   const router = useRouter()
@@ -54,10 +58,9 @@ export function useEditProduct() {
         setCurrentImagePublicId(data.product_image_public_id)
         setCategoryId(data.category_id)
         setStatusId(data.status_id)
-
       } catch (err: unknown) {
         logger.error("Error cargando producto", err)
-        setLoadError(getErrorMessage(err, "Error al cargar producto"))
+        setLoadError(getSafeErrorMessage(err, "Error al cargar producto", safeErrors))
       } finally {
         setLoading(false)
       }
@@ -84,14 +87,12 @@ export function useEditProduct() {
       let imagePublicId = currentImagePublicId
 
       if (productImage) {
-        // 1. Subir nueva imagen
         const uploaded = await uploadImage(
           productImage,
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
 
         if (uploaded) {
-          // 2. Borrar imagen vieja de Cloudinary
           if (currentImagePublicId) {
             await fetch("/api/cloudinary/delete", {
               method: "DELETE",
@@ -123,7 +124,7 @@ export function useEditProduct() {
       router.replace("/admin/products")
     } catch (err: unknown) {
       logger.error("Error actualizando producto", err)
-      setError(getErrorMessage(err, "Error al guardar cambios"))
+      setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
     } finally {
       setSaving(false)
     }

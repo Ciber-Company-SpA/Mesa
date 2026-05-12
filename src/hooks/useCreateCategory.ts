@@ -2,10 +2,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
+import { getSafeErrorMessage } from "@/lib/safe-error"
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
+const safeErrors = [
+  "El nombre de la categoría es obligatorio",
+  "Usuario no autenticado",
+  "No se encontró el restaurante del usuario"
+]
 
 export function useCreateCategory() {
   const router = useRouter()
@@ -53,14 +56,12 @@ export function useCreateCategory() {
           restaurant_id: profile.restaurant_id
         })
 
-      if (categoryError) {
-        throw categoryError
-      }
+      if (categoryError) throw categoryError
 
       router.replace("/admin/categories")
     } catch (err: unknown) {
       logger.error("Error creando categoría", err)
-      setError(getErrorMessage(err, "Error al crear categoría"))
+      setError(getSafeErrorMessage(err, "Error al crear categoría", safeErrors))
     } finally {
       setLoading(false)
     }

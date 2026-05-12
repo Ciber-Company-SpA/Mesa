@@ -21,7 +21,7 @@ export function useRegisterRestaurant() {
       setLoading(true)
       setError("")
 
-      const { data, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -32,15 +32,12 @@ export function useRegisterRestaurant() {
         }
       })
 
-      if (authError) {
-        throw authError
-      }
+      if (authError) throw authError
 
       router.replace("/login")
-
     } catch (err: unknown) {
       logger.error("Error registrando restaurante", err)
-      setError(err instanceof Error ? err.message : "Error al registrar restaurante")
+      setError("Error al registrar restaurante")
     } finally {
       setLoading(false)
     }

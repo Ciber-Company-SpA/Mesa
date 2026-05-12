@@ -30,14 +30,14 @@ export function useUploadImage() {
       if (!response.ok) throw new Error("Error al subir imagen")
 
       const data = await response.json()
+
       return {
         secure_url: data.secure_url,
         public_id: data.public_id
       }
-
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("Error subiendo imagen", err)
-      setError(err instanceof Error ? err.message : "Error desconocido")
+      setError("Error al subir imagen")
       return null
     } finally {
       setUploading(false)

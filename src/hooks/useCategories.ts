@@ -27,9 +27,9 @@ export function useCategories() {
         if (error) throw error
 
         setCategories(data || [])
-      } catch (err) {
+      } catch (err: unknown) {
         logger.error("Error cargando categorías", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
+        setError("Error al cargar categorías")
       } finally {
         setLoading(false)
       }

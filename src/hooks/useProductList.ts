@@ -27,7 +27,7 @@ export function useProductList() {
     totalProducts: visibleProducts.length,
     loading,
     deleting,
-    error: error ?? deleteError,
+    error: error || deleteError,
     deleteProduct: deleteVisibleProduct
   }
 }
