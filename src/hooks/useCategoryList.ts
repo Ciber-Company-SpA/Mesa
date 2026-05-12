@@ -1,14 +1,8 @@
-"use client"
-
 import { useState } from "react"
 
 import { useCategories } from "@/hooks/useCategories"
 import { useDeleteCategory } from "@/hooks/useDeleteCategory"
-
-export type Category = {
-  id: number
-  category_name: string
-}
+import type { Category } from "@/types/category"
 
 export function useCategoryList() {
   const {
@@ -41,10 +35,10 @@ export function useCategoryList() {
 
   return {
     categories: visibleCategories,
-    totalCategories: visibleCategories.length,
+    totalCategories: visibleCategories.length, // ← lo dejamos
     loading,
     deleting,
-    error: error || deleteError,
+    error: error ?? deleteError,
     deleteCategory: deleteVisibleCategory
   }
 }

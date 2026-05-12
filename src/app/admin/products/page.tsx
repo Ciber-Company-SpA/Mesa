@@ -1,29 +1,10 @@
+"use client"
+
 import Link from "next/link"
+import { useProductList } from "@/hooks/useProductList"
 
 export default function ProductsPage() {
-  const productos = [
-    {
-      id: 1,
-      nombre: "Hamburguesa BBQ",
-      categoria: "Hamburguesas",
-      precio: 8990,
-      activo: true
-    },
-    {
-      id: 2,
-      nombre: "Pizza Pepperoni",
-      categoria: "Pizzas",
-      precio: 11990,
-      activo: true
-    },
-    {
-      id: 3,
-      nombre: "Cheesecake",
-      categoria: "Postres",
-      precio: 4990,
-      activo: false
-    }
-  ]
+  const { products, loading, error, deleteProduct } = useProductList()
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6">
@@ -31,10 +12,7 @@ export default function ProductsPage() {
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">
-              Productos
-            </h1>
-
+            <h1 className="text-3xl font-bold">Productos</h1>
             <p className="text-zinc-400 mt-2">
               Gestiona los productos de tu restaurante.
             </p>
@@ -43,75 +21,102 @@ export default function ProductsPage() {
           <Link
             href="/admin/products/create"
             className="rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-600 transition"
-            >
+          >
             Nuevo producto
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-          
-          <table className="w-full">
-            <thead className="border-b border-zinc-800 bg-zinc-900/50">
-              <tr className="text-left">
-                <th className="p-4">Producto</th>
-                <th className="p-4">Categoría</th>
-                <th className="p-4">Precio</th>
-                <th className="p-4">Estado</th>
-                <th className="p-4">Acciones</th>
-              </tr>
-            </thead>
+        {loading && (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-400">
+            Cargando productos...
+          </div>
+        )}
 
-            <tbody>
-              {productos.map((producto) => (
-                <tr
-                  key={producto.id}
-                  className="border-b border-zinc-800 last:border-none"
-                >
-                  <td className="p-4 font-medium">
-                    {producto.nombre}
-                  </td>
+        {error && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
-                  <td className="p-4 text-zinc-400">
-                    {producto.categoria}
-                  </td>
+        {!loading && !error && products.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center">
+            <h2 className="text-2xl font-bold">No hay productos</h2>
+            <p className="text-zinc-400 mt-3 text-sm">
+              Crea tu primer producto para comenzar a armar el menú.
+            </p>
+            <Link
+              href="/admin/products/create"
+              className="mt-6 inline-block rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-600 transition"
+            >
+              Nuevo producto
+            </Link>
+          </div>
+        )}
 
-                  <td className="p-4">
-                    ${producto.precio}
-                  </td>
+        {!loading && !error && products.length > 0 && (
+          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+            <table className="w-full">
+              <thead className="border-b border-zinc-800 bg-zinc-900/50">
+                <tr className="text-left">
+                  <th className="p-4">Producto</th>
+                  <th className="p-4">Categoría</th>
+                  <th className="p-4">Precio</th>
+                  <th className="p-4">Estado</th>
+                  <th className="p-4">Acciones</th>
+                </tr>
+              </thead>
 
-                  <td className="p-4">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        producto.activo
+              <tbody>
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-b border-zinc-800 last:border-none"
+                  >
+                    <td className="p-4 font-medium">
+                      {product.product_name}
+                    </td>
+
+                    <td className="p-4 text-zinc-400">
+                      {product.categories.category_name}
+                    </td>
+
+                    <td className="p-4">
+                      ${product.product_price.toLocaleString("es-CL")}
+                    </td>
+
+                    <td className="p-4">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        product.status_id === 1
                           ? "bg-green-500/20 text-green-400"
                           : "bg-red-500/20 text-red-400"
-                      }`}
-                    >
-                      {producto.activo ? "Activo" : "Oculto"}
-                    </span>
-                  </td>
+                      }`}>
+                        {product.status_id === 1 ? "Activo" : "Oculto"}
+                      </span>
+                    </td>
 
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                    <Link
-                    href={`/admin/products/${producto.id}/edit`}
-                    className="rounded-xl border border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-800 transition"
-                    >
-                    Editar
-                    </Link>
+                    <td className="p-4">
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
+                          className="rounded-xl border border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-800 transition"
+                        >
+                          Editar
+                        </Link>
 
-                      <button className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition">
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-
-          </table>
-
-        </div>
+                        <button
+                          onClick={async () => await deleteProduct(product.id)}
+                          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
       </div>
     </main>

@@ -1,8 +1,7 @@
-"use client"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
 
 export function useRegisterRestaurant() {
   const router = useRouter()
@@ -37,14 +36,11 @@ export function useRegisterRestaurant() {
         throw authError
       }
 
-      console.log("Registro completado")
-      console.log(data)
-
       router.replace("/login")
 
-    } catch (err: any) {
-      console.log(err)
-      setError(err.message || "Error al registrar restaurante")
+    } catch (err: unknown) {
+      logger.error("Error registrando restaurante", err)
+      setError(err instanceof Error ? err.message : "Error al registrar restaurante")
     } finally {
       setLoading(false)
     }
@@ -53,19 +49,14 @@ export function useRegisterRestaurant() {
   return {
     restaurantName,
     setRestaurantName,
-
     adminName,
     setAdminName,
-
     email,
     setEmail,
-
     password,
     setPassword,
-
     loading,
     error,
-
     registerRestaurant
   }
 }

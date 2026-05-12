@@ -1,7 +1,6 @@
-"use client"
-
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
 
 export function useDeleteCategory() {
 
@@ -32,13 +31,10 @@ export function useDeleteCategory() {
 
       return true
 
-    } catch (err: any) {
+    } catch (err: unknown) {
 
-      console.log(err)
-
-      setError(
-        err.message || "Error al eliminar categoría"
-      )
+      logger.error("Error eliminando categoría", err)
+      setError(err instanceof Error ? err.message : "Error al eliminar categoría")
 
       return false
 

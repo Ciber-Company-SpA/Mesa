@@ -1,8 +1,7 @@
-"use client"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -60,7 +59,7 @@ export function useCreateCategory() {
 
       router.replace("/admin/categories")
     } catch (err: unknown) {
-      console.log(err)
+      logger.error("Error creando categoría", err)
       setError(getErrorMessage(err, "Error al crear categoría"))
     } finally {
       setLoading(false)

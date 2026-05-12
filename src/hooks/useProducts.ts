@@ -2,44 +2,49 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
-import type { Category } from "@/types/category"
+import type { Product } from "@/types/product"
 
-export function useCategories() {
+export function useProducts() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
-  const [categories, setCategories] = useState<Category[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
     if (!restaurantId) return
 
-    async function loadCategories() {
+    async function loadProducts() {
       try {
         setLoading(true)
         setError("")
 
         const { data, error } = await supabase
-          .from("categories")
-          .select("*")
+          .from("products")
+          .select(`
+            *,
+            categories (
+              category_name
+            )
+          `)
           .eq("restaurant_id", restaurantId)
 
         if (error) throw error
 
-        setCategories(data || [])
+        setProducts(data || [])
       } catch (err) {
-        logger.error("Error cargando categorías", err)
+        logger.error("Error cargando productos", err)
         setError(err instanceof Error ? err.message : "Error desconocido")
       } finally {
         setLoading(false)
       }
     }
 
-    loadCategories()
+    loadProducts()
   }, [restaurantId])
 
   return {
-    categories,
+    products,
     loading: loadingId || loading,
     error: idError || error
   }

@@ -1,8 +1,7 @@
-"use client"
-
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/logger"
 
 export function useLogin() {
   const router = useRouter()
@@ -12,9 +11,7 @@ export function useLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function login(
-    e: React.FormEvent
-  ) {
+  async function login(e: React.FormEvent) {
 
     e.preventDefault()
 
@@ -23,10 +20,7 @@ export function useLogin() {
       setLoading(true)
       setError("")
 
-      const {
-        data,
-        error
-      } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
@@ -35,16 +29,12 @@ export function useLogin() {
         throw error
       }
 
-      console.log("Login correcto")
-      console.log(data)
-
-
       router.push("/admin")
 
-    } catch (err: any) {
+    } catch (err: unknown) {
 
-      console.log(err)
-      setError(err.message)
+      logger.error("Error en login", err)
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
 
     } finally {
 
@@ -54,16 +44,12 @@ export function useLogin() {
   }
 
   return {
-
     email,
     setEmail,
-
     password,
     setPassword,
-
     loading,
     error,
-
     login
   }
 }

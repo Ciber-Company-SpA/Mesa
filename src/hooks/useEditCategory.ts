@@ -1,8 +1,7 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -47,7 +46,7 @@ export function useEditCategory() {
 
         setCategoryName(data.category_name)
       } catch (err: unknown) {
-        console.log(err)
+        logger.error("Error cargando categoría", err)
         setLoadError(getErrorMessage(err, "Error al cargar categoría"))
       } finally {
         setLoading(false)
@@ -83,7 +82,7 @@ export function useEditCategory() {
 
       router.replace("/admin/categories")
     } catch (err: unknown) {
-      console.log(err)
+      logger.error("Error actualizando categoría", err)
       setError(getErrorMessage(err, "Error al guardar cambios"))
     } finally {
       setSaving(false)

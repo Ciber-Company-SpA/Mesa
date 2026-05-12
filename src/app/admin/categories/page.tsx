@@ -41,7 +41,7 @@ export default function CategoriesPage() {
           </Link>
         </header>
 
-        <section className="rounded-[2rem] border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6">
+        <section className="rounded-4xl border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-4 rounded-3xl bg-stone-50 px-5 py-4 ring-1 ring-stone-200">
             <div>
               <p className="text-sm text-stone-600">Categorías registradas</p>
