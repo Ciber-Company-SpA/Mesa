@@ -29,8 +29,7 @@ export function useMenuData(qrCode: string) {
           .eq("qr_code", qrCode)
           .single()
 
-        logger.error("qrData:", JSON.stringify(qrData, null, 2))
-        logger.error("qrError:", qrError)
+     
 
         if (qrError || !qrData) throw new Error("QR no válido")
 
@@ -41,9 +40,7 @@ export function useMenuData(qrCode: string) {
           .eq("qr_code_id", qrData.id)
           .single()
 
-        logger.error("tableData:", JSON.stringify(tableData, null, 2))
-        logger.error("tableError:", tableError)
-
+      
         if (tableError || !tableData) throw new Error("Mesa no encontrada")
 
         const { restaurant_id, table_number } = tableData
