@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
-import { nanoid } from "nanoid"
+import { createQR } from "@/hooks/useCreateQR"
 import { getSafeErrorMessage } from "@/lib/safe-error"
 
 const safeErrors = [
@@ -16,7 +16,6 @@ export function useCreateTable() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
 
   const [tableNumber, setTableNumber] = useState("")
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -37,16 +36,7 @@ export function useCreateTable() {
         throw new Error("No se encontró el restaurante")
       }
 
-      const { data: qrData, error: qrError } = await supabase
-        .from("qr_codes")
-        .insert({
-          qr_code: nanoid(8),
-          qr_active: true
-        })
-        .select()
-        .single()
-
-      if (qrError) throw qrError
+      const qrData = await createQR()  // 👈 separado
 
       const { error: tableError } = await supabase
         .from("tables")
