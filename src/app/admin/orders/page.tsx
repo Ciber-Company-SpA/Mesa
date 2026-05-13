@@ -1,99 +1,161 @@
+import Link from "next/link"
+
+type OrderStatus = "Nuevo" | "Preparación" | "Listo" | "Entregado" | "Cancelado"
+
+type Order = {
+  id: number
+  mesa: number
+  estado: OrderStatus
+  total: number
+  tiempo: string
+}
+
+const orders: Order[] = [
+  {
+    id: 101,
+    mesa: 4,
+    estado: "Nuevo",
+    total: 25990,
+    tiempo: "Hace 2 min",
+  },
+  {
+    id: 102,
+    mesa: 2,
+    estado: "Preparación",
+    total: 18990,
+    tiempo: "Hace 7 min",
+  },
+  {
+    id: 103,
+    mesa: 7,
+    estado: "Listo",
+    total: 32990,
+    tiempo: "Hace 12 min",
+  },
+]
+
+const statusStyles: Record<OrderStatus, string> = {
+  Nuevo: "bg-orange-100 text-orange-700",
+  Preparación: "bg-amber-100 text-amber-700",
+  Listo: "bg-emerald-100 text-emerald-700",
+  Entregado: "bg-stone-100 text-stone-600",
+  Cancelado: "bg-red-100 text-red-700",
+}
+
+const summary = [
+  {
+    label: "Nuevos",
+    value: orders.filter((order) => order.estado === "Nuevo").length,
+    className: "bg-orange-50 text-orange-700 ring-orange-100",
+  },
+  {
+    label: "En preparación",
+    value: orders.filter((order) => order.estado === "Preparación").length,
+    className: "bg-amber-50 text-amber-700 ring-amber-100",
+  },
+  {
+    label: "Listos",
+    value: orders.filter((order) => order.estado === "Listo").length,
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  },
+]
+
 export default function OrdersPage() {
-  const pedidos = [
-    {
-      id: 101,
-      mesa: 4,
-      estado: "Nuevo",
-      total: 25990,
-      tiempo: "Hace 2 min"
-    },
-    {
-      id: 102,
-      mesa: 2,
-      estado: "Preparación",
-      total: 18990,
-      tiempo: "Hace 7 min"
-    },
-    {
-      id: 103,
-      mesa: 7,
-      estado: "Listo",
-      total: 32990,
-      tiempo: "Hace 12 min"
-    }
-  ]
-
   return (
-    <main className="min-h-screen bg-zinc-950 p-6 text-white">
+    <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
+        <header className="mb-6">
+          <Link
+            href="/admin"
+            className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
+          >
+            Volver
+          </Link>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">
-            Pedidos
-          </h1>
-
-          <p className="mt-2 text-zinc-400">
-            Revisa la actividad y estado de los pedidos.
+          <p className="text-sm text-stone-600">Panel admin</p>
+          <h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
+          <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
+            Gestiona los pedidos activos del restaurante.
           </p>
-        </div>
+        </header>
 
-        <div className="space-y-4">
-          {pedidos.map((pedido) => (
+        <section className="mb-5 grid gap-3 sm:grid-cols-3">
+          {summary.map((item) => (
             <div
-              key={pedido.id}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+              key={item.label}
+              className={`rounded-3xl px-5 py-4 ring-1 ${item.className}`}
             >
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    Pedido #{pedido.id}
-                  </h2>
-
-                  <p className="mt-1 text-zinc-400">
-                    Mesa {pedido.mesa}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-
-                  <span
-                    className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                      pedido.estado === "Nuevo"
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : pedido.estado === "Preparación"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-green-500/20 text-green-400"
-                    }`}
-                  >
-                    {pedido.estado}
-                  </span>
-
-                  <span className="text-zinc-400 text-sm">
-                    {pedido.tiempo}
-                  </span>
-
-                  <span className="rounded-xl bg-zinc-800 px-4 py-2 font-semibold">
-                    ${pedido.total}
-                  </span>
-                </div>
-
-              </div>
-
-              <div className="mt-5 flex gap-2">
-                <button className="rounded-xl border border-zinc-700 px-4 py-2 text-sm transition hover:bg-zinc-800">
-                  Ver detalle
-                </button>
-
-                <button className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold transition hover:bg-orange-600">
-                  Cambiar estado
-                </button>
-              </div>
-
+              <p className="text-sm font-semibold">{item.label}</p>
+              <p className="mt-2 text-4xl font-bold leading-none tracking-tight tabular-nums">
+                {item.value}
+              </p>
             </div>
           ))}
-        </div>
+        </section>
 
+        <section className="rounded-[2rem] border border-stone-200 bg-white p-4 shadow-xl shadow-stone-900/5 sm:p-6">
+          {orders.length === 0 && (
+            <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-8 text-center shadow-inner">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                #
+              </div>
+              <h2 className="mt-4 text-2xl font-bold tracking-tight">
+                No hay pedidos activos
+              </h2>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-stone-600">
+                Cuando entren nuevos pedidos aparecerán en este panel.
+              </p>
+            </div>
+          )}
+
+          {orders.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {orders.map((order) => (
+                <article
+                  key={order.id}
+                  className="flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
+                >
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="text-xl font-bold tracking-tight text-stone-950 tabular-nums">
+                        Pedido #{order.id}
+                      </h2>
+                      <p className="mt-2 text-base font-semibold text-stone-700">
+                        Mesa {order.mesa}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-stone-500 tabular-nums">
+                        {order.tiempo}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${statusStyles[order.estado]}`}
+                    >
+                      {order.estado}
+                    </span>
+                  </div>
+
+                  <div className="mb-5 rounded-3xl bg-orange-50 px-4 py-3 ring-1 ring-orange-100">
+                    <p className="text-sm font-semibold text-orange-700">
+                      Total
+                    </p>
+                    <p className="mt-1 text-2xl font-bold tracking-tight text-orange-700 tabular-nums">
+                      ${order.total.toLocaleString("es-CL")}
+                    </p>
+                  </div>
+                  <div className="mt-auto grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                     className="col-span-2 mx-auto w-full max-w-xs rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        Ver detalle
+                         </button>
+                        </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )
