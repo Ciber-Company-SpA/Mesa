@@ -1,6 +1,7 @@
 "use client"
 
 import { use, useState } from "react"
+import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { useMenuData } from "@/hooks/useMenuData"
 
 function formatPrice(price: number) {
@@ -169,17 +170,7 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
         )}
       </section>
 
-      <button
-        className="fixed bottom-5 right-5 z-10 flex items-center gap-3 rounded-full bg-orange-500 px-5 py-4 text-stone-950 shadow-2xl shadow-orange-500/30 ring-1 ring-orange-200/50 transition hover:bg-orange-400"
-        type="button"
-        aria-label="Abrir carrito"
-      >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-950 text-sm font-black text-orange-200">
-          0
-        </span>
-        <span className="text-sm font-black">Carrito</span>
-        <span className="text-sm font-black">$0</span>
-      </button>
+      <FloatingCartButton />
     </main>
   )
 }
