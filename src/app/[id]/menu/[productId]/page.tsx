@@ -52,9 +52,9 @@ export default function ProductDetailPage({
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-6 text-sm font-semibold text-orange-400 transition hover:text-orange-300"
+          className="mb-6 inline-flex items-center rounded-full bg-white/10 px-5 py-3 text-sm font-black text-orange-100 shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.14] hover:text-orange-200"
         >
-          Volver al menu
+          Volver al menú
         </button>
 
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-stone-900 via-[#2b1b15] to-orange-950 shadow-2xl shadow-black/40 md:aspect-[4/3]">
@@ -91,11 +91,15 @@ export default function ProductDetailPage({
             </p>
           )}
 
-          <div className="mt-6 inline-block rounded-3xl bg-white/10 px-6 py-4 ring-1 ring-white/10">
-            <p className="text-xs font-bold text-stone-400">Precio</p>
-            <p className="mt-1 text-3xl font-black text-orange-200">
-              {formatPrice(product.product_price)}
-            </p>
+          <div className="mt-7 flex justify-center">
+            <div className="rounded-[2rem] bg-white/10 px-8 py-5 text-center shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-stone-400">
+                Precio
+              </p>
+              <p className="mt-2 text-4xl font-black tracking-tight text-orange-200 tabular-nums">
+                {formatPrice(product.product_price)}
+              </p>
+            </div>
           </div>
         </div>
       </section>
