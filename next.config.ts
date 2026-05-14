@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "192.168.18.74",  // Laptop de Tomy
     "10.46.41.101",   // Laptop de Benja
+    "192.168.56.1",   // Laptop de Amaro
   ],
 };
 export default withSentryConfig(nextConfig, {
