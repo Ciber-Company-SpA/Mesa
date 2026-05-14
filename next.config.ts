@@ -2,7 +2,11 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["10.145.21.101", "192.168.18.74", "10.46.41.101"],
+  // Orígenes permitidos para desarrollo (evita errores de CORS en la red local)
+  allowedDevOrigins: [
+    "192.168.18.74",  // Laptop de Tomy
+    "10.46.41.101",   // Laptop de Benja
+  ],
 };
 export default withSentryConfig(nextConfig, {
   // For all available options, see:
