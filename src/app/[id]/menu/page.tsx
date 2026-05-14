@@ -3,6 +3,7 @@
 import { use, useState } from "react"
 import Link from "next/link"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
+import { useCartSync } from "@/hooks/useCartSync"
 import { useMenuData } from "@/hooks/useMenuData"
 import { encodeId } from "@/lib/hashids"
 
@@ -49,10 +50,11 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
   const { id } = use(params)
   const { restaurant, categories, products, tableNumber, loading, error } = useMenuData(id)
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  useCartSync(restaurant?.id ?? null)
 
   const filteredProducts = selectedCategory
-  ? products.filter((p) => p.category_id === selectedCategory && p.status_id !== 3)
-  : products.filter((p) => p.status_id !== 3)
+    ? products.filter((p) => p.category_id === selectedCategory && p.status_id !== 3)
+    : products.filter((p) => p.status_id !== 3)
 
   if (loading) return (
     <main className="flex min-h-screen items-center justify-center bg-stone-950 text-white">
@@ -130,40 +132,79 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              {filteredProducts.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/${id}/menu/${encodeId(item.id)}`}
-                  className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
-                >
-                  <ProductImage
-                    src={item.product_image}
-                    alt={item.product_name}
-                    className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
-                    imageClassName="p-3 drop-shadow-xl"
-                  />
-                  <div className="min-w-0 flex-1 py-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-orange-200/80">
-                          {item.categories?.category_name}
+              {filteredProducts.map((item) => {
+                const isAgotado = item.status_id === 2
+
+                return isAgotado ? (
+                  <div
+                    key={item.id}
+                    className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] bg-white/10 p-3 opacity-60 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur"
+                  >
+                    <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
+                      Agotado
+                    </span>
+                    <ProductImage
+                      src={item.product_image}
+                      alt={item.product_name}
+                      className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                      imageClassName="p-3 drop-shadow-xl"
+                    />
+                    <div className="min-w-0 flex-1 py-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-orange-200/80">
+                            {item.categories?.category_name}
+                          </p>
+                          <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                            {item.product_name}
+                          </h3>
+                        </div>
+                        <p className="shrink-0 text-sm font-black text-orange-200">
+                          {formatPrice(item.product_price)}
                         </p>
-                        <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
-                          {item.product_name}
-                        </h3>
                       </div>
-                      <p className="shrink-0 text-sm font-black text-orange-200">
-                        {formatPrice(item.product_price)}
-                      </p>
+                      {item.product_description && (
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                          {item.product_description}
+                        </p>
+                      )}
                     </div>
-                    {item.product_description && (
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
-                        {item.product_description}
-                      </p>
-                    )}
                   </div>
-                </Link>
-              ))}
+                ) : (
+                  <Link
+                    key={item.id}
+                    href={`/${id}/menu/${encodeId(item.id)}`}
+                    className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
+                  >
+                    <ProductImage
+                      src={item.product_image}
+                      alt={item.product_name}
+                      className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                      imageClassName="p-3 drop-shadow-xl"
+                    />
+                    <div className="min-w-0 flex-1 py-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-orange-200/80">
+                            {item.categories?.category_name}
+                          </p>
+                          <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                            {item.product_name}
+                          </h3>
+                        </div>
+                        <p className="shrink-0 text-sm font-black text-orange-200">
+                          {formatPrice(item.product_price)}
+                        </p>
+                      </div>
+                      {item.product_description && (
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                          {item.product_description}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </section>
         ) : (

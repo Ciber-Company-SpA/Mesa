@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import type { MenuData } from "@/types/menu"
 import { Category } from "@/types/category"
-import { useCartStore } from "@/store/cartStore"
 
 export function useMenuData(qrCode: string) {
   const [data, setData] = useState<MenuData>({
@@ -64,21 +63,9 @@ export function useMenuData(qrCode: string) {
         if (productsRes.error) throw productsRes.error
         if (categoriesRes.error) throw categoriesRes.error
 
-        const validProducts = productsRes.data ?? []
-
-     
-        const { items, removeItem } = useCartStore.getState()
-        const validIds = new Set(validProducts.map((p) => p.id))
-        const activeIds = new Set(validProducts.filter((p) => p.status_id !== 3).map((p) => p.id))
-        items.forEach((item) => {
-          if (!validIds.has(item.id) || !activeIds.has(item.id)) {
-            removeItem(item.id)
-          }
-        })
-
         setData({
           restaurant: restaurantRes.data,
-          products: validProducts,
+          products: productsRes.data ?? [],
           categories: (categoriesRes.data ?? []) as Category[],
           tableNumber: table_number,
         })

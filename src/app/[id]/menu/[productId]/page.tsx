@@ -7,6 +7,7 @@ import { decodeId } from "@/lib/hashids"
 import { useProductDetail } from "@/hooks/useProductDetail"
 import { useProductVariants } from "@/hooks/useProductVariants"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
+import { useCartSync } from "@/hooks/useCartSync"
 
 function formatPrice(price: number) {
   return `$${price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
@@ -21,13 +22,16 @@ export default function ProductDetailPage({
   const router = useRouter()
   const addItem = useCartStore((state) => state.addItem)
   const [activeOptionIndex, setActiveOptionIndex] = useState(0)
+  const [unavailableMsg, setUnavailableMsg] = useState("")
+  const [realtimeStatus, setRealtimeStatus] = useState<number | null>(null)
   const realProductId = decodeId(productId)
   const { product, loading, error } = useProductDetail(realProductId)
   const {
     variants,
     loading: loadingVariants,
-    error: variantsError
+    error: variantsError,
   } = useProductVariants(realProductId)
+  const { syncCart } = useCartSync(product?.restaurant_id ?? null)
 
   if (!realProductId) return (
     <main className="flex min-h-screen items-center justify-center bg-stone-950 px-4 text-white">
@@ -53,23 +57,30 @@ export default function ProductDetailPage({
     </main>
   )
 
+  const currentStatus = realtimeStatus ?? product.status_id
+  const isAgotado = currentStatus === 2
+  const isDeshabilitado = currentStatus === 3
+
   const productOptions = variants.length > 0
     ? variants.map((variant) => ({
-      id: variant.id,
-      name: variant.variant_name,
-      price: variant.variant_price,
-      image: variant.variant_image,
-    }))
+        id: variant.id,
+        name: variant.variant_name,
+        price: variant.variant_price,
+        image: variant.variant_image,
+      }))
     : [{
-      id: product.id,
-      name: product.product_name,
-      price: product.product_price,
-      image: product.product_image,
-    }]
+        id: product.id,
+        name: product.product_name,
+        price: product.product_price,
+        image: product.product_image,
+      }]
+
   const activeOption = productOptions[Math.min(activeOptionIndex, productOptions.length - 1)]
   const activeTitle = variants.length > 0
     ? `${product.product_name} · ${activeOption.name}`
     : product.product_name
+  const productIdForStatus = product.id
+  const productNameForStatus = product.product_name
 
   function handleOptionsScroll(event: React.UIEvent<HTMLDivElement>) {
     const scrollContainer = event.currentTarget
@@ -91,9 +102,57 @@ export default function ProductDetailPage({
     }
   }
 
+  async function handleAddToCart() {
+    if (isAgotado || isDeshabilitado) {
+      setUnavailableMsg(
+        isDeshabilitado
+          ? `${productNameForStatus} no disponible`
+          : `${productNameForStatus} agotado`
+      )
+      setTimeout(() => setUnavailableMsg(""), 3000)
+      return
+    }
+
+    await syncCart()
+
+    const res = await fetch(`/api/product-status?id=${productIdForStatus}`)
+    const data = await res.json()
+
+    if (!data || data.status_id === 2 || data.status_id === 3) {
+      setRealtimeStatus(data.status_id)
+      setUnavailableMsg(
+        data?.status_id === 3
+          ? `${productNameForStatus} no disponible`
+          : `${productNameForStatus} agotado`
+      )
+      setTimeout(() => setUnavailableMsg(""), 3000)
+      return
+    }
+
+    addItem({
+      id: activeOption.id,
+      productId: productIdForStatus,
+      name: activeTitle,
+      price: activeOption.price,
+      image: activeOption.image ?? undefined,
+      quantity: 1,
+    })
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-stone-950 pb-28 text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
+
+      {/* Toast de disponibilidad */}
+      <div
+        className={`fixed bottom-28 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 ${
+          unavailableMsg ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-black text-red-300 shadow-2xl ring-1 ring-white/10">
+          {unavailableMsg}
+        </div>
+      </div>
 
       <section className="relative mx-auto max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
         <button
@@ -157,19 +216,17 @@ export default function ProductDetailPage({
               <p className="mt-2 text-4xl font-black tracking-tight text-orange-200 tabular-nums">
                 {formatPrice(activeOption.price)}
               </p>
-            <button
+              <button
                 type="button"
-                onClick={() => addItem({
-                  id: activeOption.id,
-                  name: activeTitle,
-                  price: activeOption.price,
-                  image: activeOption.image ?? undefined,
-                  quantity: 1,
-                })}
-                className="mt-5 flex w-full items-center justify-center rounded-[1.35rem] bg-orange-500 px-5 py-4 text-sm font-black text-stone-950 shadow-2xl shadow-orange-500/25 ring-1 ring-orange-200/50 transition hover:bg-orange-400"
+                onClick={handleAddToCart}
+                className={`mt-5 flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black shadow-2xl ring-1 transition ${
+                  isAgotado || isDeshabilitado
+                    ? "cursor-not-allowed bg-stone-700 text-stone-400 ring-white/10 shadow-none"
+                    : "bg-orange-500 text-stone-950 shadow-orange-500/25 ring-orange-200/50 hover:bg-orange-400"
+                }`}
               >
-                Añadir al carrito
-          </button>
+                {isAgotado ? "Agotado" : isDeshabilitado ? "No disponible" : "Añadir al carrito"}
+              </button>
             </div>
           </div>
 
