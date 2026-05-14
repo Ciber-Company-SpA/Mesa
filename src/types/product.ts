@@ -1,4 +1,6 @@
 import type { Category } from "@/types/category"
+import type { ProductStatus } from "@/types/product-status"
+import type { ProductVariant } from "@/types/product-variant"
 
 export type Product = {
   id: number
@@ -11,4 +13,6 @@ export type Product = {
   restaurant_id: number
   status_id: number
   categories: Category
+  product_status?: ProductStatus
+  product_variants?: ProductVariant[]
 }

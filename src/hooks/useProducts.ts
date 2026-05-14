@@ -25,6 +25,10 @@ export function useProducts() {
             *,
             categories (
               category_name
+            ),
+            product_status (
+              id,
+              status_name
             )
           `)
           .eq("restaurant_id", restaurantId)

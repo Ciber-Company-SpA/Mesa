@@ -1,8 +1,45 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { encodeId } from "@/lib/hashids"
 import { useProductList } from "@/hooks/useProductList"
+
+const statusLabels: Record<number, string> = {
+  1: "Disponible",
+  2: "Agotado",
+  3: "Deshabilitado",
+}
+
+const statusBadgeClasses: Record<number, string> = {
+  1: "bg-emerald-100 text-emerald-700",
+  2: "bg-amber-100 text-amber-700",
+  3: "bg-stone-100 text-stone-600",
+}
+
+function getStatusLabel(statusId: number, statusName?: string) {
+  return statusName || statusLabels[statusId] || "Estado desconocido"
+}
+
+function getStatusActions(statusId: number) {
+  if (statusId === 3) {
+    return [
+      { label: "Marcar como habilitado", nextStatusId: 1 },
+    ]
+  }
+
+  if (statusId === 2) {
+    return [
+      { label: "Marcar como deshabilitado", nextStatusId: 3 },
+      { label: "Marcar con stock", nextStatusId: 1 },
+    ]
+  }
+
+  return [
+    { label: "Marcar como deshabilitado", nextStatusId: 3 },
+    { label: "Marcar como fuera de stock", nextStatusId: 2 },
+  ]
+}
 
 export default function ProductsPage() {
   const {
@@ -10,9 +47,12 @@ export default function ProductsPage() {
     totalProducts,
     loading,
     deleting,
+    updatingStatusId,
     error,
-    deleteProduct
+    deleteProduct,
+    updateProductStatus
   } = useProductList()
+  const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null)
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
@@ -92,8 +132,47 @@ export default function ProductsPage() {
               {products.map((product) => (
                 <article
                   key={product.id}
-                  className="flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                  className="group relative flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
                 >
+                  <div className="absolute right-6 top-6 z-10">
+                    <button
+                      type="button"
+                      disabled={updatingStatusId === product.id}
+                      onClick={() => {
+                        setOpenMenuProductId((currentId) =>
+                          currentId === product.id ? null : product.id
+                        )
+                      }}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-bold leading-none text-stone-700 shadow-lg ring-1 ring-stone-200 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                        openMenuProductId === product.id
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                      }`}
+                      aria-label="Opciones de producto"
+                    >
+                      ...
+                    </button>
+
+                    {openMenuProductId === product.id && (
+                      <div className="absolute right-0 top-11 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white py-2 text-sm font-semibold text-stone-700 shadow-2xl shadow-stone-900/15">
+                        {getStatusActions(product.status_id).map((action) => (
+                          <button
+                            key={action.nextStatusId}
+                            type="button"
+                            disabled={updatingStatusId === product.id}
+                            onClick={async () => {
+                              const success = await updateProductStatus(product.id, action.nextStatusId)
+                              if (success) setOpenMenuProductId(null)
+                            }}
+                            className="block w-full px-4 py-3 text-left transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-200">
                     {product.product_image ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -126,11 +205,9 @@ export default function ProductsPage() {
                       </div>
 
                       <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                        product.status_id === 1
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-stone-100 text-stone-600"
+                        statusBadgeClasses[product.status_id] ?? "bg-stone-100 text-stone-600"
                       }`}>
-                        {product.status_id === 1 ? "Activo" : "Oculto"}
+                        {getStatusLabel(product.status_id, product.product_status?.status_name)}
                       </span>
                     </div>
 

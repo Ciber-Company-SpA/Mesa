@@ -122,7 +122,7 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-bold text-orange-200/80">Menú principal</p>
-                <h2 className="text-2xl font-black tracking-tight text-white">Más opciones</h2>
+                <h2 className="text-2xl font-black tracking-tight text-white">Menú completo</h2>
               </div>
               <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-stone-300 ring-1 ring-white/10">
                 {filteredProducts.length} productos
