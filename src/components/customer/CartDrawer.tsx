@@ -4,6 +4,8 @@ import { useState } from "react"
 import { QRCodeSVG } from "qrcode.react"
 import { useCartStore, useCartTotal } from "@/store/cartStore"
 
+const FAKE_ORDER_QR_STORAGE_KEY = "mesa-fake-order-qr-visible"
+
 type CartDrawerProps = {
   isOpen: boolean
   onClose: () => void
@@ -14,19 +16,29 @@ function formatPrice(price: number) {
 }
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const [showFakeQr, setShowFakeQr] = useState(false)
+  const [showFakeQr, setShowFakeQr] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(FAKE_ORDER_QR_STORAGE_KEY) === "true"
+  )
   const items = useCartStore((state) => state.items)
   const total = useCartTotal()
   const hasItems = items.length > 0
+  const isFakeQrVisible = showFakeQr && hasItems
 
   function handleClose() {
-    setShowFakeQr(false)
     onClose()
   }
 
   function handleContinueOrder() {
     if (!hasItems) return
     setShowFakeQr(true)
+    localStorage.setItem(FAKE_ORDER_QR_STORAGE_KEY, "true")
+  }
+
+  function handleCancelOrder() {
+    setShowFakeQr(false)
+    localStorage.removeItem(FAKE_ORDER_QR_STORAGE_KEY)
   }
 
   if (!isOpen) return null
@@ -43,10 +55,10 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
           <div>
             <p className="text-sm font-semibold text-orange-200/80">
-              {showFakeQr ? "Confirmación visual" : "Pedido actual"}
+              {isFakeQrVisible ? "Confirmación visual" : "Pedido actual"}
             </p>
             <h2 className="text-2xl font-black tracking-tight">
-              {showFakeQr ? "Pedido listo" : "Tu carrito"}
+              {isFakeQrVisible ? "Pedido listo" : "Tu carrito"}
             </h2>
           </div>
 
@@ -60,7 +72,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           </button>
         </header>
 
-        {showFakeQr ? (
+        {isFakeQrVisible ? (
           <>
             <div className="flex-1 overflow-y-auto px-5 py-5 text-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <h3 className="text-xl font-black tracking-tight text-white sm:text-2xl">
@@ -81,7 +93,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               </div>
 
               <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-orange-200">
-                Código ficticio de pedido
+                Código del pedido
               </p>
             </div>
 
@@ -95,10 +107,10 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
               <button
                 type="button"
-                onClick={() => setShowFakeQr(false)}
-                className="flex w-full items-center justify-center rounded-[1.35rem] bg-white/10 px-5 py-4 text-sm font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/15"
+                onClick={handleCancelOrder}
+                className="flex w-full items-center justify-center rounded-[1.35rem] bg-red-500/10 px-5 py-4 text-sm font-black text-red-100 ring-1 ring-red-300/20 transition hover:bg-red-500/15"
               >
-                Volver al carrito
+                Cancelar pedido
               </button>
             </footer>
           </>
