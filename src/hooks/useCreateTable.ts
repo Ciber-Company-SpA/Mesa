@@ -37,7 +37,7 @@ export function useCreateTable() {
       }
 
       const qrData = await createQR()  
-      logger.error("qrData creado:", JSON.stringify(qrData, null, 2))
+      
       const { error: tableError } = await supabase
         .from("tables")
         .insert({

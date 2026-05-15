@@ -5,7 +5,7 @@ export async function createQR() {
   const qrCode = nanoid(8)
 
   const { data, error } = await supabase
-    .from("qr_codes")
+    .from("table_qr_codes")
     .insert({ qr_code: qrCode })
     .select()
     .single()

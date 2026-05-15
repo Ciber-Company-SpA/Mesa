@@ -22,7 +22,7 @@ export function useDeleteTable() {
       if (tableError) throw tableError
 
       const { error: qrError } = await supabase
-        .from("qr_codes")
+        .from("table_qr_codes")
         .delete()
         .eq("id", qrCodeId)
 

@@ -23,7 +23,7 @@ export function useTables() {
           .from("tables")
           .select(`
             *,
-            qr_codes (
+            qr_codes:table_qr_codes (
               id,
               qr_code,
               qr_active,

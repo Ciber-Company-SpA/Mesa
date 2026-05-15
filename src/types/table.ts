@@ -1,4 +1,4 @@
-import type { QRCode } from "@/types/qr-code"
+import type { tableQRCode } from "@/types/table-qr-code"
 
 
 export type Table = {
@@ -6,5 +6,5 @@ export type Table = {
   table_number: number
   restaurant_id: number
   qr_code_id: number
-  qr_codes: QRCode
+  qr_codes: tableQRCode
 }
