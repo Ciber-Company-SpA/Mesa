@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { encodeId } from "@/lib/hashids" 
 import { useCategoryList } from "@/hooks/useCategoryList"
+import { BackButton } from "@/components/ui/BackButton"
+
 
 export default function CategoriesPage() {
   const {
@@ -18,13 +20,8 @@ export default function CategoriesPage() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <Link
-              href="/admin"
-              className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
-            >
-              Volver
-            </Link>
-
+           
+            <BackButton href="/admin" label="Volver al menú" className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md" />
             <p className="text-sm text-stone-600">Panel admin</p>
             <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
             <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">

@@ -3,6 +3,7 @@
 import type { FormEvent } from "react"
 import { useState } from "react"
 import Link from "next/link"
+import { BackButton } from "@/components/ui/BackButton"
 import { useCreateTable } from "@/hooks/useCreateTable"
 
 export default function CreateTablePage() {
@@ -36,12 +37,11 @@ export default function CreateTablePage() {
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
         <header className="mb-6">
-          <Link
+          <BackButton
             href="/admin/tables"
+            label="Volver"
             className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
-          >
-            Volver
-          </Link>
+          />
 
           <p className="text-sm text-stone-600">Panel admin</p>
           <h1 className="text-3xl font-bold tracking-tight">Nueva mesa</h1>

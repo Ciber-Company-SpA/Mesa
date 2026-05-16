@@ -2,12 +2,15 @@
 
 import { useCartStore } from "@/store/cartStore"
 import { use, useState } from "react"
-import { useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
 import { useProductDetail } from "@/hooks/useProductDetail"
 import { useProductVariants } from "@/hooks/useProductVariants"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { useCartSync } from "@/hooks/useCartSync"
+import { BackButton } from "@/components/ui/BackButton"
+
+
+
 
 function formatPrice(price: number) {
   return `$${price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
@@ -19,7 +22,6 @@ export default function ProductDetailPage({
   params: Promise<{ id: string; productId: string }>
 }) {
   const { productId } = use(params)
-  const router = useRouter()
   const addItem = useCartStore((state) => state.addItem)
   const [activeOptionIndex, setActiveOptionIndex] = useState(0)
   const [unavailableMsg, setUnavailableMsg] = useState("")
@@ -155,13 +157,10 @@ export default function ProductDetailPage({
       </div>
 
       <section className="relative mx-auto max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
-        <button
-          type="button"
-          onClick={() => router.back()}
+        <BackButton
+          label="Volver al menú"
           className="mb-6 inline-flex items-center rounded-full bg-white/10 px-5 py-3 text-sm font-black text-orange-100 shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.14] hover:text-orange-200"
-        >
-          Volver al menú
-        </button>
+        />
 
         <div
           className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"

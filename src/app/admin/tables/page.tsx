@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
+import { BackButton } from "@/components/ui/BackButton"
 import { useTableList } from "@/hooks/useTableList"
 import { encodeId } from "@/lib/hashids"
 
@@ -20,12 +21,11 @@ export default function TablesPage() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <Link
+            <BackButton
               href="/admin"
+              label="Volver"
               className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
-            >
-              Volver
-            </Link>
+            />
 
             <p className="text-sm text-stone-600">Panel admin</p>
             <h1 className="text-3xl font-bold tracking-tight">Mesas</h1>

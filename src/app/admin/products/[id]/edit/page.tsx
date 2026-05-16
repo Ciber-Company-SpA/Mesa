@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ProductOptionsEditor } from "@/components/admin/ProductOptionsEditor"
+import { BackButton } from "@/components/ui/BackButton"
 import { useEditProduct } from "@/hooks/useEditProduct"
 import { useCategories } from "@/hooks/useCategories"
 
@@ -47,12 +48,11 @@ export default function EditProductPage() {
     <main className="min-h-screen bg-zinc-950 p-6 text-white">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8">
-          <Link
+          <BackButton
             href="/admin/products"
+            label="Volver a productos"
             className="text-sm text-orange-500 transition hover:text-orange-400"
-          >
-            Volver a productos
-          </Link>
+          />
 
           <h1 className="mt-4 text-3xl font-bold">Editar producto</h1>
 

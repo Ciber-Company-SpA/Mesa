@@ -55,7 +55,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
           <div>
             <p className="text-sm font-semibold text-orange-200/80">
-              {isFakeQrVisible ? "Confirmación visual" : "Pedido actual"}
+              {isFakeQrVisible ? "" : "Pedido actual"}
             </p>
             <h2 className="text-2xl font-black tracking-tight">
               {isFakeQrVisible ? "Pedido listo" : "Tu carrito"}

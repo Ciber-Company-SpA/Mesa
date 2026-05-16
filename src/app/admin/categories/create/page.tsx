@@ -4,6 +4,7 @@ import type { FormEvent } from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useCreateCategory } from "@/hooks/useCreateCategory"
+import { BackButton } from "@/components/ui/BackButton"
 
 export default function CreateCategoryPage() {
   const {
@@ -36,13 +37,7 @@ export default function CreateCategoryPage() {
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
         <header className="mb-6">
-          <Link
-            href="/admin/categories"
-            className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
-          >
-            Volver
-          </Link>
-
+          <BackButton href="/admin/categories" label="Volver al menú" className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md" />
           <p className="text-sm text-stone-600">Panel admin</p>
           <h1 className="text-3xl font-bold tracking-tight">Nueva categoría</h1>
           <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
