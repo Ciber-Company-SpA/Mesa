@@ -2,6 +2,7 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
+import { isNetworkError } from "@/hooks/useOfflineRetry"
 
 export function useLogin() {
   const router = useRouter()
@@ -18,29 +19,22 @@ export function useLogin() {
       setLoading(true)
       setError("")
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) throw error
 
       router.push("/admin")
     } catch (err: unknown) {
       logger.error("Error en login", err)
-      setError("No se pudo iniciar sesión")
+      setError(
+        isNetworkError(err)
+          ? "Sin conexión. Revisa tu internet e intenta de nuevo."
+          : "No se pudo iniciar sesión"
+      )
     } finally {
       setLoading(false)
     }
   }
 
-  return {
-    email,
-    setEmail,
-    password,
-    setPassword,
-    loading,
-    error,
-    login
-  }
+  return { email, setEmail, password, setPassword, loading, error, login }
 }
