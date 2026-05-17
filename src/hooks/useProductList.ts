@@ -12,7 +12,12 @@ const statusNames: Record<number, string> = {
 
 export function useProductList() {
   const { products, loading, error } = useProducts()
-  const { deleteProduct, loading: deleting, error: deleteError } = useDeleteProduct()
+  const {
+    deleteProduct,
+    loading: deleting,
+    error: deleteError,
+    dialog: deleteDialog,
+  } = useDeleteProduct()
 
   const [statusOverrides, setStatusOverrides] = useState<Record<number, {
     status_id: number
@@ -90,5 +95,6 @@ export function useProductList() {
     error: error || deleteError || statusError,
     deleteProduct: deleteVisibleProduct,
     updateProductStatus,
+    deleteDialog,
   }
 }

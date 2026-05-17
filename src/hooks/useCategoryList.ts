@@ -14,7 +14,8 @@ export function useCategoryList() {
   const {
     deleteCategory,
     loading: deleting,
-    error: deleteError
+    error: deleteError,
+    dialog: deleteDialog
   } = useDeleteCategory()
 
   const [deletedCategoryIds, setDeletedCategoryIds] = useState<number[]>([])
@@ -39,6 +40,7 @@ export function useCategoryList() {
     loading,
     deleting,
     error: error ?? deleteError,
-    deleteCategory: deleteVisibleCategory
+    deleteCategory: deleteVisibleCategory,
+    deleteDialog
   }
 }

@@ -4,7 +4,12 @@ import { useDeleteTable } from "@/hooks/useDeleteTable"
 
 export function useTableList() {
   const { tables, loading, error } = useTables()
-  const { deleteTable, loading: deleting, error: deleteError } = useDeleteTable()
+  const {
+    deleteTable,
+    loading: deleting,
+    error: deleteError,
+    dialog: deleteDialog,
+  } = useDeleteTable()
 
   const [deletedTableIds, setDeletedTableIds] = useState<number[]>([])
 
@@ -28,6 +33,7 @@ export function useTableList() {
     loading,
     deleting,
     error: error || deleteError,
-    deleteTable: deleteVisibleTable
+    deleteTable: deleteVisibleTable,
+    deleteDialog,
   }
 }

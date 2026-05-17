@@ -51,12 +51,14 @@ export default function ProductsPage() {
     updatingStatusId,
     error,
     deleteProduct,
-    updateProductStatus
+    updateProductStatus,
+    deleteDialog,
   } = useProductList()
   const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null)
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
+      {deleteDialog}
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
