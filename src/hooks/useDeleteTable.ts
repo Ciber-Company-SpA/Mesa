@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 
 type PendingDeleteTable = {
   tableId: number
@@ -45,6 +45,7 @@ export function useDeleteTable() {
 
       return await deleteTableWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return false
       logger.error("Error eliminando mesa", err)
       setError("Error al eliminar mesa")
       return false

@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { createQR } from "@/hooks/useCreateQR"
 import { getSafeErrorMessage } from "@/lib/safe-error"
-import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 
 const safeErrors = [
   "El numero de mesa debe ser mayor a 0",
@@ -28,6 +28,10 @@ export function useCreateTable() {
     }
 
     if (!restaurantId) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw { isNetworkError: true, message: "Sin conexion" }
+      }
+
       throw new Error("No se encontro el restaurante")
     }
 
@@ -55,6 +59,7 @@ export function useCreateTable() {
 
       await createTableWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return
       logger.error("Error creando mesa", err)
       setError(getSafeErrorMessage(err, "Error al crear mesa", safeErrors))
     } finally {

@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { getSafeErrorMessage } from "@/lib/safe-error"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import type { ProductOptionForm } from "@/types/product-option-form"
 import type { PreparedOption } from "@/types/prepared-option"
 
@@ -53,7 +54,6 @@ export function useCreateProduct() {
 
   const productPrice = options[0]?.price ?? ""
   const productImage = options[0]?.imageFile ?? null
-
   function updateOption(localId: string, patch: Partial<ProductOptionForm>) {
     setOptions((currentOptions) =>
       currentOptions.map((option) =>
@@ -155,6 +155,59 @@ export function useCreateProduct() {
     return preparedOptions
   }
 
+  const { run: createProductWithRetry, isPending } = useOfflineRetry(async () => {
+    const cleanName = productName.trim()
+
+    if (!cleanName) throw new Error("El nombre del producto es obligatorio")
+    if (!categoryId) throw new Error("Debes seleccionar una categoria")
+
+    if (!restaurantId) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw { isNetworkError: true, message: "Sin conexion" }
+      }
+
+      throw new Error("No se encontro el restaurante")
+    }
+
+    const preparedOptions = await prepareOptions()
+    const coverOption = preparedOptions[getCoverOptionIndex(preparedOptions.length)]
+
+    const { data: productData, error: productError } = await supabase
+      .from("products")
+      .insert({
+        product_name: cleanName,
+        product_description: productDescription.trim() || null,
+        product_price: coverOption.price,
+        product_image: coverOption.imageUrl,
+        product_image_public_id: coverOption.imagePublicId,
+        category_id: categoryId,
+        restaurant_id: restaurantId,
+        status_id: 1
+      })
+      .select("id")
+      .single()
+
+    if (productError) throw productError
+
+    if (preparedOptions.length > 1) {
+      const { error: variantsError } = await supabase
+        .from("product_variants")
+        .insert(
+          preparedOptions.map((option) => ({
+            product_id: productData.id,
+            variant_name: option.name,
+            variant_price: option.price,
+            variant_image: option.imageUrl,
+            variant_image_public_id: option.imagePublicId,
+          }))
+        )
+
+      if (variantsError) throw variantsError
+    }
+
+    router.replace("/admin/products")
+  })
+
   async function createProduct() {
     if (loading || loadingId) return
 
@@ -162,50 +215,9 @@ export function useCreateProduct() {
       setLoading(true)
       setError("")
 
-      const cleanName = productName.trim()
-
-      if (!cleanName) throw new Error("El nombre del producto es obligatorio")
-      if (!categoryId) throw new Error("Debes seleccionar una categoria")
-      if (!restaurantId) throw new Error("No se encontro el restaurante")
-
-      const preparedOptions = await prepareOptions()
-      const coverOption = preparedOptions[getCoverOptionIndex(preparedOptions.length)]
-
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .insert({
-          product_name: cleanName,
-          product_description: productDescription.trim() || null,
-          product_price: coverOption.price,
-          product_image: coverOption.imageUrl,
-          product_image_public_id: coverOption.imagePublicId,
-          category_id: categoryId,
-          restaurant_id: restaurantId,
-          status_id: 1
-        })
-        .select("id")
-        .single()
-
-      if (productError) throw productError
-
-      if (preparedOptions.length > 1) {
-        const { error: variantsError } = await supabase
-          .from("product_variants")
-          .insert(
-            preparedOptions.map((option) => ({
-              product_id: productData.id,
-              variant_name: option.name,
-              variant_price: option.price,
-              variant_image: option.imageUrl,
-              variant_image_public_id: option.imagePublicId,
-            }))
-          )
-
-        if (variantsError) throw variantsError
-      }
-
-      router.replace("/admin/products")
+      await createProductWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return
       logger.error("Error creando producto", err)
       setError(getSafeErrorMessage(err, "Error al crear producto", safeErrors))
     } finally {
@@ -230,7 +242,7 @@ export function useCreateProduct() {
     setOptionImage,
     addOption,
     removeOption,
-    loading: loading || uploading,
+    loading: loading || uploading || isPending,
     error,
     createProduct
   }

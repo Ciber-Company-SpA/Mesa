@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { getSafeErrorMessage } from "@/lib/safe-error"
-import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 
 const safeErrors = [
   "El nombre de la categoria es obligatorio",
@@ -31,7 +31,13 @@ export function useCreateCategory() {
       error: userError
     } = await supabase.auth.getUser()
 
-    if (userError || !user) {
+    if (userError) throw userError
+
+    if (!user) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw { isNetworkError: true, message: "Sin conexion" }
+      }
+
       throw new Error("Usuario no autenticado")
     }
 
@@ -67,6 +73,7 @@ export function useCreateCategory() {
 
       await createCategoryWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return
       logger.error("Error creando categoria", err)
       setError(getSafeErrorMessage(err, "Error al crear categoria", safeErrors))
     } finally {

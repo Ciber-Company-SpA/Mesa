@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { getSafeErrorMessage } from "@/lib/safe-error"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import type { ProductOptionForm } from "@/types/product-option-form"
 import type { ProductVariant } from "@/types/product-variant"
 
@@ -66,62 +67,67 @@ export function useEditProduct() {
   const productPrice = options[0]?.price ?? ""
   const productImage = options[0]?.imageFile ?? null
   const currentImageUrl = options[0]?.imageUrl ?? null
+  const { run: loadProductWithRetry, isPending: isLoadPending } = useOfflineRetry(async () => {
+    if (!productId) throw new Error("Producto no encontrado")
+
+    const [productRes, variantsRes] = await Promise.all([
+      supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .maybeSingle(),
+      supabase
+        .from("product_variants")
+        .select("*")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: true }),
+    ])
+
+    if (productRes.error) throw productRes.error
+    if (!productRes.data) throw new Error("Producto no encontrado")
+    if (variantsRes.error) throw variantsRes.error
+
+    const variants = (variantsRes.data ?? []) as ProductVariant[]
+
+    setProductName(productRes.data.product_name)
+    setProductDescription(productRes.data.product_description || "")
+    setCategoryId(productRes.data.category_id)
+    setInitialVariantIds(variants.map((variant) => variant.id))
+
+    if (variants.length > 0) {
+      setOptions(
+        variants.map((variant) =>
+          createLocalOption({
+            variantId: variant.id,
+            name: variant.variant_name,
+            price: String(variant.variant_price),
+            imageUrl: variant.variant_image,
+            imagePublicId: variant.variant_image_public_id,
+          })
+        )
+      )
+    } else {
+      setOptions([
+        createLocalOption({
+          name: "Principal",
+          price: String(productRes.data.product_price),
+          imageUrl: productRes.data.product_image,
+          imagePublicId: productRes.data.product_image_public_id,
+        })
+      ])
+    }
+
+    setLoadError("")
+  })
 
   useEffect(() => {
     async function loadProduct() {
       try {
         setLoading(true)
         setLoadError("")
-
-        if (!productId) throw new Error("Producto no encontrado")
-
-        const [productRes, variantsRes] = await Promise.all([
-          supabase
-            .from("products")
-            .select("*")
-            .eq("id", productId)
-            .maybeSingle(),
-          supabase
-            .from("product_variants")
-            .select("*")
-            .eq("product_id", productId)
-            .order("created_at", { ascending: true }),
-        ])
-
-        if (productRes.error) throw productRes.error
-        if (!productRes.data) throw new Error("Producto no encontrado")
-        if (variantsRes.error) throw variantsRes.error
-
-        const variants = (variantsRes.data ?? []) as ProductVariant[]
-
-        setProductName(productRes.data.product_name)
-        setProductDescription(productRes.data.product_description || "")
-        setCategoryId(productRes.data.category_id)
-        setInitialVariantIds(variants.map((variant) => variant.id))
-
-        if (variants.length > 0) {
-          setOptions(
-            variants.map((variant) =>
-              createLocalOption({
-                variantId: variant.id,
-                name: variant.variant_name,
-                price: String(variant.variant_price),
-                imageUrl: variant.variant_image,
-                imagePublicId: variant.variant_image_public_id,
-              })
-            )
-          )
-        } else {
-          setOptions([
-            createLocalOption({
-              name: "Principal",
-              price: String(productRes.data.product_price),
-              imageUrl: productRes.data.product_image,
-              imagePublicId: productRes.data.product_image_public_id,
-            })
-          ])
-        }
+        await loadProductWithRetry()
       } catch (err: unknown) {
+        if (isNetworkError(err)) return
         logger.error("Error cargando producto", err)
         setLoadError(getSafeErrorMessage(err, "Error al cargar producto", safeErrors))
       } finally {
@@ -130,7 +136,7 @@ export function useEditProduct() {
     }
 
     loadProduct()
-  }, [productId])
+  }, [loadProductWithRetry])
 
   function updateOption(localId: string, patch: Partial<ProductOptionForm>) {
     setOptions((currentOptions) =>
@@ -234,6 +240,87 @@ export function useEditProduct() {
     return preparedOptions
   }
 
+  const { run: updateProductWithRetry, isPending } = useOfflineRetry(async () => {
+    if (!productId) throw new Error("Producto no encontrado")
+
+    const cleanName = productName.trim()
+
+    if (!cleanName) throw new Error("El nombre del producto es obligatorio")
+    if (!categoryId) throw new Error("Debes seleccionar una categoria")
+
+    const preparedOptions = await prepareOptions()
+    const coverOption = preparedOptions[getCoverOptionIndex(preparedOptions.length)]
+
+    const { error: productError } = await supabase
+      .from("products")
+      .update({
+        product_name: cleanName,
+        product_description: productDescription.trim() || null,
+        product_price: coverOption.price,
+        product_image: coverOption.imageUrl,
+        product_image_public_id: coverOption.imagePublicId,
+        category_id: categoryId
+      })
+      .eq("id", productId)
+
+    if (productError) throw productError
+
+    if (preparedOptions.length === 1) {
+      const { error: deleteVariantsError } = await supabase
+        .from("product_variants")
+        .delete()
+        .eq("product_id", productId)
+
+      if (deleteVariantsError) throw deleteVariantsError
+    } else {
+      const currentVariantIds = preparedOptions
+        .map((option) => option.variantId)
+        .filter((variantId): variantId is number => Boolean(variantId))
+      const removedVariantIds = initialVariantIds.filter(
+        (variantId) => !currentVariantIds.includes(variantId)
+      )
+
+      if (removedVariantIds.length > 0) {
+        const { error: deleteRemovedError } = await supabase
+          .from("product_variants")
+          .delete()
+          .in("id", removedVariantIds)
+
+        if (deleteRemovedError) throw deleteRemovedError
+      }
+
+      for (const option of preparedOptions) {
+        if (option.variantId) {
+          const { error: updateVariantError } = await supabase
+            .from("product_variants")
+            .update({
+              variant_name: option.name,
+              variant_price: option.price,
+              variant_image: option.imageUrl,
+              variant_image_public_id: option.imagePublicId,
+            })
+            .eq("id", option.variantId)
+
+          if (updateVariantError) throw updateVariantError
+        } else {
+          const { error: insertVariantError } = await supabase
+            .from("product_variants")
+            .insert({
+              product_id: productId,
+              variant_name: option.name,
+              variant_price: option.price,
+              variant_image: option.imageUrl,
+              variant_image_public_id: option.imagePublicId,
+            })
+
+          if (insertVariantError) throw insertVariantError
+        }
+      }
+    }
+
+    router.replace("/admin/products")
+  })
+
   async function updateProduct() {
     if (saving) return
 
@@ -241,85 +328,9 @@ export function useEditProduct() {
       setSaving(true)
       setError("")
 
-      if (!productId) throw new Error("Producto no encontrado")
-
-      const cleanName = productName.trim()
-
-      if (!cleanName) throw new Error("El nombre del producto es obligatorio")
-      if (!categoryId) throw new Error("Debes seleccionar una categoria")
-
-      const preparedOptions = await prepareOptions()
-      const coverOption = preparedOptions[getCoverOptionIndex(preparedOptions.length)]
-
-      const { error: productError } = await supabase
-        .from("products")
-        .update({
-          product_name: cleanName,
-          product_description: productDescription.trim() || null,
-          product_price: coverOption.price,
-          product_image: coverOption.imageUrl,
-          product_image_public_id: coverOption.imagePublicId,
-          category_id: categoryId
-        })
-        .eq("id", productId)
-
-      if (productError) throw productError
-
-      if (preparedOptions.length === 1) {
-        const { error: deleteVariantsError } = await supabase
-          .from("product_variants")
-          .delete()
-          .eq("product_id", productId)
-
-        if (deleteVariantsError) throw deleteVariantsError
-      } else {
-        const currentVariantIds = preparedOptions
-          .map((option) => option.variantId)
-          .filter((variantId): variantId is number => Boolean(variantId))
-        const removedVariantIds = initialVariantIds.filter(
-          (variantId) => !currentVariantIds.includes(variantId)
-        )
-
-        if (removedVariantIds.length > 0) {
-          const { error: deleteRemovedError } = await supabase
-            .from("product_variants")
-            .delete()
-            .in("id", removedVariantIds)
-
-          if (deleteRemovedError) throw deleteRemovedError
-        }
-
-        for (const option of preparedOptions) {
-          if (option.variantId) {
-            const { error: updateVariantError } = await supabase
-              .from("product_variants")
-              .update({
-                variant_name: option.name,
-                variant_price: option.price,
-                variant_image: option.imageUrl,
-                variant_image_public_id: option.imagePublicId,
-              })
-              .eq("id", option.variantId)
-
-            if (updateVariantError) throw updateVariantError
-          } else {
-            const { error: insertVariantError } = await supabase
-              .from("product_variants")
-              .insert({
-                product_id: productId,
-                variant_name: option.name,
-                variant_price: option.price,
-                variant_image: option.imageUrl,
-                variant_image_public_id: option.imagePublicId,
-              })
-
-            if (insertVariantError) throw insertVariantError
-          }
-        }
-      }
-
-      router.replace("/admin/products")
+      await updateProductWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return
       logger.error("Error actualizando producto", err)
       setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
     } finally {
@@ -341,8 +352,8 @@ export function useEditProduct() {
     setOptionImage,
     addOption,
     removeOption,
-    loading,
-    saving: saving || uploading,
+    loading: loading || isLoadPending,
+    saving: saving || uploading || isPending,
     loadError,
     error,
     updateProduct

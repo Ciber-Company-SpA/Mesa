@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { logger } from "@/lib/logger"
 import { useRemoveBackground } from "@/hooks/useRemoveBackground"
+import { isNetworkError } from "@/hooks/useOfflineRetry"
 
 type UploadResult = {
   secure_url: string
@@ -41,6 +42,7 @@ export function useUploadImage() {
         public_id: data.public_id,
       }
     } catch (err: unknown) {
+      if (isNetworkError(err)) throw err
       logger.error("Error subiendo imagen", err)
       setError("Error al subir imagen")
       return null

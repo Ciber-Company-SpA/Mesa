@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 
 export function useDeleteCategory() {
   const [loading, setLoading] = useState(false)
@@ -33,6 +33,7 @@ export function useDeleteCategory() {
 
       return await deleteCategoryWithRetry()
     } catch (err: unknown) {
+      if (isNetworkError(err)) return false
       logger.error("Error eliminando categoria", err)
       setError("Error al eliminar categoria")
       return false
