@@ -36,7 +36,7 @@ export function useCategoryList() {
 
   return {
     categories: visibleCategories,
-    totalCategories: visibleCategories.length, // ← lo dejamos
+    totalCategories: visibleCategories.length,
     loading,
     deleting,
     error: error ?? deleteError,

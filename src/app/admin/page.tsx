@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
-import { useOrders } from "@/hooks/useOrders"
+import { useOrderList } from "@/hooks/useOrderList"
 
 const statusConfig: Record<string, string> = {
   "Nuevo":           "bg-orange-100 text-orange-700",
@@ -21,7 +21,7 @@ const quickLinks = [
 export default function AdminPage() {
   const { restaurant, loading: loadingRestaurant } = useRestaurant()
   const { totalTables, loading: loadingTables } = useTableList()
-  const { orders, activeOrdersCount, loading: loadingOrders } = useOrders()
+  const { orders, activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 4 })
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
@@ -101,7 +101,7 @@ export default function AdminPage() {
             <p className="text-sm text-stone-500 text-center py-4">No hay pedidos activos</p>
           ) : (
             orders.map((order) => {
-              const statusName = order.order_status?.[0]?.nombre ?? ""
+              const statusName = order.order_status?.nombre ?? ""
               const badgeClass = statusConfig[statusName] ?? "bg-stone-100 text-stone-700"
 
               return (
@@ -113,7 +113,7 @@ export default function AdminPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="font-bold">
-                        {order.tables?.[0]?.name ?? `Mesa ${order.table_id}`}
+                        {`Mesa ${order.tables?.[0]?.table_number ?? order.table_id}`}
                       </h2>
                       <p className="mt-2 text-sm text-stone-600">
                         Pedido #{order.id} · ${order.total.toLocaleString("es-CL")}
