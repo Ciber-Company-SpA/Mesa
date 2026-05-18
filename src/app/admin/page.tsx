@@ -4,11 +4,12 @@ import Link from "next/link"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
+import { useOrderStats } from "@/hooks/useOrderStats"
 
 const statusConfig: Record<string, string> = {
-  "Nuevo":           "bg-orange-100 text-orange-700",
-  "En preparación":  "bg-stone-950 text-white",
-  "Listo":           "bg-emerald-100 text-emerald-700",
+  "Nuevo":          "bg-orange-100 text-orange-700",
+  "En preparación": "bg-stone-950 text-white",
+  "Listo":          "bg-emerald-100 text-emerald-700",
 }
 
 const quickLinks = [
@@ -22,6 +23,7 @@ export default function AdminPage() {
   const { restaurant, loading: loadingRestaurant } = useRestaurant()
   const { totalTables, loading: loadingTables } = useTableList()
   const { orders, activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 4 })
+  const { dailySales, completedOrders, loading: loadingStats } = useOrderStats()
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
@@ -52,22 +54,18 @@ export default function AdminPage() {
         </nav>
 
         <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-stone-600">Ventas del día</p>
-              <p className="text-4xl font-bold tracking-tight">$428k</p>
+              <p className="text-4xl font-bold tracking-tight">
+                {loadingStats ? "..." : `$${dailySales.toLocaleString("es-CL")}`}
+              </p>
             </div>
             <div className="rounded-2xl bg-orange-50 px-4 py-3 text-right">
-              <p className="text-sm font-bold text-orange-700">24 completados</p>
+              <p className="text-sm font-bold text-orange-700">
+                {loadingStats ? "..." : `${completedOrders} completados`}
+              </p>
               <p className="text-sm text-stone-600">pedidos cerrados</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="h-2 rounded-full bg-stone-100">
-              <div className="h-2 w-4/5 rounded-full bg-orange-500" />
-            </div>
-            <div className="flex justify-between text-sm text-stone-600">
-              <span>Hoy</span>
             </div>
           </div>
         </section>
@@ -96,9 +94,9 @@ export default function AdminPage() {
 
         <section className="mt-4 space-y-3">
           {loadingOrders ? (
-            <p className="text-sm text-stone-500 text-center py-4">Cargando pedidos...</p>
+            <p className="py-4 text-center text-sm text-stone-500">Cargando pedidos...</p>
           ) : orders.length === 0 ? (
-            <p className="text-sm text-stone-500 text-center py-4">No hay pedidos activos</p>
+            <p className="py-4 text-center text-sm text-stone-500">No hay pedidos activos</p>
           ) : (
             orders.map((order) => {
               const statusName = order.order_status?.nombre ?? ""
