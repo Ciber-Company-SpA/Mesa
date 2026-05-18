@@ -1,6 +1,7 @@
+// hooks/useUploadImage.ts
 import { useState } from "react"
 import { logger } from "@/lib/logger"
-import { useRemoveBackground } from "@/hooks/useRemoveBackground"
+import { useProcessImage } from "@/hooks/useProcessImage"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
 
 type UploadResult = {
@@ -11,26 +12,23 @@ type UploadResult = {
 export function useUploadImage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
-  const { removeBackground } = useRemoveBackground()
+  const { processImage, processing } = useProcessImage()
 
   async function uploadImage(file: File, preset: string): Promise<UploadResult> {
     try {
       setUploading(true)
       setError("")
 
-      const processedFile = await removeBackground(file)
-      if (!processedFile) throw new Error("Error al procesar imagen")
+      const processed = await processImage(file)
+      if (!processed) throw new Error("Error al procesar imagen")
 
       const formData = new FormData()
-      formData.append("file", processedFile)
+      formData.append("file", processed)
       formData.append("upload_preset", preset)
 
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
+        { method: "POST", body: formData }
       )
 
       if (!response.ok) throw new Error("Error al subir imagen")
@@ -51,5 +49,5 @@ export function useUploadImage() {
     }
   }
 
-  return { uploadImage, uploading, error }
+  return { uploadImage, uploading: uploading || processing, error }
 }
