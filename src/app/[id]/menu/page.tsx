@@ -1,11 +1,11 @@
 "use client"
-
-import { use, useState } from "react"
 import Link from "next/link"
+import { use } from "react"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { useCartSync } from "@/hooks/useCartSync"
 import { useMenuData } from "@/hooks/useMenuData"
 import { encodeId } from "@/lib/hashids"
+import { useFilteredProducts } from "@/hooks/useFilteredProducts"
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
@@ -49,12 +49,8 @@ function ProductImage({
 export default function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { restaurant, categories, products, tableId, tableNumber, loading, error } = useMenuData(id)
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
-
-  const filteredProducts = selectedCategory
-    ? products.filter((p) => p.category_id === selectedCategory && p.status_id !== 3)
-    : products.filter((p) => p.status_id !== 3)
 
   if (loading) return (
     <main className="flex min-h-screen items-center justify-center bg-stone-950 text-white">
@@ -116,8 +112,6 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
             </button>
           ))}
         </div>
-
-        {/* futuras secciones como ofertas, menu del dia, etc */}
 
         {filteredProducts.length > 0 ? (
           <section className="mt-7">
