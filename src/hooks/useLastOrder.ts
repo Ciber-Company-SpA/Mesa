@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useCartStore } from "@/store/cartStore"
@@ -55,6 +55,12 @@ export function useLastOrder() {
   const clearLastOrder = useCartStore((state) => state.clearLastOrder)
   const [isChecking, setIsChecking] = useState(false)
   const orderToSyncRef = useRef<StoredOrder | null>(null)
+  const lastOrderRef = useRef<StoredOrder | null>(lastOrder)
+  const channelKey = useId().replaceAll(":", "")
+
+  useEffect(() => {
+    lastOrderRef.current = lastOrder
+  }, [lastOrder])
 
   const { run: syncOrderWithRetry, isPending } = useOfflineRetry(async () => {
     const orderToSync = orderToSyncRef.current
@@ -117,10 +123,10 @@ export function useLastOrder() {
   const activeOrder = isStoredOrderInProgress(lastOrder) ? lastOrder : null
 
   useEffect(() => {
-    if (!lastOrder) return
+    if (!lastOrder?.id) return
 
     const channel = supabase
-      .channel(`last-order-${lastOrder.id}`)
+      .channel(`last-order-${lastOrder.id}-${channelKey}`)
       .on(
         "postgres_changes",
         {
@@ -131,6 +137,9 @@ export function useLastOrder() {
         },
         async (payload) => {
           try {
+            const currentLastOrder = lastOrderRef.current
+            if (!currentLastOrder) return
+
             const updatedOrder = payload.new as Partial<{
               status_id: number | null
               created_at: string
@@ -145,21 +154,21 @@ export function useLastOrder() {
               return
             }
 
-            const nextStatusId = updatedOrder.status_id ?? lastOrder.statusId
+            const nextStatusId = updatedOrder.status_id ?? currentLastOrder.statusId
             const nextStatusName =
-              nextStatusId !== lastOrder.statusId
+              nextStatusId !== currentLastOrder.statusId
                 ? await getOrderStatusNameById(nextStatusId)
-                : lastOrder.statusName
+                : currentLastOrder.statusName
 
             setLastOrder({
-              ...lastOrder,
+              ...currentLastOrder,
               statusId: nextStatusId,
               statusName: nextStatusName,
-              createdAt: updatedOrder.created_at ?? lastOrder.createdAt,
-              qrCodeId: updatedOrder.qr_code_id ?? lastOrder.qrCodeId,
-              tableId: updatedOrder.table_id ?? lastOrder.tableId,
-              restaurantId: updatedOrder.restaurant_id ?? lastOrder.restaurantId,
-              total: updatedOrder.total ?? lastOrder.total,
+              createdAt: updatedOrder.created_at ?? currentLastOrder.createdAt,
+              qrCodeId: updatedOrder.qr_code_id ?? currentLastOrder.qrCodeId,
+              tableId: updatedOrder.table_id ?? currentLastOrder.tableId,
+              restaurantId: updatedOrder.restaurant_id ?? currentLastOrder.restaurantId,
+              total: updatedOrder.total ?? currentLastOrder.total,
             })
           } catch (err: unknown) {
             logger.error("Error actualizando ultimo pedido en tiempo real", err)
@@ -171,7 +180,7 @@ export function useLastOrder() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [clearLastOrder, lastOrder, setLastOrder])
+  }, [channelKey, clearLastOrder, lastOrder?.id, setLastOrder])
 
   return { activeOrder, lastOrder, isChecking: isChecking || isPending, syncOrder }
 }
