@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
 import { useCartStore } from "@/store/cartStore"
 import type { StoredOrder } from "@/types/cart-store"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
@@ -104,6 +105,8 @@ export function useLastOrder() {
 
       try {
         await syncOrderWithRetry()
+      } catch (err: unknown) {
+        logger.error("Error sincronizando ultimo pedido", err)
       } finally {
         setIsChecking(false)
       }
@@ -127,36 +130,40 @@ export function useLastOrder() {
           filter: `id=eq.${lastOrder.id}`,
         },
         async (payload) => {
-          const updatedOrder = payload.new as Partial<{
-            status_id: number | null
-            created_at: string
-            qr_code_id: number
-            table_id: number
-            restaurant_id: number
-            total: number
-          }>
+          try {
+            const updatedOrder = payload.new as Partial<{
+              status_id: number | null
+              created_at: string
+              qr_code_id: number
+              table_id: number
+              restaurant_id: number
+              total: number
+            }>
 
-          if (updatedOrder.status_id === 3) {
-            clearLastOrder()
-            return
+            if (updatedOrder.status_id === 3) {
+              clearLastOrder()
+              return
+            }
+
+            const nextStatusId = updatedOrder.status_id ?? lastOrder.statusId
+            const nextStatusName =
+              nextStatusId !== lastOrder.statusId
+                ? await getOrderStatusNameById(nextStatusId)
+                : lastOrder.statusName
+
+            setLastOrder({
+              ...lastOrder,
+              statusId: nextStatusId,
+              statusName: nextStatusName,
+              createdAt: updatedOrder.created_at ?? lastOrder.createdAt,
+              qrCodeId: updatedOrder.qr_code_id ?? lastOrder.qrCodeId,
+              tableId: updatedOrder.table_id ?? lastOrder.tableId,
+              restaurantId: updatedOrder.restaurant_id ?? lastOrder.restaurantId,
+              total: updatedOrder.total ?? lastOrder.total,
+            })
+          } catch (err: unknown) {
+            logger.error("Error actualizando ultimo pedido en tiempo real", err)
           }
-
-          const nextStatusId = updatedOrder.status_id ?? lastOrder.statusId
-          const nextStatusName =
-            nextStatusId !== lastOrder.statusId
-              ? await getOrderStatusNameById(nextStatusId)
-              : lastOrder.statusName
-
-          setLastOrder({
-            ...lastOrder,
-            statusId: nextStatusId,
-            statusName: nextStatusName,
-            createdAt: updatedOrder.created_at ?? lastOrder.createdAt,
-            qrCodeId: updatedOrder.qr_code_id ?? lastOrder.qrCodeId,
-            tableId: updatedOrder.table_id ?? lastOrder.tableId,
-            restaurantId: updatedOrder.restaurant_id ?? lastOrder.restaurantId,
-            total: updatedOrder.total ?? lastOrder.total,
-          })
         }
       )
       .subscribe()
