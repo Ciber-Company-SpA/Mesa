@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useCache } from "@/hooks/useCache"
+
+type RestaurantIdCache = {
+  restaurantId: number
+}
 
 export function useRestaurantId() {
-  const [restaurantId, setRestaurantId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const { run: loadWithRetry, isPending } = useOfflineRetry(async () => {
+  const fetchRestaurantId = useCallback(async (): Promise<RestaurantIdCache> => {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError) throw userError
@@ -21,25 +22,21 @@ export function useRestaurantId() {
 
     if (error) throw error
 
-    setRestaurantId(profile.restaurant_id)
-    setError("")
-  })
+    return { restaurantId: profile.restaurant_id }
+  }, [])
 
-  useEffect(() => {
-    async function load() {
-      try {
-        await loadWithRetry()
-      } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error obteniendo restaurante", err)
-        setError("No se pudo obtener el restaurante")
-      } finally {
-        setLoading(false)
-      }
-    }
+  const { data, isLoading, isPendingRetry, error } = useCache<RestaurantIdCache>(
+    "restaurant-id",
+    fetchRestaurantId
+  )
 
-    load()
-  }, [loadWithRetry])
+  if (error) {
+    logger.error("Error obteniendo restaurante", error)
+  }
 
-  return { restaurantId, loading: loading || isPending, error }
+  return {
+    restaurantId: data?.restaurantId ?? null,
+    loading: isLoading || isPendingRetry,
+    error: error ? "No se pudo obtener el restaurante" : ""
+  }
 }

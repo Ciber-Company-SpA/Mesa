@@ -1,55 +1,46 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { useCache } from "@/hooks/useCache"
 import type { Product } from "@/types/product"
 
 export function useProducts() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const fetchProducts = useCallback(async (): Promise<Product[]> => {
+    const { data, error } = await supabase
+      .from("products")
+      .select(`
+        *,
+        categories (
+          category_name
+        ),
+        product_status (
+          id,
+          status_name
+        )
+      `)
+      .eq("restaurant_id", restaurantId)
 
-  useEffect(() => {
-    if (!restaurantId) return
+    if (error) throw error
 
-    async function loadProducts() {
-      try {
-        setLoading(true)
-        setError("")
-
-        const { data, error } = await supabase
-          .from("products")
-          .select(`
-            *,
-            categories (
-              category_name
-            ),
-            product_status (
-              id,
-              status_name
-            )
-          `)
-          .eq("restaurant_id", restaurantId)
-
-        if (error) throw error
-
-        setProducts(data || [])
-      } catch (err: unknown) {
-        logger.error("Error cargando productos", err)
-        setError("Error al cargar productos")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadProducts()
+    return data || []
   }, [restaurantId])
 
+  const { data, isLoading, isPendingRetry, error } = useCache<Product[]>(
+    `products-${restaurantId ?? "pending"}`,
+    fetchProducts,
+    { enabled: Boolean(restaurantId) }
+  )
+
+  if (error) {
+    logger.error("Error cargando productos", error)
+  }
+
   return {
-    products,
-    loading: loadingId || loading,
-    error: idError || error
+    products: data ?? [],
+    loading: loadingId || isLoading || isPendingRetry,
+    error: idError || (error ? "Error al cargar productos" : "")
   }
 }

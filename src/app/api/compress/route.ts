@@ -13,12 +13,11 @@ export async function POST(req: NextRequest) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer); // ✅ Buffer en lugar de Uint8Array
+  const buffer = Buffer.from(arrayBuffer);
 
   try {
-    // toBuffer() retorna Uint8Array — convertir explícitamente a Buffer
     const compressedUint8 = await tinify.fromBuffer(buffer).toBuffer();
-    const compressed = Buffer.from(compressedUint8); 
+    const compressed = Buffer.from(compressedUint8);
 
     return new NextResponse(compressed, {
       headers: {
@@ -28,7 +27,9 @@ export async function POST(req: NextRequest) {
         "X-Compressed-Size": compressed.length.toString(),
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error compressing image";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,40 +1,35 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
+import { useCache } from "@/hooks/useCache"
 import type { ProductVariant } from "@/types/product-variant"
 
 export function useProductVariants(productId: number | null) {
-  const [variants, setVariants] = useState<ProductVariant[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const fetchVariants = useCallback(async (): Promise<ProductVariant[]> => {
+    const { data, error } = await supabase
+      .from("product_variants")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: true })
 
-  useEffect(() => {
-    if (!productId) return
+    if (error) throw error
 
-    async function loadVariants() {
-      try {
-        setLoading(true)
-        setError("")
-
-        const { data, error } = await supabase
-          .from("product_variants")
-          .select("*")
-          .eq("product_id", productId)
-          .order("created_at", { ascending: true })
-
-        if (error) throw error
-
-        setVariants(data || [])
-      } catch (err) {
-        logger.error("Error cargando variantes", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadVariants()
+    return data || []
   }, [productId])
 
-  return { variants, loading, error }
+  const { data, isLoading, isPendingRetry, error } = useCache<ProductVariant[]>(
+    `product-variants-${productId ?? "pending"}`,
+    fetchVariants,
+    { enabled: Boolean(productId) }
+  )
+
+  if (error) {
+    logger.error("Error cargando variantes", error)
+  }
+
+  return {
+    variants: data ?? [],
+    loading: isLoading || isPendingRetry,
+    error: error instanceof Error ? error.message : error ? "Error desconocido" : ""
+  }
 }

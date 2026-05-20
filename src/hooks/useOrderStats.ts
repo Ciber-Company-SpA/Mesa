@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useCache } from "@/hooks/useCache"
+
+type OrderStats = {
+  dailySales: number
+  completedOrders: number
+}
 
 export function useOrderStats() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
-  const [dailySales, setDailySales] = useState(0)
-  const [completedOrders, setCompletedOrders] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const todayKey = new Date().toISOString().slice(0, 10)
 
-  const { run: loadStatsWithRetry, isPending } = useOfflineRetry(async () => {
+  const fetchStats = useCallback(async (): Promise<OrderStats> => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -26,35 +28,27 @@ export function useOrderStats() {
     if (error) throw error
 
     const orders = data ?? []
-    setCompletedOrders(orders.length)
-    setDailySales(orders.reduce((sum, o) => sum + o.total, 0))
-    setError("")
-  })
 
-  useEffect(() => {
-    if (!restaurantId) return
-
-    async function loadStats() {
-      try {
-        setLoading(true)
-        setError("")
-        await loadStatsWithRetry()
-      } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error cargando estadísticas", err)
-        setError("Error al cargar estadísticas")
-      } finally {
-        setLoading(false)
-      }
+    return {
+      completedOrders: orders.length,
+      dailySales: orders.reduce((sum, order) => sum + order.total, 0),
     }
+  }, [restaurantId])
 
-    loadStats()
-  }, [loadStatsWithRetry, restaurantId])
+  const { data, isLoading, isPendingRetry, error } = useCache<OrderStats>(
+    `order-stats-${restaurantId ?? "pending"}-${todayKey}`,
+    fetchStats,
+    { enabled: Boolean(restaurantId) }
+  )
+
+  if (error) {
+    logger.error("Error cargando estadisticas", error)
+  }
 
   return {
-    dailySales,
-    completedOrders,
-    loading: loadingId || loading || isPending,
-    error: idError || error,
+    dailySales: data?.dailySales ?? 0,
+    completedOrders: data?.completedOrders ?? 0,
+    loading: loadingId || isLoading || isPendingRetry,
+    error: idError || (error ? "Error al cargar estadisticas" : ""),
   }
 }

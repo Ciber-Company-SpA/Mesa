@@ -1,41 +1,36 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
+import { useCache } from "@/hooks/useCache"
 import type { Product } from "@/types/product"
 
 export function useProductDetail(productId: number | null) {
-  const [product, setProduct] = useState<Product | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const fetchProduct = useCallback(async (): Promise<Product> => {
+    const { data, error } = await supabase
+      .from("products")
+      .select(`*, categories ( category_name )`)
+      .eq("id", productId)
+      .maybeSingle()
 
-  useEffect(() => {
-    if (!productId) return
+    if (error) throw error
+    if (!data) throw new Error("Producto no encontrado")
 
-    async function loadProduct() {
-      try {
-        setLoading(true)
-        setError("")
-
-        const { data, error } = await supabase
-          .from("products")
-          .select(`*, categories ( category_name )`)
-          .eq("id", productId)
-          .maybeSingle()
-
-        if (error) throw error
-        if (!data) throw new Error("Producto no encontrado")
-
-        setProduct(data)
-      } catch (err) {
-        logger.error("Error cargando producto", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadProduct()
+    return data
   }, [productId])
 
-  return { product, loading, error }
+  const { data, isLoading, isPendingRetry, error } = useCache<Product>(
+    `product-${productId ?? "pending"}`,
+    fetchProduct,
+    { enabled: Boolean(productId) }
+  )
+
+  if (error) {
+    logger.error("Error cargando producto", error)
+  }
+
+  return {
+    product: data,
+    loading: isLoading || isPendingRetry,
+    error: error instanceof Error ? error.message : error ? "Error desconocido" : ""
+  }
 }

@@ -1,86 +1,95 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import type { MenuData } from "@/types/menu"
 import { Category } from "@/types/category"
+import { useCache } from "@/hooks/useCache"
+
+const EMPTY_MENU: MenuData = {
+  restaurant: null,
+  categories: [],
+  products: [],
+  tableId: null,
+  tableNumber: null,
+}
 
 export function useMenuData(qrCode: string) {
-  const [data, setData] = useState<MenuData>({
-    restaurant: null,
-    categories: [],
-    products: [],
-    tableId: null,
-    tableNumber: null,
-  })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const fetcher = useCallback(async (): Promise<MenuData> => {
+    // 1. Obtener id del QR
+    const { data: qrData, error: qrError } = await supabase
+      .from("table_qr_codes")
+      .select("id")
+      .eq("qr_code", qrCode)
+      .single()
 
-  useEffect(() => {
-    if (!qrCode) return
+    if (qrError || !qrData) throw new Error("QR no válido")
 
-    async function fetchMenu() {
-      try {
-        setLoading(true)
-        setError("")
+    // 2. Obtener mesa con ese qr_code_id
+    const { data: tableData, error: tableError } = await supabase
+      .from("tables")
+      .select("id, table_number, restaurant_id")
+      .eq("qr_code_id", qrData.id)
+      .single()
 
-        // 1. Obtener id del QR
-        const { data: qrData, error: qrError } = await supabase
-          .from("table_qr_codes")
-          .select("id")
-          .eq("qr_code", qrCode)
-          .single()
+    if (tableError || !tableData) throw new Error("Mesa no encontrada")
 
-        if (qrError || !qrData) throw new Error("QR no válido")
+    const { restaurant_id, table_number } = tableData
 
-        // 2. Obtener mesa con ese qr_code_id
-        const { data: tableData, error: tableError } = await supabase
-          .from("tables")
-          .select("id, table_number, restaurant_id")
-          .eq("qr_code_id", qrData.id)
-          .single()
+    // 3. Restaurante, productos y categorías en paralelo
+    const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
+      supabase
+        .from("restaurants")
+        .select("id, restaurant_name, restaurant_logo")
+        .eq("id", restaurant_id)
+        .single(),
+      supabase
+        .from("products")
+        .select(`*, categories ( category_name )`)
+        .eq("restaurant_id", restaurant_id),
+      supabase
+        .from("categories")
+        .select("id, category_name")
+        .eq("restaurant_id", restaurant_id),
+    ])
 
-        if (tableError || !tableData) throw new Error("Mesa no encontrada")
+    if (restaurantRes.error) throw restaurantRes.error
+    if (productsRes.error) throw productsRes.error
+    if (categoriesRes.error) throw categoriesRes.error
 
-        const { restaurant_id, table_number } = tableData
-
-        // 3. Restaurante, productos y categorías en paralelo
-        const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
-          supabase
-            .from("restaurants")
-            .select("id, restaurant_name, restaurant_logo")
-            .eq("id", restaurant_id)
-            .single(),
-          supabase
-            .from("products")
-            .select(`*, categories ( category_name )`)
-            .eq("restaurant_id", restaurant_id),
-          supabase
-            .from("categories")
-            .select("id, category_name")
-            .eq("restaurant_id", restaurant_id),
-        ])
-
-        if (restaurantRes.error) throw restaurantRes.error
-        if (productsRes.error) throw productsRes.error
-        if (categoriesRes.error) throw categoriesRes.error
-
-        setData({
-          restaurant: restaurantRes.data,
-          products: productsRes.data ?? [],
-          categories: (categoriesRes.data ?? []) as Category[],
-          tableId: tableData.id,
-          tableNumber: table_number,
-        })
-      } catch (err: unknown) {
-        logger.error("Error cargando menú", err)
-        setError("No se pudo cargar el menú")
-      } finally {
-        setLoading(false)
-      }
+    return {
+      restaurant: restaurantRes.data,
+      products: productsRes.data ?? [],
+      categories: (categoriesRes.data ?? []) as Category[],
+      tableId: tableData.id,
+      tableNumber: table_number,
     }
-
-    fetchMenu()
   }, [qrCode])
 
-  return { ...data, loading, error }
+  const {
+    data,
+    isFromCache,
+    isLoading,
+    isPendingRetry,
+    error: cacheError,
+    refresh,
+    cancel,
+  } = useCache<MenuData>(
+    `menu-${qrCode}`,    // clave única por QR
+    fetcher,
+    { ttl: 1000 * 60 * 60 } // cache válido 1 hora
+  )
+
+  if (cacheError) {
+    logger.error("Error cargando menú", cacheError)
+  }
+
+  return {
+    ...(data ?? EMPTY_MENU),
+    loading: isLoading,
+    error: cacheError ? "No se pudo cargar el menú" : "",
+    isFromCache,    // true → mostrar banner "modo offline"
+    isPendingRetry, // true → mostrar spinner de reintentando...
+    refresh,
+    cancel,
+  }
 }

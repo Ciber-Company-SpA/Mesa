@@ -1,37 +1,33 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
-import type { Restaurant } from "@/types/restaurant" 
-
+import { useCache } from "@/hooks/useCache"
+import type { Restaurant } from "@/types/restaurant"
 
 export function useRestaurant() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (loadingId || restaurantId === null) return
+  const fetchRestaurant = useCallback(async (): Promise<Restaurant> => {
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("id, restaurant_name, restaurant_logo")
+      .eq("id", restaurantId)
+      .single()
 
-    async function load() {
-      try {
-        const { data, error } = await supabase
-          .from("restaurants")
-          .select("id, restaurant_name, restaurant_logo")
-          .eq("id", restaurantId)
-          .single()
+    if (error) throw error
 
-        if (error) throw error
-        setRestaurant(data)
-      } catch (err: unknown) {
-        setError("No se pudo obtener el restaurante")
-      } finally {
-        setLoading(false)
-      }
-    }
+    return data
+  }, [restaurantId])
 
-    load()
-  }, [restaurantId, loadingId])
+  const { data, isLoading, isPendingRetry, error } = useCache<Restaurant>(
+    `restaurant-${restaurantId ?? "pending"}`,
+    fetchRestaurant,
+    { enabled: Boolean(restaurantId) }
+  )
 
-  return { restaurant, loading, error }
+  return {
+    restaurant: data,
+    loading: loadingId || isLoading || isPendingRetry,
+    error: error ? "No se pudo obtener el restaurante" : ""
+  }
 }

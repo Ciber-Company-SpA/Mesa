@@ -1,18 +1,14 @@
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useCache } from "@/hooks/useCache"
 import type { Order } from "@/types/order"
 
 export function useOrders({ limit = 30 }: { limit?: number } = {}) {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const { run: loadOrdersWithRetry, isPending } = useOfflineRetry(async () => {
+  const fetchOrders = useCallback(async (): Promise<Order[]> => {
     const { data, error } = await supabase
       .from("orders")
       .select("id, table_id, total, status_id, created_at, order_status(status_name), tables(table_number), order_qr_codes(qr_code, qr_active)")
@@ -23,34 +19,22 @@ export function useOrders({ limit = 30 }: { limit?: number } = {}) {
 
     if (error) throw error
 
-    setOrders((data ?? []) as unknown as Order[])
-    setError("")
-  })
+    return (data ?? []) as unknown as Order[]
+  }, [limit, restaurantId])
 
-  useEffect(() => {
-    if (!restaurantId) return
+  const { data, isLoading, isPendingRetry, error } = useCache<Order[]>(
+    `orders-${restaurantId ?? "pending"}-${limit}`,
+    fetchOrders,
+    { enabled: Boolean(restaurantId) }
+  )
 
-    async function loadOrders() {
-      try {
-        setLoading(true)
-        setError("")
-
-        await loadOrdersWithRetry()
-      } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error cargando pedidos", err)
-        setError("Error al cargar pedidos")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadOrders()
-  }, [loadOrdersWithRetry, restaurantId])
+  if (error) {
+    logger.error("Error cargando pedidos", error)
+  }
 
   return {
-    orders,
-    loading: loadingId || loading || isPending,
-    error: idError || error,
+    orders: data ?? [],
+    loading: loadingId || isLoading || isPendingRetry,
+    error: idError || (error ? "Error al cargar pedidos" : ""),
   }
 }
