@@ -1,10 +1,13 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useCache } from "@/hooks/useCache"
+import { useCache, writeCache } from "@/hooks/useCache"
 import type { ProductVariant } from "@/types/product-variant"
 
-export function useProductVariants(productId: number | null) {
+export function useProductVariants(
+  productId: number | null,
+  fallbackVariants?: ProductVariant[]
+) {
   const fetchVariants = useCallback(async (): Promise<ProductVariant[]> => {
     const { data, error } = await supabase
       .from("product_variants")
@@ -23,13 +26,22 @@ export function useProductVariants(productId: number | null) {
     { enabled: Boolean(productId) }
   )
 
-  if (error) {
+  useEffect(() => {
+    if (!productId || !fallbackVariants) return
+
+    writeCache(`product-variants-${productId}`, fallbackVariants)
+  }, [fallbackVariants, productId])
+
+  const hasFallback = fallbackVariants !== undefined
+  const variants = data ?? fallbackVariants ?? []
+
+  if (error && !hasFallback) {
     logger.error("Error cargando variantes", error)
   }
 
   return {
-    variants: data ?? [],
-    loading: isLoading || isPendingRetry,
-    error: error instanceof Error ? error.message : error ? "Error desconocido" : ""
+    variants,
+    loading: !hasFallback && variants.length === 0 && (isLoading || isPendingRetry),
+    error: hasFallback ? "" : error instanceof Error ? error.message : error ? "Error desconocido" : ""
   }
 }

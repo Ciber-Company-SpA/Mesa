@@ -1,9 +1,9 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import type { MenuData } from "@/types/menu"
 import { Category } from "@/types/category"
-import { useCache } from "@/hooks/useCache"
+import { useCache, writeCache } from "@/hooks/useCache"
 
 const EMPTY_MENU: MenuData = {
   restaurant: null,
@@ -44,7 +44,7 @@ export function useMenuData(qrCode: string) {
         .single(),
       supabase
         .from("products")
-        .select(`*, categories ( category_name )`)
+        .select(`*, categories ( category_name ), product_variants (*)`)
         .eq("restaurant_id", restaurant_id),
       supabase
         .from("categories")
@@ -82,6 +82,18 @@ export function useMenuData(qrCode: string) {
   if (cacheError) {
     logger.error("Error cargando menú", cacheError)
   }
+
+  useEffect(() => {
+    if (!data) return
+
+    data.products.forEach((product) => {
+      writeCache(`product-${product.id}`, product)
+
+      if (Array.isArray(product.product_variants)) {
+        writeCache(`product-variants-${product.id}`, product.product_variants)
+      }
+    })
+  }, [data])
 
   return {
     ...(data ?? EMPTY_MENU),

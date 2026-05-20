@@ -1,10 +1,10 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useCache } from "@/hooks/useCache"
+import { useCache, writeCache } from "@/hooks/useCache"
 import type { Product } from "@/types/product"
 
-export function useProductDetail(productId: number | null) {
+export function useProductDetail(productId: number | null, fallbackProduct?: Product | null) {
   const fetchProduct = useCallback(async (): Promise<Product> => {
     const { data, error } = await supabase
       .from("products")
@@ -24,13 +24,21 @@ export function useProductDetail(productId: number | null) {
     { enabled: Boolean(productId) }
   )
 
-  if (error) {
+  useEffect(() => {
+    if (!fallbackProduct) return
+
+    writeCache(`product-${fallbackProduct.id}`, fallbackProduct)
+  }, [fallbackProduct])
+
+  const product = data ?? fallbackProduct ?? null
+
+  if (error && !fallbackProduct) {
     logger.error("Error cargando producto", error)
   }
 
   return {
-    product: data,
-    loading: isLoading || isPendingRetry,
-    error: error instanceof Error ? error.message : error ? "Error desconocido" : ""
+    product,
+    loading: !product && (isLoading || isPendingRetry),
+    error: product ? "" : error instanceof Error ? error.message : error ? "Error desconocido" : ""
   }
 }

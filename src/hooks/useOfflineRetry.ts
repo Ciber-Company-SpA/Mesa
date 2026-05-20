@@ -108,13 +108,23 @@ export function useOfflineRetry<T = void>(
       }
     }
 
+    function retryWhenVisible() {
+      if (document.visibilityState === "visible") {
+        retry()
+      }
+    }
+
     const delay = computeDelay(attempt, { initialDelay, factor, maxDelay })
     const timeoutId = window.setTimeout(retry, delay)
     window.addEventListener("online", retry)
+    window.addEventListener("focus", retry)
+    document.addEventListener("visibilitychange", retryWhenVisible)
 
     return () => {
       window.clearTimeout(timeoutId)
       window.removeEventListener("online", retry)
+      window.removeEventListener("focus", retry)
+      document.removeEventListener("visibilitychange", retryWhenVisible)
     }
   }, [attempt, factor, initialDelay, isPending, maxDelay, safeSetPending])
 
@@ -122,6 +132,7 @@ export function useOfflineRetry<T = void>(
     try {
       const result = await fnRef.current()
       setAttempt(0)
+      safeSetPending(false)
       return result
     } catch (err) {
       if (isNetworkError(err)) {

@@ -33,15 +33,16 @@ export default function ProductDetailPage({
   const isProgrammaticScrollRef = useRef(false)
 
   const realProductId = decodeId(productId)
-  const { product, loading, error } = useProductDetail(realProductId)
-  const { restaurant, tableId } = useMenuData(id)
+  const { restaurant, tableId, products } = useMenuData(id)
+  const menuProduct = products.find((item) => item.id === realProductId)
+  const { product, loading, error } = useProductDetail(realProductId, menuProduct)
   const { activeOrder, syncOrder } = useLastOrder()
 
   const {
     variants,
     loading: loadingVariants,
     error: variantsError,
-  } = useProductVariants(realProductId)
+  } = useProductVariants(realProductId, product?.product_variants ?? menuProduct?.product_variants)
 
   const { syncCart } = useCartSync(product?.restaurant_id ?? null)
 

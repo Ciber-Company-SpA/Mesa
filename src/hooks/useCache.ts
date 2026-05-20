@@ -35,7 +35,7 @@ function readCache<T>(key: string, ttl?: number): T | null {
   }
 }
 
-function writeCache<T>(key: string, data: T): void {
+export function writeCache<T>(key: string, data: T): void {
   try {
     if (typeof window === "undefined") return
 
@@ -115,7 +115,7 @@ export function useCache<T>(
   useEffect(() => {
     if (!enabled) return
 
-    function handleOnline() {
+    function refreshFromCache() {
       if (!isFromCache) return
 
       fetcher()
@@ -123,14 +123,28 @@ export function useCache<T>(
           writeCache(key, fresh)
           setData(fresh)
           setIsFromCache(false)
+          setError(null)
         })
         .catch(() => {
           // Keep the cached data visible if the background refresh fails.
         })
     }
 
-    window.addEventListener("online", handleOnline)
-    return () => window.removeEventListener("online", handleOnline)
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") {
+        refreshFromCache()
+      }
+    }
+
+    window.addEventListener("online", refreshFromCache)
+    window.addEventListener("focus", refreshFromCache)
+    document.addEventListener("visibilitychange", refreshWhenVisible)
+
+    return () => {
+      window.removeEventListener("online", refreshFromCache)
+      window.removeEventListener("focus", refreshFromCache)
+      document.removeEventListener("visibilitychange", refreshWhenVisible)
+    }
   }, [enabled, key, fetcher, isFromCache])
 
   const refresh = useCallback(() => {
