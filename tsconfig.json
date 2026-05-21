@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -19,8 +22,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "allowJs": true
   },
   "include": [
     "next-env.d.ts",
@@ -29,6 +35,8 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "src/hooks/xd", "src/hooks/useOrderList ts"  ],
-  "exclude": ["node_modules"]
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

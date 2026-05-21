@@ -29,10 +29,14 @@ export function useProducts() {
   }, [restaurantId])
 
   const { data, isLoading, isPendingRetry, error } = useCache<Product[]>(
-    `products-${restaurantId ?? "pending"}`,
-    fetchProducts,
-    { enabled: Boolean(restaurantId), revalidateOnMount: true }
-  )
+  `products-${restaurantId ?? "pending"}`,
+  fetchProducts,
+  {
+    enabled: Boolean(restaurantId),
+    revalidateOnMount: true,
+    ttl: 5 * 60 * 1000, // 5 minutos
+  }
+)
 
   if (error) {
     logger.error("Error cargando productos", error)

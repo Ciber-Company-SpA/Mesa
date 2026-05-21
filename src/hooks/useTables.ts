@@ -29,10 +29,14 @@ export function useTables() {
   }, [restaurantId])
 
   const { data, isLoading, isPendingRetry, error } = useCache<Table[]>(
-    `tables-${restaurantId ?? "pending"}`,
-    fetchTables,
-    { enabled: Boolean(restaurantId), revalidateOnMount: true }
-  )
+  `tables-${restaurantId ?? "pending"}`,
+  fetchTables,
+  {
+    enabled: Boolean(restaurantId),
+    revalidateOnMount: true,
+    ttl: 10 * 60 * 1000, // 10 minutos
+  }
+)
 
   if (error) {
     logger.error("Error cargando mesas", error)

@@ -46,6 +46,27 @@ export function writeCache<T>(key: string, data: T): void {
   }
 }
 
+export function invalidateCache(keyOrPrefix: string): void {
+  try {
+    if (typeof window === "undefined") return
+
+    if (keyOrPrefix.endsWith(":*")) {
+      const prefix = keyOrPrefix.slice(0, -2)
+      const keys = Object.keys(localStorage)
+      keys.forEach((k) => {
+        if (k.startsWith(prefix)) {
+          localStorage.removeItem(k)
+        }
+      })
+      return
+    }
+
+    localStorage.removeItem(keyOrPrefix)
+  } catch {
+  }
+}
+
+
 export function useCache<T>(
   key: string,
   fetcher: () => Promise<T>,
