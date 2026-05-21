@@ -21,7 +21,10 @@ export function useDeleteVariant() {
             await fetch("/api/cloudinary/delete", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ publicId: variantImagePublicId }),
+              body: JSON.stringify({
+                publicId: variantImagePublicId,
+                variantId: variantId,
+              }),
             })
           }
 

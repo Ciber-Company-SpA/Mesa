@@ -20,14 +20,17 @@ export function useDeleteProduct() {
     if (!pendingDelete) return false
 
     if (pendingDelete.productImagePublicId) {
-      const response = await fetch("/api/cloudinary/delete", {
+    const response = await fetch("/api/cloudinary/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publicId: pendingDelete.productImagePublicId }),
-      })
+        body: JSON.stringify({
+          publicId: pendingDelete.productImagePublicId,
+          productId: pendingDelete.productId,
+        }),
+    })
 
-      if (!response.ok) throw new Error("Error al eliminar imagen")
-    }
+    if (!response.ok) throw new Error("Error al eliminar imagen")
+  }
 
     const { error } = await supabase
       .from("products")

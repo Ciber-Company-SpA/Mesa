@@ -21,61 +21,71 @@ export function useEditVariant(variant: ProductVariant) {
   const [error, setError] = useState("")
 
   async function updateVariant() {
-    if (loading) return
+  if (loading) return
 
-    try {
-      setLoading(true)
-      setError("")
+  try {
+    setLoading(true)
+    setError("")
 
-      const cleanName = variantName.trim()
-      const cleanPrice = Number(variantPrice)
+    const cleanName = variantName.trim()
+    const cleanPrice = Number(variantPrice)
 
-      if (!cleanName) throw new Error("El nombre de la variante es obligatorio")
-      if (!cleanPrice || cleanPrice <= 0) throw new Error("El precio debe ser mayor a 0")
+    if (!cleanName) throw new Error("El nombre de la variante es obligatorio")
+    if (!cleanPrice || cleanPrice <= 0) throw new Error("El precio debe ser mayor a 0")
 
-      let imageUrl = currentImageUrl
-      let imagePublicId = currentImagePublicId
+    let imageUrl = currentImageUrl
+    let imagePublicId = currentImagePublicId
+    let oldPublicIdToDelete: string | null = null
 
-      if (variantImage) {
-        const uploaded = await uploadImage(
-          variantImage,
-          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
-        )
+    // 1. Subir imagen nueva (si la hay), pero NO borrar la vieja todavía
+    if (variantImage) {
+      const uploaded = await uploadImage(
+        variantImage,
+        process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
+      )
 
-        if (uploaded) {
-          if (currentImagePublicId) {
-            await fetch("/api/cloudinary/delete", {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ publicId: currentImagePublicId }),
-            })
-          }
-
-          imageUrl = uploaded.secure_url
-          imagePublicId = uploaded.public_id
+      if (uploaded) {
+        if (currentImagePublicId) {
+          oldPublicIdToDelete = currentImagePublicId
         }
+        imageUrl = uploaded.secure_url
+        imagePublicId = uploaded.public_id
       }
-
-      const { error } = await supabase
-        .from("product_variants")
-        .update({
-          variant_name: cleanName,
-          variant_price: cleanPrice,
-          variant_image: imageUrl,
-          variant_image_public_id: imagePublicId,
-        })
-        .eq("id", variant.id)
-
-      if (error) throw error
-
-      return true
-    } catch (err: unknown) {
-      logger.error("Error actualizando variante", err)
-      setError(getErrorMessage(err, "Error al guardar variante"))
-      return false
-    } finally {
-      setLoading(false)
     }
+
+    // 2. Actualizar la BD primero
+    const { error } = await supabase
+      .from("product_variants")
+      .update({
+        variant_name: cleanName,
+        variant_price: cleanPrice,
+        variant_image: imageUrl,
+        variant_image_public_id: imagePublicId,
+      })
+      .eq("id", variant.id)
+
+    if (error) throw error
+
+    // 3. Recién ahora borrar la imagen vieja
+    if (oldPublicIdToDelete) {
+      await fetch("/api/cloudinary/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicId: oldPublicIdToDelete,
+          variantId: variant.id,
+        }),
+      }).catch((err) => logger.warn("No se pudo borrar imagen vieja", err))
+    }
+
+    return true
+  } catch (err: unknown) {
+    logger.error("Error actualizando variante", err)
+    setError(getErrorMessage(err, "Error al guardar variante"))
+    return false
+  } finally {
+    setLoading(false)
+  }
   }
 
   return {
