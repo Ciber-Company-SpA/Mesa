@@ -21,7 +21,7 @@ export function useProductDetail(productId: number | null, fallbackProduct?: Pro
   const { data, isLoading, isPendingRetry, error } = useCache<Product>(
     `product-${productId ?? "pending"}`,
     fetchProduct,
-    { enabled: Boolean(productId) }
+    { enabled: Boolean(productId), revalidateOnMount: true }
   )
 
   useEffect(() => {

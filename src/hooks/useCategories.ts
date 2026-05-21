@@ -22,7 +22,7 @@ export function useCategories() {
   const { data, isLoading, isPendingRetry, error } = useCache<Category[]>(
     `categories-${restaurantId ?? "pending"}`,
     fetchCategories,
-    { enabled: Boolean(restaurantId) }
+    { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
 
   if (error) {

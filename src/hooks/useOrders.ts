@@ -25,7 +25,7 @@ export function useOrders({ limit = 30 }: { limit?: number } = {}) {
   const { data, isLoading, isPendingRetry, error } = useCache<Order[]>(
     `orders-${restaurantId ?? "pending"}-${limit}`,
     fetchOrders,
-    { enabled: Boolean(restaurantId) }
+    { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
 
   if (error) {

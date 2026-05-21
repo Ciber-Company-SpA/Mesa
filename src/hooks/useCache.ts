@@ -4,6 +4,7 @@ import { isNetworkError, useOfflineRetry } from "./useOfflineRetry"
 type CacheOptions = {
   ttl?: number
   enabled?: boolean
+  revalidateOnMount?: boolean
   initialDelay?: number
   factor?: number
   maxDelay?: number
@@ -48,7 +49,7 @@ export function writeCache<T>(key: string, data: T): void {
 export function useCache<T>(
   key: string,
   fetcher: () => Promise<T>,
-  { ttl, enabled = true, initialDelay, factor, maxDelay }: CacheOptions = {}
+  { ttl, enabled = true, revalidateOnMount = false, initialDelay, factor, maxDelay }: CacheOptions = {}
 ): CacheState<T> {
   const [data, setData] = useState<T | null>(() => (enabled ? readCache<T>(key, ttl) : null))
   const [isFromCache, setIsFromCache] = useState(() => enabled && data !== null)
@@ -94,6 +95,13 @@ export function useCache<T>(
         setIsLoading(false)
         setError(null)
       })
+
+      if (revalidateOnMount) {
+        run().catch((err) => {
+          if (!isNetworkError(err)) setError(err)
+        })
+      }
+
       return
     }
 
@@ -110,7 +118,7 @@ export function useCache<T>(
         setIsLoading(false)
       }
     })
-  }, [cancel, enabled, key, run, ttl])
+  }, [cancel, enabled, key, revalidateOnMount, run, ttl])
 
   useEffect(() => {
     if (!enabled) return

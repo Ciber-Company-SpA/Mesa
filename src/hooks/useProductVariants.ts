@@ -23,7 +23,7 @@ export function useProductVariants(
   const { data, isLoading, isPendingRetry, error } = useCache<ProductVariant[]>(
     `product-variants-${productId ?? "pending"}`,
     fetchVariants,
-    { enabled: Boolean(productId) }
+    { enabled: Boolean(productId), revalidateOnMount: true }
   )
 
   useEffect(() => {

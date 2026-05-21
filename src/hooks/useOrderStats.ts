@@ -38,7 +38,7 @@ export function useOrderStats() {
   const { data, isLoading, isPendingRetry, error } = useCache<OrderStats>(
     `order-stats-${restaurantId ?? "pending"}-${todayKey}`,
     fetchStats,
-    { enabled: Boolean(restaurantId) }
+    { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
 
   if (error) {

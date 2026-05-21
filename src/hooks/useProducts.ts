@@ -31,7 +31,7 @@ export function useProducts() {
   const { data, isLoading, isPendingRetry, error } = useCache<Product[]>(
     `products-${restaurantId ?? "pending"}`,
     fetchProducts,
-    { enabled: Boolean(restaurantId) }
+    { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
 
   if (error) {

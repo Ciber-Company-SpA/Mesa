@@ -20,7 +20,8 @@ export function useProductStatus() {
 
   const { data, isLoading, isPendingRetry, error } = useCache<ProductStatus[]>(
     "product-status",
-    fetchStatuses
+    fetchStatuses,
+    { revalidateOnMount: true }
   )
 
   if (error) {

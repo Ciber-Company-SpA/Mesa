@@ -31,7 +31,7 @@ export function useTables() {
   const { data, isLoading, isPendingRetry, error } = useCache<Table[]>(
     `tables-${restaurantId ?? "pending"}`,
     fetchTables,
-    { enabled: Boolean(restaurantId) }
+    { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
 
   if (error) {
