@@ -12,14 +12,10 @@ export function useRemoveBackground() {
       setError("")
 
       const formData = new FormData()
-      formData.append("image_file", file)
-      formData.append("size", "auto")
+      formData.append("image", file)
 
-      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+      const response = await fetch("/api/remove-background", {
         method: "POST",
-        headers: {
-          "X-Api-Key": process.env.NEXT_PUBLIC_REMOVEBG_API_KEY!,
-        },
         body: formData,
       })
 
