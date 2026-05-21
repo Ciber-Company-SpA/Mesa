@@ -15,23 +15,15 @@ export function useOrderStats() {
   const todayKey = new Date().toISOString().slice(0, 10)
 
   const fetchStats = useCallback(async (): Promise<OrderStats> => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
     const { data, error } = await supabase
-      .from("orders")
-      .select("total")
-      .eq("restaurant_id", restaurantId)
-      .eq("status_id", 3)
-      .gte("created_at", today.toISOString())
+       .rpc("get_daily_order_stats", { restaurant_id_param: restaurantId })
+       .single<{ daily_sales: number; completed_orders: number }>()
 
     if (error) throw error
 
-    const orders = data ?? []
-
     return {
-      completedOrders: orders.length,
-      dailySales: orders.reduce((sum, order) => sum + order.total, 0),
+      dailySales: Number(data?.daily_sales ?? 0),
+      completedOrders: Number(data?.completed_orders ?? 0),
     }
   }, [restaurantId])
 
