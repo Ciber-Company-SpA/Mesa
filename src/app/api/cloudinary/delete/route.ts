@@ -1,7 +1,6 @@
 import { v2 as cloudinary } from "cloudinary"
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -12,18 +11,7 @@ cloudinary.config({
 const PUBLIC_ID_REGEX = /^[a-zA-Z0-9_\-/.]+$/
 
 export async function DELETE(req: NextRequest) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {},
-      },
-    }
-  )
-
+  const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -88,7 +76,6 @@ export async function DELETE(req: NextRequest) {
       { status: 403 }
     )
   }
-
 
   const result = await cloudinary.uploader.destroy(publicId)
   return NextResponse.json(result)

@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   // 1. Verificar sesión de Supabase
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {},
-      },
-    }
-  )
-
+  const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -24,7 +12,6 @@ export async function POST(request: NextRequest) {
   // 2. Leer el archivo del FormData
   const formData = await request.formData()
   const file = formData.get("image")
-
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Falta la imagen" }, { status: 400 })
   }
@@ -34,7 +21,6 @@ export async function POST(request: NextRequest) {
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: "Imagen demasiado grande" }, { status: 400 })
   }
-
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
   if (!allowedTypes.includes(file.type)) {
     return NextResponse.json({ error: "Tipo de archivo no permitido" }, { status: 400 })
@@ -61,7 +47,6 @@ export async function POST(request: NextRequest) {
       { status: 502 }
     )
   }
-
 
   const imageBuffer = await response.arrayBuffer()
   return new NextResponse(imageBuffer, {

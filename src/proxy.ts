@@ -13,8 +13,7 @@ export async function proxy(req: NextRequest) {
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          // Importante: cuando Supabase refresca el token, hay que escribir
-          // las cookies nuevas en la respuesta para que el navegador las reciba
+         
           cookiesToSet.forEach(({ name, value }) =>
             req.cookies.set(name, value)
           )
