@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { BackButton } from "@/components/ui/BackButton"
+import { Pagination } from "@/components/ui/Pagination"
 import { encodeId } from "@/lib/hashids"
 import { useProductList } from "@/hooks/useProductList"
 
@@ -43,9 +44,11 @@ function getStatusActions(statusId: number) {
 }
 
 export default function ProductsPage() {
+  const [currentPage, setCurrentPage] = useState(1)
   const {
     products,
     totalProducts,
+    totalPages,
     loading,
     deleting,
     updatingStatusId,
@@ -53,7 +56,7 @@ export default function ProductsPage() {
     deleteProduct,
     updateProductStatus,
     deleteDialog,
-  } = useProductList()
+  } = useProductList({ page: currentPage, pageSize: 12 })
   const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null)
 
   return (
@@ -130,125 +133,134 @@ export default function ProductsPage() {
           )}
 
           {!loading && !error && products.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {products.map((product) => (
-                <article
-                  key={product.id}
-                  className="group relative flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
-                >
-                  <div className="absolute right-6 top-6 z-10">
-                    <button
-                      type="button"
-                      disabled={updatingStatusId === product.id}
-                      onClick={() => {
-                        setOpenMenuProductId((currentId) =>
-                          currentId === product.id ? null : product.id
-                        )
-                      }}
-                      className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-bold leading-none text-stone-700 shadow-lg ring-1 ring-stone-200 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 ${
-                        openMenuProductId === product.id
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                      }`}
-                      aria-label="Opciones de producto"
-                    >
-                      ...
-                    </button>
-
-                    {openMenuProductId === product.id && (
-                      <div className="absolute right-0 top-11 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white py-2 text-sm font-semibold text-stone-700 shadow-2xl shadow-stone-900/15">
-                        {getStatusActions(product.status_id).map((action) => (
-                          <button
-                            key={action.nextStatusId}
-                            type="button"
-                            disabled={updatingStatusId === product.id}
-                            onClick={async () => {
-                              const success = await updateProductStatus(product.id, action.nextStatusId)
-                              if (success) setOpenMenuProductId(null)
-                            }}
-                            className="block w-full px-4 py-3 text-left transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-200">
-                    {product.product_image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.product_image}
-                        alt={product.product_name}
-                        className="h-full max-h-40 w-full object-contain p-3"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-stone-400">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
-                          📷
-                        </div>
-                        <p className="mt-3 text-sm font-semibold">
-                          Sin imagen
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex min-w-0 flex-1 flex-col">
-                    <div className="mb-4 flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <h2 className="truncate text-lg font-bold text-stone-950">
-                          {product.product_name}
-                        </h2>
-                        <p className="mt-1 truncate text-sm text-stone-600">
-                          {product.categories.category_name}
-                        </p>
-                      </div>
-
-                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                        statusBadgeClasses[product.status_id] ?? "bg-stone-100 text-stone-600"
-                      }`}>
-                        {getStatusLabel(product.status_id, product.product_status?.status_name)}
-                      </span>
-                    </div>
-
-                    {product.product_description && (
-                      <p className="mb-4 line-clamp-2 text-sm leading-6 text-stone-600">
-                        {product.product_description}
-                      </p>
-                    )}
-
-                    <div className="mb-4 rounded-3xl bg-stone-50 px-4 py-3 ring-1 ring-stone-200">
-                      <p className="text-sm text-stone-600">Precio</p>
-                      <p className="mt-1 text-2xl font-bold tracking-tight text-stone-950">
-                        ${product.product_price.toLocaleString("es-CL")}
-                      </p>
-                    </div>
-
-                    <div className="mt-auto grid grid-cols-2 gap-2">
-                      <Link
-                        href={`/admin/products/${encodeId(product.id)}/edit`}
-                        className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-                      >
-                        Editar
-                      </Link>
-
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {products.map((product) => (
+                  <article
+                    key={product.id}
+                    className="group relative flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                  >
+                    <div className="absolute right-6 top-6 z-10">
                       <button
                         type="button"
-                        disabled={deleting}
-                        onClick={async () => {
-                          await deleteProduct(product.id, product.product_image_public_id)
+                        disabled={updatingStatusId === product.id}
+                        onClick={() => {
+                          setOpenMenuProductId((currentId) =>
+                            currentId === product.id ? null : product.id
+                          )
                         }}
-                        className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-bold leading-none text-stone-700 shadow-lg ring-1 ring-stone-200 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                          openMenuProductId === product.id
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        }`}
+                        aria-label="Opciones de producto"
                       >
-                        Eliminar
+                        ...
                       </button>
+
+                      {openMenuProductId === product.id && (
+                        <div className="absolute right-0 top-11 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white py-2 text-sm font-semibold text-stone-700 shadow-2xl shadow-stone-900/15">
+                          {getStatusActions(product.status_id).map((action) => (
+                            <button
+                              key={action.nextStatusId}
+                              type="button"
+                              disabled={updatingStatusId === product.id}
+                              onClick={async () => {
+                                const success = await updateProductStatus(product.id, action.nextStatusId)
+                                if (success) setOpenMenuProductId(null)
+                              }}
+                              className="block w-full px-4 py-3 text-left transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+
+                    <div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-200">
+                      {product.product_image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.product_image}
+                          alt={product.product_name}
+                          className="h-full max-h-40 w-full object-contain p-3"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-stone-400">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                            📷
+                          </div>
+                          <p className="mt-3 text-sm font-semibold">
+                            Sin imagen
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex min-w-0 flex-1 flex-col">
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-lg font-bold text-stone-950">
+                            {product.product_name}
+                          </h2>
+                          <p className="mt-1 truncate text-sm text-stone-600">
+                            {product.categories.category_name}
+                          </p>
+                        </div>
+
+                        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                          statusBadgeClasses[product.status_id] ?? "bg-stone-100 text-stone-600"
+                        }`}>
+                          {getStatusLabel(product.status_id, product.product_status?.status_name)}
+                        </span>
+                      </div>
+
+                      {product.product_description && (
+                        <p className="mb-4 line-clamp-2 text-sm leading-6 text-stone-600">
+                          {product.product_description}
+                        </p>
+                      )}
+
+                      <div className="mb-4 rounded-3xl bg-stone-50 px-4 py-3 ring-1 ring-stone-200">
+                        <p className="text-sm text-stone-600">Precio</p>
+                        <p className="mt-1 text-2xl font-bold tracking-tight text-stone-950">
+                          ${product.product_price.toLocaleString("es-CL")}
+                        </p>
+                      </div>
+
+                      <div className="mt-auto grid grid-cols-2 gap-2">
+                        <Link
+                          href={`/admin/products/${encodeId(product.id)}/edit`}
+                          className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                        >
+                          Editar
+                        </Link>
+
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={async () => {
+                            await deleteProduct(product.id, product.product_image_public_id)
+                          }}
+                          className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                disabled={loading || deleting}
+              />
+            </>
           )}
         </section>
       </div>

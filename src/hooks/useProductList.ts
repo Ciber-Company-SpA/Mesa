@@ -10,8 +10,13 @@ const statusNames: Record<number, string> = {
   3: "Deshabilitado",
 }
 
-export function useProductList() {
-  const { products, loading, error } = useProducts()
+type UseProductListOptions = {
+  page?: number
+  pageSize?: number
+}
+
+export function useProductList({ page = 1, pageSize = 12 }: UseProductListOptions = {}) {
+  const { products, total, loading, error, refresh } = useProducts({ page, pageSize })
   const {
     deleteProduct,
     loading: deleting,
@@ -49,6 +54,7 @@ export function useProductList() {
 
     if (success) {
       setDeletedProductIds((prev) => [...prev, productId])
+      refresh()
     }
 
     return success
@@ -88,7 +94,8 @@ export function useProductList() {
 
   return {
     products: visibleProducts,
-    totalProducts: visibleProducts.length,
+    totalProducts: total - deletedProductIds.length,
+    totalPages: Math.max(1, Math.ceil((total - deletedProductIds.length) / pageSize)),
     loading,
     deleting,
     updatingStatusId,
