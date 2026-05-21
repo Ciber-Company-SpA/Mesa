@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useCartStore } from "@/store/cartStore"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
@@ -22,9 +22,12 @@ export function useOrderRegistration({ qrCode, onOrderCompleted }: UseOrderRegis
   const clearCart = useCartStore((state) => state.clear)
   const setLastOrder = useCartStore((state) => state.setLastOrder)
   const clearLastOrder = useCartStore((state) => state.clearLastOrder)
+
   const [isRegistered, setIsRegistered] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
-  const { run: checkRegisteredOrderWithRetry, isPending } = useOfflineRetry(async () => {
+  const [qrCodeId, setQrCodeId] = useState<number | null>(null)
+
+  const checkRegisteredOrder = useCallback(async () => {
     const { data: qrData, error: qrError } = await supabase
       .from("order_qr_codes")
       .select("id")
@@ -33,6 +36,8 @@ export function useOrderRegistration({ qrCode, onOrderCompleted }: UseOrderRegis
 
     if (qrError) throw qrError
     if (!qrData) return
+
+    setQrCodeId(qrData.id)
 
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -66,12 +71,15 @@ export function useOrderRegistration({ qrCode, onOrderCompleted }: UseOrderRegis
       })
       clearCart()
     }
-  })
+  }, [qrCode, clearCart, setLastOrder, clearLastOrder, onOrderCompleted])
 
+  const { run: checkRegisteredOrderWithRetry, isPending } = useOfflineRetry(checkRegisteredOrder)
+
+  // Check inicial al montar
   useEffect(() => {
     let isMounted = true
 
-    async function checkRegisteredOrder() {
+    async function initialCheck() {
       try {
         await checkRegisteredOrderWithRetry()
         if (isMounted) setIsOffline(false)
@@ -80,12 +88,11 @@ export function useOrderRegistration({ qrCode, onOrderCompleted }: UseOrderRegis
       }
     }
 
-    checkRegisteredOrder()
-    const intervalId = window.setInterval(checkRegisteredOrder, 2500)
+    initialCheck()
 
     function handleOnline() {
       setIsOffline(false)
-      checkRegisteredOrder()
+      initialCheck()
     }
 
     function handleOffline() {
@@ -97,11 +104,35 @@ export function useOrderRegistration({ qrCode, onOrderCompleted }: UseOrderRegis
 
     return () => {
       isMounted = false
-      window.clearInterval(intervalId)
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
   }, [checkRegisteredOrderWithRetry])
+
+  // Suscripción Realtime: escucha INSERT/UPDATE en orders filtrados por qr_code_id
+  useEffect(() => {
+    if (!qrCodeId) return
+
+    const channel = supabase
+      .channel(`order-qr-${qrCodeId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `qr_code_id=eq.${qrCodeId}`,
+        },
+        () => {
+          checkRegisteredOrder().catch(() => {})
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [qrCodeId, checkRegisteredOrder])
 
   return { isRegistered, isOffline: isOffline || isPending }
 }
