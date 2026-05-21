@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // Crear respuesta inicial que vamos a poder modificar
   let response = NextResponse.next({ request: req })
 
@@ -52,7 +52,7 @@ export async function middleware(req: NextRequest) {
   return response
 }
 
-// SOLO corre el middleware en rutas /admin/*
+
 export const config = {
   matcher: ["/admin/:path*"],
 }
