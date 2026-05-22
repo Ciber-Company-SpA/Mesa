@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ProductOptionsEditor } from "@/components/admin/ProductOptionsEditor"
 import { BackButton } from "@/components/ui/BackButton"
 import { useEditProduct } from "@/hooks/useEditProduct"
-import { useCategories } from "@/hooks/useCategories"
+import { useAllCategories } from "@/hooks/useAllCategories"
 
 export default function EditProductPage() {
   const {
@@ -22,7 +22,7 @@ export default function EditProductPage() {
     updateProduct
   } = useEditProduct()
 
-  const { categories } = useCategories()
+  const { categories } = useAllCategories()
 
   if (loading) {
     return (
