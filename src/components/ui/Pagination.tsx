@@ -8,7 +8,7 @@ type PaginationProps = {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange, disabled }: PaginationProps) {
-  if (totalPages <= 1) return null
+ 
 
   const pages = getPageRange(currentPage, totalPages)
 
