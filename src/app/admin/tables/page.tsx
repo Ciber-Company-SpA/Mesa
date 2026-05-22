@@ -1,21 +1,31 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { QRCodeSVG } from "qrcode.react"
 import { BackButton } from "@/components/ui/BackButton"
+import { Pagination } from "@/components/ui/Pagination"
 import { useTableList } from "@/hooks/useTableList"
 import { encodeId } from "@/lib/hashids"
 
 export default function TablesPage() {
+  const [currentPage, setCurrentPage] = useState(1)
   const {
     tables,
     totalTables,
+    totalPages,
     loading,
     deleting,
     error,
     deleteTable,
     deleteDialog,
-  } = useTableList()
+  } = useTableList({ page: currentPage, pageSize: 12 })
+
+  useEffect(() => {
+    if (!loading && currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages, loading])
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
@@ -93,62 +103,71 @@ export default function TablesPage() {
           )}
 
           {!loading && !error && tables.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {tables.map((table) => (
-                <article
-                  key={table.id}
-                  className="min-w-0 rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
-                >
-                  <div className="mb-5 flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-bold text-stone-950">
-                        Mesa {table.table_number}
-                      </h2>
-                      <p className="mt-1 truncate text-sm text-stone-600">
-                        Código: {table.qr_codes.qr_code}
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {tables.map((table) => (
+                  <article
+                    key={table.id}
+                    className="min-w-0 rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                  >
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-bold text-stone-950">
+                          Mesa {table.table_number}
+                        </h2>
+                        <p className="mt-1 truncate text-sm text-stone-600">
+                          Código: {table.qr_codes.qr_code}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
+                        QR listo
+                      </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-center">
+                      <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
+                        <QRCodeSVG
+                          value={`${process.env.NEXT_PUBLIC_APP_URL}/${table.qr_codes.qr_code}/menu`}
+                          size={104}
+                        />
+                      </div>
+
+                      <p className="mt-3 text-xs text-stone-500">
+                        QR asignado automáticamente
                       </p>
                     </div>
 
-                    <div className="shrink-0 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
-                      QR listo
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/admin/tables/${encodeId(table.id)}/edit`}
+                        className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        Editar
+                      </Link>
+
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={async () => {
+                          await deleteTable(table.id, table.qr_code_id)
+                        }}
+                        className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Eliminar
+                      </button>
                     </div>
-                  </div>
+                  </article>
+                ))}
+              </div>
 
-                  <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-center">
-                    <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
-                      <QRCodeSVG
-                        value={`${process.env.NEXT_PUBLIC_APP_URL}/${table.qr_codes.qr_code}/menu`}
-                        size={104}
-                      />
-                    </div>
-
-                    <p className="mt-3 text-xs text-stone-500">
-                      QR asignado automáticamente
-                    </p>
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-2 gap-2">
-                    <Link
-                      href={`/admin/tables/${encodeId(table.id)}/edit`}
-                      className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-                    >
-                      Editar
-                    </Link>
-
-                    <button
-                      type="button"
-                      disabled={deleting}
-                      onClick={async () => {
-                        await deleteTable(table.id, table.qr_code_id)
-                      }}
-                      className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                disabled={loading || deleting}
+              />
+            </>
           )}
         </section>
       </div>

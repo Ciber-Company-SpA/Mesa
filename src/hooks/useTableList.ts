@@ -2,8 +2,13 @@ import { useState } from "react"
 import { useTables } from "@/hooks/useTables"
 import { useDeleteTable } from "@/hooks/useDeleteTable"
 
-export function useTableList() {
-  const { tables, loading, error } = useTables()
+type UseTableListOptions = {
+  page?: number
+  pageSize?: number
+}
+
+export function useTableList({ page = 1, pageSize = 12 }: UseTableListOptions = {}) {
+  const { tables, total, loading, error, refresh } = useTables({ page, pageSize })
   const {
     deleteTable,
     loading: deleting,
@@ -22,6 +27,7 @@ export function useTableList() {
 
     if (success) {
       setDeletedTableIds((prev) => [...prev, tableId])
+      refresh()
     }
 
     return success
@@ -29,7 +35,8 @@ export function useTableList() {
 
   return {
     tables: visibleTables,
-    totalTables: visibleTables.length,
+    totalTables: total - deletedTableIds.length,
+    totalPages: Math.max(1, Math.ceil((total - deletedTableIds.length) / pageSize)),
     loading,
     deleting,
     error: error || deleteError,

@@ -8,20 +8,18 @@ type PaginationProps = {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange, disabled }: PaginationProps) {
- 
-
   const pages = getPageRange(currentPage, totalPages)
 
   return (
     <nav
       aria-label="Paginación"
-      className="mt-6 flex items-center justify-center gap-2"
+      className="sticky bottom-4 z-20 mx-auto mt-6 flex w-fit items-center justify-center gap-2 rounded-full border border-stone-200 bg-white/80 px-3 py-2 shadow-xl shadow-stone-900/10 backdrop-blur-md"
     >
       <button
         type="button"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={disabled || currentPage === 1}
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-200 disabled:hover:bg-white disabled:hover:text-stone-700"
+        className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-200 disabled:hover:bg-white disabled:hover:text-stone-700"
       >
         Anterior
       </button>
@@ -43,7 +41,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled }: 
               onClick={() => onPageChange(page)}
               disabled={disabled}
               aria-current={page === currentPage ? "page" : undefined}
-              className={`min-w-10 rounded-2xl border px-3 py-2 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`min-w-10 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
                 page === currentPage
                   ? "border-orange-500 bg-orange-500 text-white"
                   : "border-stone-200 bg-white text-stone-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
@@ -59,7 +57,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled }: 
         type="button"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={disabled || currentPage === totalPages}
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-200 disabled:hover:bg-white disabled:hover:text-stone-700"
+        className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-200 disabled:hover:bg-white disabled:hover:text-stone-700"
       >
         Siguiente
       </button>
@@ -68,7 +66,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled }: 
 }
 
 function getPageRange(current: number, total: number): (number | "...")[] {
-  const delta = 1 // cuántas páginas mostrar a cada lado de la actual
+  const delta = 1
   const range: (number | "...")[] = []
 
   for (let i = 1; i <= total; i++) {
