@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ProductOptionsEditor } from "@/components/admin/ProductOptionsEditor"
 import { BackButton } from "@/components/ui/BackButton"
 import { useCreateProduct } from "@/hooks/useCreateProduct"
-import { useCategories } from "@/hooks/useCategories"
+import { useAllCategories } from "@/hooks/useAllCategories"
 
 export default function CreateProductPage() {
   const {
@@ -21,7 +21,7 @@ export default function CreateProductPage() {
     createProduct
   } = useCreateProduct()
 
-  const { categories } = useCategories()
+  const { categories } = useAllCategories()
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-white">
