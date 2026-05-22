@@ -1,20 +1,30 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { encodeId } from "@/lib/hashids" 
+import { encodeId } from "@/lib/hashids"
 import { useCategoryList } from "@/hooks/useCategoryList"
 import { BackButton } from "@/components/ui/BackButton"
-
+import { Pagination } from "@/components/ui/Pagination"
 
 export default function CategoriesPage() {
+  const [currentPage, setCurrentPage] = useState(1)
   const {
     categories,
     totalCategories,
+    totalPages,
     loading,
+    deleting,
     error,
     deleteCategory,
     deleteDialog
-  } = useCategoryList()
+  } = useCategoryList({ page: currentPage, pageSize: 12 })
+
+  useEffect(() => {
+    if (!loading && currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages, loading])
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
@@ -22,7 +32,6 @@ export default function CategoriesPage() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-           
             <BackButton href="/admin" label="Volver al menú" className="mb-4 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md" />
             <p className="text-sm text-stone-600">Panel admin</p>
             <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
@@ -48,8 +57,6 @@ export default function CategoriesPage() {
                 {totalCategories}
               </p>
             </div>
-
-         
           </div>
 
           {loading && (
@@ -85,48 +92,59 @@ export default function CategoriesPage() {
           )}
 
           {!loading && !error && categories.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {categories.map((category) => (
-                <article
-                  key={category.id}
-                  className="rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
-                >
-                  <div className="mb-5 flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-lg font-bold text-orange-700">
-                      {category.category_name.slice(0, 1).toUpperCase()}
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {categories.map((category) => (
+                  <article
+                    key={category.id}
+                    className="rounded-3xl border border-stone-200 bg-white p-5 shadow-lg shadow-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/10"
+                  >
+                    <div className="mb-5 flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-lg font-bold text-orange-700">
+                        {category.category_name.slice(0, 1).toUpperCase()}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h2 className="truncate text-lg font-bold text-stone-950">
+                          {category.category_name}
+                        </h2>
+
+                        <p className="mt-1 text-sm text-stone-600">
+                          Categoría del menú
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="min-w-0">
-                      <h2 className="truncate text-lg font-bold text-stone-950">
-                        {category.category_name}
-                      </h2>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/admin/categories/${encodeId(category.id)}/edit`}
+                        className="flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        Editar
+                      </Link>
 
-                      <p className="mt-1 text-sm text-stone-600">
-                        Categoría del menú
-                      </p>
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={async () => {
+                          await deleteCategory(category.id)
+                        }}
+                        className="flex-1 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Eliminar
+                      </button>
                     </div>
-                  </div>
+                  </article>
+                ))}
+              </div>
 
-                  <div className="flex gap-2">
-                    <Link
-                     href={`/admin/categories/${encodeId(category.id)}/edit`}
-                      className="flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm font-semibold text-stone-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-                    >
-                      Editar
-                    </Link>
-
-                    <button
-                      onClick={async () => {
-                        await deleteCategory(category.id)
-                      }}
-                      className="flex-1 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                disabled={loading || deleting}
+              />
+            </>
           )}
         </section>
       </div>

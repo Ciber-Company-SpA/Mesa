@@ -1,15 +1,20 @@
 import { useState } from "react"
-
 import { useCategories } from "@/hooks/useCategories"
 import { useDeleteCategory } from "@/hooks/useDeleteCategory"
-import type { Category } from "@/types/category"
 
-export function useCategoryList() {
+type UseCategoryListOptions = {
+  page?: number
+  pageSize?: number
+}
+
+export function useCategoryList({ page = 1, pageSize = 12 }: UseCategoryListOptions = {}) {
   const {
     categories,
+    total,
     loading,
-    error
-  } = useCategories()
+    error,
+    refresh,
+  } = useCategories({ page, pageSize })
 
   const {
     deleteCategory,
@@ -20,7 +25,7 @@ export function useCategoryList() {
 
   const [deletedCategoryIds, setDeletedCategoryIds] = useState<number[]>([])
 
-  const visibleCategories = (categories as Category[]).filter(
+  const visibleCategories = categories.filter(
     (category) => !deletedCategoryIds.includes(category.id)
   )
 
@@ -29,6 +34,7 @@ export function useCategoryList() {
 
     if (success) {
       setDeletedCategoryIds((prev) => [...prev, categoryId])
+      refresh()
     }
 
     return success
@@ -36,7 +42,8 @@ export function useCategoryList() {
 
   return {
     categories: visibleCategories,
-    totalCategories: visibleCategories.length,
+    totalCategories: total - deletedCategoryIds.length,
+    totalPages: Math.max(1, Math.ceil((total - deletedCategoryIds.length) / pageSize)),
     loading,
     deleting,
     error: error ?? deleteError,
