@@ -1,8 +1,9 @@
+import { unstable_cache } from "next/cache"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
 import type { MenuData } from "@/types/menu"
 import type { Category } from "@/types/category"
 
-export async function getMenuData(qrCode: string): Promise<MenuData> {
+async function fetchMenuData(qrCode: string): Promise<MenuData> {
   const supabase = createSupabaseAnonClient()
 
   const { data: qrData, error: qrError } = await supabase
@@ -13,7 +14,6 @@ export async function getMenuData(qrCode: string): Promise<MenuData> {
 
   if (qrError || !qrData) throw new Error("QR no válido")
 
-
   const { data: tableData, error: tableError } = await supabase
     .from("tables")
     .select("id, table_number, restaurant_id")
@@ -23,7 +23,6 @@ export async function getMenuData(qrCode: string): Promise<MenuData> {
   if (tableError || !tableData) throw new Error("Mesa no encontrada")
 
   const { restaurant_id, table_number } = tableData
-
 
   const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
     supabase
@@ -53,3 +52,12 @@ export async function getMenuData(qrCode: string): Promise<MenuData> {
     tableNumber: table_number,
   }
 }
+
+export const getMenuData = unstable_cache(
+  fetchMenuData,
+  ["menu-data"], // key base, el qrCode se agrega automáticamente como argumento
+  {
+    revalidate: 300, // 5 minutos
+    tags: ["menu"], // tag para invalidación manual con revalidateTag("menu")
+  }
+)
