@@ -5,8 +5,8 @@ import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { createProductAction } from "@/app/actions/product-actions"
-import { ProductOptionSchema, CreateProductSchema, type ProductOptionInput } from "@/lib/validation/product"
 import type { ProductOptionForm } from "@/types/product-option-form"
+import { CreateProductOptionSchema, CreateProductSchema, type CreateProductOptionInput } from "@/lib/validation/product"
 
 let optionIdSeed = 0
 
@@ -93,8 +93,8 @@ export function useCreateProduct() {
   }
 
   // Sube imágenes pendientes y construye los options con URLs ya subidas
-  async function prepareOptions(): Promise<ProductOptionInput[]> {
-    const preparedOptions: ProductOptionInput[] = []
+  async function prepareOptions(): Promise<CreateProductOptionInput[]> {
+    const preparedOptions: CreateProductOptionInput[] = []
 
     for (const option of options) {
       let imageUrl = option.imageUrl
@@ -120,7 +120,7 @@ export function useCreateProduct() {
       }
 
       // Validar cliente con Zod
-      const validation = ProductOptionSchema.safeParse(rawOption)
+      const validation = CreateProductOptionSchema.safeParse(rawOption)
 
       if (!validation.success) {
         throw new Error(validation.error.issues[0]?.message ?? "Datos inválidos")
