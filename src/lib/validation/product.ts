@@ -43,3 +43,10 @@ export const UpdateProductSchema = z.object({
 })
 
 export type UpdateProductInput = z.infer<typeof UpdateProductSchema>
+
+export const DeleteProductSchema = z.object({
+  productId: z.number().int().positive(),
+  productImagePublicId: z.string().nullable().optional(),
+})
+
+export type DeleteProductInput = z.infer<typeof DeleteProductSchema>

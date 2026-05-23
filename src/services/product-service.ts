@@ -2,8 +2,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
   CreateProductSchema,
   UpdateProductSchema,
+  DeleteProductSchema,
   type CreateProductInput,
   type UpdateProductInput,
+  type DeleteProductInput,
 } from "@/lib/validation/product"
 import { ok, fail, type Result } from "@/services/result"
 
@@ -215,6 +217,29 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
         if (insertError) return fail("Error al insertar nueva variante")
       }
     }
+  }
+
+  return ok({ id: productId })
+}
+
+export async function deleteProduct(input: DeleteProductInput): Promise<Result<{ id: number }>> {
+  const validation = DeleteProductSchema.safeParse(input)
+
+  if (!validation.success) {
+    return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const { productId } = validation.data
+
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId)
+
+  if (error) {
+    return fail("Error al eliminar el producto")
   }
 
   return ok({ id: productId })
