@@ -1,25 +1,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
-import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { createProductAction } from "@/app/actions/product-actions"
+import { ProductOptionSchema, CreateProductSchema, type ProductOptionInput } from "@/lib/validation/product"
 import type { ProductOptionForm } from "@/types/product-option-form"
-import type { PreparedOption } from "@/types/prepared-option"
-
-const safeErrors = [
-  "El nombre del producto es obligatorio",
-  "El precio debe ser mayor a 0",
-  "El precio de cada opcion debe ser mayor a 0",
-  "El nombre de cada opcion es obligatorio",
-  "Debes seleccionar una categoria",
-  "No se encontro el restaurante"
-]
-
-
 
 let optionIdSeed = 0
 
@@ -34,10 +21,6 @@ function createLocalOption(name = ""): ProductOptionForm {
     imageUrl: null,
     imagePublicId: null,
   }
-}
-
-function getCoverOptionIndex(optionsLength: number) {
-  return Math.floor((optionsLength - 1) / 2)
 }
 
 export function useCreateProduct() {
@@ -55,6 +38,7 @@ export function useCreateProduct() {
 
   const productPrice = options[0]?.price ?? ""
   const productImage = options[0]?.imageFile ?? null
+
   function updateOption(localId: string, patch: Partial<ProductOptionForm>) {
     setOptions((currentOptions) =>
       currentOptions.map((option) =>
@@ -66,14 +50,12 @@ export function useCreateProduct() {
   function setProductPrice(value: string) {
     const firstOption = options[0]
     if (!firstOption) return
-
     updateOption(firstOption.localId, { price: value })
   }
 
   function setProductImage(file: File | null) {
     const firstOption = options[0]
     if (!firstOption) return
-
     updateOption(firstOption.localId, { imageFile: file })
   }
 
@@ -110,26 +92,11 @@ export function useCreateProduct() {
     })
   }
 
-  async function prepareOptions() {
-    const isVariantMode = options.length > 1
-    const preparedOptions: PreparedOption[] = []
+  // Sube imágenes pendientes y construye los options con URLs ya subidas
+  async function prepareOptions(): Promise<ProductOptionInput[]> {
+    const preparedOptions: ProductOptionInput[] = []
 
     for (const option of options) {
-      const cleanName = option.name.trim()
-      const cleanPrice = Number(option.price)
-
-      if (!cleanPrice || cleanPrice <= 0) {
-        throw new Error(
-          isVariantMode
-            ? "El precio de cada opcion debe ser mayor a 0"
-            : "El precio debe ser mayor a 0"
-        )
-      }
-
-      if (isVariantMode && !cleanName) {
-        throw new Error("El nombre de cada opcion es obligatorio")
-      }
-
       let imageUrl = option.imageUrl
       let imagePublicId = option.imagePublicId
 
@@ -145,68 +112,65 @@ export function useCreateProduct() {
         imagePublicId = result.public_id
       }
 
-      preparedOptions.push({
-        name: cleanName || "Principal",
-        price: cleanPrice,
+      const rawOption = {
+        name: option.name.trim() || "Principal",
+        price: Number(option.price),
         imageUrl,
         imagePublicId,
-      })
+      }
+
+      // Validar cliente con Zod
+      const validation = ProductOptionSchema.safeParse(rawOption)
+
+      if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message ?? "Datos inválidos")
+      }
+
+      preparedOptions.push(validation.data)
     }
 
     return preparedOptions
   }
 
   const { run: createProductWithRetry, isPending } = useOfflineRetry(async () => {
-    const cleanName = productName.trim()
-
-    if (!cleanName) throw new Error("El nombre del producto es obligatorio")
-    if (!categoryId) throw new Error("Debes seleccionar una categoria")
-
     if (!restaurantId) {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         throw { isNetworkError: true, message: "Sin conexion" }
       }
-
       throw new Error("No se encontro el restaurante")
     }
 
-    const preparedOptions = await prepareOptions()
-    const coverOption = preparedOptions[getCoverOptionIndex(preparedOptions.length)]
+    // Validar el form completo en cliente antes de subir nada
+    const formValidation = CreateProductSchema.safeParse({
+      name: productName.trim(),
+      description: productDescription.trim() || null,
+      categoryId,
+      restaurantId,
+      // options se valida después en prepareOptions
+      options: [{ name: "placeholder", price: 1, imageUrl: null, imagePublicId: null }],
+    })
 
-    const { data: productData, error: productError } = await supabase
-      .from("products")
-      .insert({
-        product_name: cleanName,
-        product_description: productDescription.trim() || null,
-        product_price: coverOption.price,
-        product_image: coverOption.imageUrl,
-        product_image_public_id: coverOption.imagePublicId,
-        category_id: categoryId,
-        restaurant_id: restaurantId,
-        status_id: 1
-      })
-      .select("id")
-      .single()
-
-    if (productError) throw productError
-
-    if (preparedOptions.length > 1) {
-      const { error: variantsError } = await supabase
-        .from("product_variants")
-        .insert(
-          preparedOptions.map((option) => ({
-            product_id: productData.id,
-            variant_name: option.name,
-            variant_price: option.price,
-            variant_image: option.imageUrl,
-            variant_image_public_id: option.imagePublicId,
-          }))
-        )
-
-      if (variantsError) throw variantsError
+    // Solo validamos los campos top-level, no options aún (porque hay que subir imágenes primero)
+    if (!formValidation.success) {
+      const firstError = formValidation.error.issues.find((issue) => issue.path[0] !== "options")
+      if (firstError) throw new Error(firstError.message)
     }
 
-    await revalidateMenu()
+    // Subir imágenes + validar options
+    const preparedOptions = await prepareOptions()
+
+    // Llamar al server
+    const result = await createProductAction({
+      name: productName.trim(),
+      description: productDescription.trim() || null,
+      categoryId: categoryId!,
+      restaurantId,
+      options: preparedOptions,
+    })
+
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
     router.replace("/admin/products")
   })
@@ -217,12 +181,11 @@ export function useCreateProduct() {
     try {
       setLoading(true)
       setError("")
-
       await createProductWithRetry()
     } catch (err: unknown) {
       if (isNetworkError(err)) return
       logger.error("Error creando producto", err)
-      setError(getSafeErrorMessage(err, "Error al crear producto", safeErrors))
+      setError(err instanceof Error ? err.message : "Error al crear producto")
     } finally {
       setLoading(false)
     }
@@ -247,6 +210,6 @@ export function useCreateProduct() {
     removeOption,
     loading: loading || uploading || isPending,
     error,
-    createProduct
+    createProduct,
   }
 }
