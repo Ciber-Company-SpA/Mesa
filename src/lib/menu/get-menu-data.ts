@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseAnonClient } from "@/lib/supabase/anon"
 import type { MenuData } from "@/types/menu"
 import type { Category } from "@/types/category"
 
 export async function getMenuData(qrCode: string): Promise<MenuData> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAnonClient()
 
   const { data: qrData, error: qrError } = await supabase
     .from("table_qr_codes")
