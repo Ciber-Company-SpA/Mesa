@@ -60,10 +60,10 @@ export default function ProductsPage() {
   const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null)
 
   useEffect(() => {
-  if (!loading && currentPage > totalPages) {
-    setCurrentPage(totalPages)
-  }
-}, [currentPage, totalPages, loading])
+    if (!loading && currentPage > totalPages) {
+      queueMicrotask(() => setCurrentPage(totalPages))
+    }
+  }, [currentPage, totalPages, loading])
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">

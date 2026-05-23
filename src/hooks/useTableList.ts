@@ -21,12 +21,18 @@ export function useTableList({ page = 1, pageSize = 12 }: UseTableListOptions = 
   const visibleTables = tables.filter(
     (table) => !deletedTableIds.includes(table.id)
   )
+  const optimisticDeletedCount = tables.filter((table) =>
+    deletedTableIds.includes(table.id)
+  ).length
+  const totalVisibleTables = Math.max(0, total - optimisticDeletedCount)
 
   async function deleteVisibleTable(tableId: number, qrCodeId: number) {
     const success = await deleteTable(tableId, qrCodeId)
 
     if (success) {
-      setDeletedTableIds((prev) => [...prev, tableId])
+      setDeletedTableIds((prev) =>
+        prev.includes(tableId) ? prev : [...prev, tableId]
+      )
       refresh()
     }
 
@@ -35,8 +41,8 @@ export function useTableList({ page = 1, pageSize = 12 }: UseTableListOptions = 
 
   return {
     tables: visibleTables,
-    totalTables: total - deletedTableIds.length,
-    totalPages: Math.max(1, Math.ceil((total - deletedTableIds.length) / pageSize)),
+    totalTables: totalVisibleTables,
+    totalPages: Math.max(1, Math.ceil(totalVisibleTables / pageSize)),
     loading,
     deleting,
     error: error || deleteError,

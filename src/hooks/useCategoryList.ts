@@ -28,12 +28,18 @@ export function useCategoryList({ page = 1, pageSize = 12 }: UseCategoryListOpti
   const visibleCategories = categories.filter(
     (category) => !deletedCategoryIds.includes(category.id)
   )
+  const optimisticDeletedCount = categories.filter((category) =>
+    deletedCategoryIds.includes(category.id)
+  ).length
+  const totalVisibleCategories = Math.max(0, total - optimisticDeletedCount)
 
   async function deleteVisibleCategory(categoryId: number) {
     const success = await deleteCategory(categoryId)
 
     if (success) {
-      setDeletedCategoryIds((prev) => [...prev, categoryId])
+      setDeletedCategoryIds((prev) =>
+        prev.includes(categoryId) ? prev : [...prev, categoryId]
+      )
       refresh()
     }
 
@@ -42,8 +48,8 @@ export function useCategoryList({ page = 1, pageSize = 12 }: UseCategoryListOpti
 
   return {
     categories: visibleCategories,
-    totalCategories: total - deletedCategoryIds.length,
-    totalPages: Math.max(1, Math.ceil((total - deletedCategoryIds.length) / pageSize)),
+    totalCategories: totalVisibleCategories,
+    totalPages: Math.max(1, Math.ceil(totalVisibleCategories / pageSize)),
     loading,
     deleting,
     error: error ?? deleteError,

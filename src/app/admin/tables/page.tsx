@@ -23,7 +23,7 @@ export default function TablesPage() {
 
   useEffect(() => {
     if (!loading && currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      queueMicrotask(() => setCurrentPage(totalPages))
     }
   }, [currentPage, totalPages, loading])
 

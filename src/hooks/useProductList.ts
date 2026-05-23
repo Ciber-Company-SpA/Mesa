@@ -49,11 +49,18 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
       }
     })
 
+  const optimisticDeletedCount = products.filter((product) =>
+    deletedProductIds.includes(product.id)
+  ).length
+  const totalVisibleProducts = Math.max(0, total - optimisticDeletedCount)
+
   async function deleteVisibleProduct(productId: number, product_image_public_id: string | null) {
     const success = await deleteProduct(productId, product_image_public_id ?? undefined)
 
     if (success) {
-      setDeletedProductIds((prev) => [...prev, productId])
+      setDeletedProductIds((prev) =>
+        prev.includes(productId) ? prev : [...prev, productId]
+      )
       refresh()
     }
 
@@ -94,8 +101,8 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
 
   return {
     products: visibleProducts,
-    totalProducts: total - deletedProductIds.length,
-    totalPages: Math.max(1, Math.ceil((total - deletedProductIds.length) / pageSize)),
+    totalProducts: totalVisibleProducts,
+    totalPages: Math.max(1, Math.ceil(totalVisibleProducts / pageSize)),
     loading,
     deleting,
     updatingStatusId,

@@ -22,7 +22,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     if (!loading && currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      queueMicrotask(() => setCurrentPage(totalPages))
     }
   }, [currentPage, totalPages, loading])
 
