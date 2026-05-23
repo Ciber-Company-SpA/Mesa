@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
@@ -59,7 +60,7 @@ export function useCreateCategory() {
       })
 
     if (categoryError) throw categoryError
-
+    await revalidateMenu()
     router.replace("/admin/categories")
   })
 

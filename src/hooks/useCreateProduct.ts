@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
@@ -204,6 +205,8 @@ export function useCreateProduct() {
 
       if (variantsError) throw variantsError
     }
+
+    await revalidateMenu()
 
     router.replace("/admin/products")
   })

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useProducts } from "@/hooks/useProducts"
 import { useDeleteProduct } from "@/hooks/useDeleteProduct"
@@ -88,7 +89,7 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
           status_name: statusNames[nextStatusId] ?? "",
         },
       }))
-
+      await revalidateMenu()
       return true
     } catch (err: unknown) {
       logger.error("Error actualizando estado de producto", err)

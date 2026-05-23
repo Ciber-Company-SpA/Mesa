@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -19,7 +20,7 @@ export function useDeleteCategory() {
       .eq("id", categoryIdRef.current)
 
     if (error) throw error
-
+    await revalidateMenu()
     return true
   })
 
@@ -32,7 +33,6 @@ export function useDeleteCategory() {
           categoryIdRef.current = categoryId
           setLoading(true)
           setError("")
-
           return await deleteCategoryWithRetry()
         } catch (err: unknown) {
           if (isNetworkError(err)) return false

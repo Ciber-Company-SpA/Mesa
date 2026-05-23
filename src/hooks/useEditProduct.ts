@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { getSafeErrorMessage } from "@/lib/safe-error"
 import { useUploadImage } from "@/hooks/useUploadImage"
@@ -317,6 +318,8 @@ export function useEditProduct() {
         }
       }
     }
+
+    await revalidateMenu()
 
     router.replace("/admin/products")
   })

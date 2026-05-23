@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import type { ProductVariant } from "@/types/product-variant"
@@ -65,6 +66,8 @@ export function useEditVariant(variant: ProductVariant) {
       .eq("id", variant.id)
 
     if (error) throw error
+    
+    await revalidateMenu()
 
     // 3. Recién ahora borrar la imagen vieja
     if (oldPublicIdToDelete) {

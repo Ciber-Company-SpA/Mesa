@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { decodeId } from "@/lib/hashids"
 import { getSafeErrorMessage } from "@/lib/safe-error"
@@ -52,7 +53,7 @@ export function useEditCategory() {
       .eq("id", categoryId)
 
     if (error) throw error
-
+    await revalidateMenu()
     router.replace("/admin/categories")
   })
 

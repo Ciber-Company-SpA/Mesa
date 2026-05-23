@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useUploadImage } from "@/hooks/useUploadImage"
 
@@ -60,7 +61,8 @@ export function useCreateVariant(productId: number) {
       setVariantName("")
       setVariantPrice("")
       setVariantImage(null)
-
+      
+      await revalidateMenu()
       return true
     } catch (err: unknown) {
       logger.error("Error creando variante", err)

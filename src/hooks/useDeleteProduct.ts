@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
@@ -38,7 +39,7 @@ export function useDeleteProduct() {
       .eq("id", pendingDelete.productId)
 
     if (error) throw error
-
+    await revalidateMenu()
     return true
   })
 

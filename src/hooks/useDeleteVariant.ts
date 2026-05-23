@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 
@@ -34,7 +35,7 @@ export function useDeleteVariant() {
             .eq("id", variantId)
 
           if (error) throw error
-
+          await revalidateMenu()
           return true
         } catch (err) {
           logger.error("Error eliminando variante", err)
