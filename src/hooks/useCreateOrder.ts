@@ -1,36 +1,14 @@
 import { useCallback, useState } from "react"
-import { supabase } from "@/lib/supabase"
 import type { CartItem } from "@/types/cart-item"
-import type { Order } from "@/types/order"
 import { useCartStore } from "@/store/cartStore"
-import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
-
-type OrderStatusName = Pick<NonNullable<Order["order_status"]>, "status_name">
-type OrderStatusRelation = OrderStatusName | OrderStatusName[] | null
+import { createOrderAction } from "@/app/actions/order-actions"
+import type { CreateOrderItemInput } from "@/lib/validation/order"
 
 type UseCreateOrderProps = {
   items: CartItem[]
   tableId: number
   restaurantId: number
-}
-
-function getOrderStatusName(orderStatus: OrderStatusRelation) {
-  if (Array.isArray(orderStatus)) return orderStatus[0]?.status_name ?? null
-  return orderStatus?.status_name ?? null
-}
-
-function getCreateOrderErrorMessage(err: unknown) {
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    err.code === "42501"
-  ) {
-    return "Supabase esta bloqueando la creacion del pedido por permisos."
-  }
-
-  return getSafeErrorMessage(err, "Error al crear el pedido, intenta de nuevo.", [])
 }
 
 export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderProps) {
@@ -39,31 +17,36 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-
   const { run: createOrderWithRetry, isPending } = useOfflineRetry(async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .insert({
-        total,
-        table_id: tableId,
-        restaurant_id: restaurantId,
-        status_id: 1,
-      })
-      .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")
-      .single()
+    // Mapear CartItem → CreateOrderItemInput
+    const orderItems: CreateOrderItemInput[] = items.map((item) => ({
+      productId: item.productId ?? item.id,
+      productName: item.name,
+      productPrice: item.price,
+      productQuantity: item.quantity,
+      notes: null,
+    }))
 
-    if (error) throw error
+    const result = await createOrderAction({
+      tableId,
+      restaurantId,
+      items: orderItems,
+    })
+
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
     setLastOrder({
-      id: data.id,
-      statusId: data.status_id,
-      statusName: getOrderStatusName(data.order_status) ?? "Nuevo",
-      createdAt: data.created_at,
-      tableId: data.table_id,
-      restaurantId: data.restaurant_id,
-      total: data.total,
+      id: result.data.id,
+      statusId: result.data.statusId,
+      statusName: result.data.statusName ?? "Nuevo",
+      createdAt: result.data.createdAt,
+      tableId: result.data.tableId,
+      restaurantId: result.data.restaurantId,
+      total: result.data.total,
     })
+
     clearCart()
   })
 
@@ -81,7 +64,7 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
       await createOrderWithRetry()
     } catch (err) {
       if (isNetworkError(err)) return
-      setError(getCreateOrderErrorMessage(err))
+      setError(err instanceof Error ? err.message : "Error al crear el pedido, intenta de nuevo.")
     } finally {
       setIsLoading(false)
     }
