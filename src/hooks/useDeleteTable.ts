@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteTableAction } from "@/app/actions/table-actions"
 
 type PendingDeleteTable = {
@@ -43,9 +43,11 @@ export function useDeleteTable() {
 
           return await deleteTableWithRetry()
         } catch (err: unknown) {
-          if (isNetworkError(err)) return false
-          logger.error("Error eliminando mesa", err)
-          setError(err instanceof Error ? err.message : "Error al eliminar mesa")
+          handleMutationError(err, {
+            logTag: "Error eliminando mesa",
+            fallback: "Error al eliminar mesa",
+            setError,
+          })
           return false
         } finally {
           setLoading(false)

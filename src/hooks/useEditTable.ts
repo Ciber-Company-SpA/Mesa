@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
   updateTableAction,
   getTableForEditAction,
@@ -55,9 +55,11 @@ export function useEditTable() {
         setLoadError("")
         await loadTableWithRetry()
       } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error cargando mesa", err)
-        setLoadError(err instanceof Error ? err.message : "Error al cargar mesa")
+        handleMutationError(err, {
+          logTag: "Error cargando mesa",
+          fallback: "Error al cargar mesa",
+          setError: setLoadError,
+        })
       } finally {
         setLoading(false)
       }
@@ -75,9 +77,11 @@ export function useEditTable() {
       setError("")
       await updateTableWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error actualizando mesa", err)
-      setError(err instanceof Error ? err.message : "Error al guardar cambios")
+      handleMutationError(err, {
+        logTag: "Error actualizando mesa",
+        fallback: "Error al guardar cambios",
+        setError,
+      })
     } finally {
       setSaving(false)
     }

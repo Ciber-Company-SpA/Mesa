@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react"
 import type { CartItem } from "@/types/cart-item"
 import { useCartStore } from "@/store/cartStore"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createOrderAction } from "@/app/actions/order-actions"
 import type { CreateOrderItemInput } from "@/lib/validation/order"
 
@@ -63,8 +64,11 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
     try {
       await createOrderWithRetry()
     } catch (err) {
-      if (isNetworkError(err)) return
-      setError(err instanceof Error ? err.message : "Error al crear el pedido, intenta de nuevo.")
+      handleMutationError(err, {
+        logTag: "Error creando pedido",
+        fallback: "Error al crear el pedido, intenta de nuevo.",
+        setError,
+      })
     } finally {
       setIsLoading(false)
     }

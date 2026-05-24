@@ -1,12 +1,16 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createProductAction } from "@/app/actions/product-actions"
-import type { ProductOptionForm } from "@/types/product-option-form"
-import { CreateProductOptionSchema, CreateProductSchema, type CreateProductOptionInput } from "@/lib/validation/product"
+import {
+  CreateProductOptionSchema,
+  CreateProductSchema,
+  type CreateProductOptionInput,
+  type ProductOptionForm,
+} from "@/lib/validation/product"
 
 let optionIdSeed = 0
 
@@ -183,9 +187,11 @@ export function useCreateProduct() {
       setError("")
       await createProductWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error creando producto", err)
-      setError(err instanceof Error ? err.message : "Error al crear producto")
+      handleMutationError(err, {
+        logTag: "Error creando producto",
+        fallback: "Error al crear producto",
+        setError,
+      })
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import {
   createProduct as createProductService,
   updateProduct as updateProductService,
@@ -24,7 +24,7 @@ export async function createProductAction(
   const result = await createProductService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -36,7 +36,7 @@ export async function updateProductAction(
   const result = await updateProductService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -48,7 +48,7 @@ export async function deleteProductAction(
   const result = await deleteProductService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -60,7 +60,7 @@ export async function updateProductStatusAction(
   const result = await updateProductStatusService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result

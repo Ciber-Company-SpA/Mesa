@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import {
   createVariant as createVariantService,
   updateVariant as updateVariantService,
@@ -20,7 +20,7 @@ export async function createVariantAction(
   const result = await createVariantService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -32,7 +32,7 @@ export async function updateVariantAction(
   const result = await updateVariantService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -44,7 +44,7 @@ export async function deleteVariantAction(
   const result = await deleteVariantService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
   updateCategoryAction,
   getCategoryForEditAction,
@@ -56,9 +56,11 @@ export function useEditCategory() {
         setError("")
         await loadCategoryWithRetry()
       } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error cargando categoria", err)
-        setLoadError(err instanceof Error ? err.message : "Error al cargar categoría")
+        handleMutationError(err, {
+          logTag: "Error cargando categoria",
+          fallback: "Error al cargar categoría",
+          setError: setLoadError,
+        })
       } finally {
         setLoading(false)
       }
@@ -76,9 +78,11 @@ export function useEditCategory() {
       setError("")
       await updateCategoryWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error actualizando categoria", err)
-      setError(err instanceof Error ? err.message : "Error al guardar cambios")
+      handleMutationError(err, {
+        logTag: "Error actualizando categoria",
+        fallback: "Error al guardar cambios",
+        setError,
+      })
     } finally {
       setSaving(false)
     }

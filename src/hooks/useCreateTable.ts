@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createTableAction } from "@/app/actions/table-actions"
+import { CreateTableSchema } from "@/lib/validation/table"
 
 export function useCreateTable() {
   const router = useRouter()
@@ -21,10 +22,16 @@ export function useCreateTable() {
       throw new Error("No se encontró el restaurante")
     }
 
-    const result = await createTableAction({
+    const validation = CreateTableSchema.safeParse({
       tableNumber: Number(tableNumber),
       restaurantId,
     })
+
+    if (!validation.success) {
+      throw new Error(validation.error.issues[0]?.message ?? "Datos inválidos")
+    }
+
+    const result = await createTableAction(validation.data)
 
     if (!result.ok) {
       throw new Error(result.error)
@@ -41,9 +48,11 @@ export function useCreateTable() {
       setError("")
       await createTableWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error creando mesa", err)
-      setError(err instanceof Error ? err.message : "Error al crear mesa")
+      handleMutationError(err, {
+        logTag: "Error creando mesa",
+        fallback: "Error al crear mesa",
+        setError,
+      })
     } finally {
       setLoading(false)
     }

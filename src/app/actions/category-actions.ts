@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import {
   createCategory as createCategoryService,
   updateCategory as updateCategoryService,
@@ -22,7 +22,7 @@ export async function createCategoryAction(
   const result = await createCategoryService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -34,7 +34,7 @@ export async function updateCategoryAction(
   const result = await updateCategoryService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result
@@ -46,7 +46,7 @@ export async function deleteCategoryAction(
   const result = await deleteCategoryService(input)
 
   if (result.ok) {
-    revalidateTag("menu", "default")
+    updateTag("menu")
   }
 
   return result

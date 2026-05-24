@@ -22,7 +22,6 @@ export default function EditTablePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    console.log("tableNumber:", tableNumber, "saving:", saving, "loading:", loading)
 
     if (saving || loading) return
 

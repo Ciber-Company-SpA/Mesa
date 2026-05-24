@@ -8,6 +8,7 @@ import {
   type DeleteVariantInput,
 } from "@/lib/validation/variant"
 import { ok, fail, type Result } from "@/services/result"
+import { deleteImageBestEffort } from "@/lib/cloudinary/delete-image-server"
 
 export type CreatedVariant = {
   id: number
@@ -54,6 +55,15 @@ export async function updateVariant(input: UpdateVariantInput): Promise<Result<{
 
   const supabase = await createSupabaseServerClient()
 
+  // Leer public_id previo para detectar si la imagen fue reemplazada
+  const { data: previous } = await supabase
+    .from("product_variants")
+    .select("variant_image_public_id")
+    .eq("id", variantId)
+    .maybeSingle()
+
+  const previousImagePublicId = previous?.variant_image_public_id ?? null
+
   const { error } = await supabase
     .from("product_variants")
     .update({
@@ -66,6 +76,10 @@ export async function updateVariant(input: UpdateVariantInput): Promise<Result<{
 
   if (error) {
     return fail("Error al actualizar la variante")
+  }
+
+  if (previousImagePublicId && previousImagePublicId !== imagePublicId) {
+    await deleteImageBestEffort(previousImagePublicId)
   }
 
   return ok({ id: variantId })
@@ -82,6 +96,13 @@ export async function deleteVariant(input: DeleteVariantInput): Promise<Result<{
 
   const supabase = await createSupabaseServerClient()
 
+  // Leer public_id antes del DELETE (post-delete no existe el row)
+  const { data: previous } = await supabase
+    .from("product_variants")
+    .select("variant_image_public_id")
+    .eq("id", variantId)
+    .maybeSingle()
+
   const { error } = await supabase
     .from("product_variants")
     .delete()
@@ -90,6 +111,8 @@ export async function deleteVariant(input: DeleteVariantInput): Promise<Result<{
   if (error) {
     return fail("Error al eliminar la variante")
   }
+
+  await deleteImageBestEffort(previous?.variant_image_public_id)
 
   return ok({ id: variantId })
 }

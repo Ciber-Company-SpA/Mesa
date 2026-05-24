@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteCategoryAction } from "@/app/actions/category-actions"
 
 export function useDeleteCategory() {
@@ -35,9 +35,11 @@ export function useDeleteCategory() {
           setError("")
           return await deleteCategoryWithRetry()
         } catch (err: unknown) {
-          if (isNetworkError(err)) return false
-          logger.error("Error eliminando categoria", err)
-          setError(err instanceof Error ? err.message : "Error al eliminar categoría")
+          handleMutationError(err, {
+            logTag: "Error eliminando categoria",
+            fallback: "Error al eliminar categoría",
+            setError,
+          })
           return false
         } finally {
           setLoading(false)

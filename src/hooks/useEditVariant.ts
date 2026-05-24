@@ -1,8 +1,18 @@
-import { useState } from "react"
-import { logger } from "@/lib/logger"
+import { useRef, useState } from "react"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { updateVariantAction } from "@/app/actions/variant-actions"
+import { UpdateVariantSchema } from "@/lib/validation/variant"
 import type { ProductVariant } from "@/types/product-variant"
+
+type PendingUpdateVariant = {
+  variantId: number
+  name: string
+  price: number
+  imageUrl: string | null
+  imagePublicId: string | null
+}
 
 export function useEditVariant(variant: ProductVariant) {
   const { uploadImage, uploading } = useUploadImage()
@@ -16,8 +26,21 @@ export function useEditVariant(variant: ProductVariant) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const pendingPayloadRef = useRef<PendingUpdateVariant | null>(null)
+
+  const { run: updateVariantWithRetry, isPending } = useOfflineRetry(async () => {
+    const payload = pendingPayloadRef.current
+    if (!payload) return
+
+    const result = await updateVariantAction(payload)
+
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
+  })
+
   async function updateVariant() {
-    if (loading) return
+    if (loading || uploading) return
 
     try {
       setLoading(true)
@@ -25,7 +48,6 @@ export function useEditVariant(variant: ProductVariant) {
 
       let imageUrl = currentImageUrl
       let imagePublicId = currentImagePublicId
-      let oldPublicIdToDelete: string | null = null
 
       if (variantImage) {
         const uploaded = await uploadImage(
@@ -33,43 +55,33 @@ export function useEditVariant(variant: ProductVariant) {
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
 
-        if (uploaded) {
-          if (currentImagePublicId) {
-            oldPublicIdToDelete = currentImagePublicId
-          }
-          imageUrl = uploaded.secure_url
-          imagePublicId = uploaded.public_id
-        }
+        if (!uploaded) throw new Error("Error al subir imagen")
+
+        imageUrl = uploaded.secure_url
+        imagePublicId = uploaded.public_id
       }
 
-      const result = await updateVariantAction({
+      const payload = {
         variantId: variant.id,
         name: variantName.trim(),
         price: Number(variantPrice),
         imageUrl,
         imagePublicId,
-      })
-
-      if (!result.ok) {
-        throw new Error(result.error)
       }
 
-      if (oldPublicIdToDelete) {
-        await fetch("/api/cloudinary/delete", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            publicId: oldPublicIdToDelete,
-            variantId: variant.id,
-          }),
-        }).catch((err) => logger.warn("No se pudo borrar imagen vieja", err))
+      const validation = UpdateVariantSchema.safeParse(payload)
+      if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message ?? "Datos inválidos")
       }
 
-      return true
+      pendingPayloadRef.current = validation.data
+      await updateVariantWithRetry()
     } catch (err: unknown) {
-      logger.error("Error actualizando variante", err)
-      setError(err instanceof Error ? err.message : "Error al guardar variante")
-      return false
+      handleMutationError(err, {
+        logTag: "Error actualizando variante",
+        fallback: "Error al guardar variante",
+        setError,
+      })
     } finally {
       setLoading(false)
     }
@@ -80,7 +92,7 @@ export function useEditVariant(variant: ProductVariant) {
     variantPrice, setVariantPrice,
     variantImage, setVariantImage,
     currentImageUrl,
-    loading: loading || uploading,
+    loading: loading || uploading || isPending,
     error,
     updateVariant,
   }

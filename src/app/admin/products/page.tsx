@@ -248,7 +248,7 @@ export default function ProductsPage() {
                           type="button"
                           disabled={deleting}
                           onClick={async () => {
-                            await deleteProduct(product.id, product.product_image_public_id)
+                            await deleteProduct(product.id)
                           }}
                           className="min-w-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >

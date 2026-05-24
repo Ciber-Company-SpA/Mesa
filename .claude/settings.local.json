@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\elveg\\\\Downloads\\\\Mesa\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\elveg\\\\Downloads\\\\Mesa\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(xargs grep -l \"rateLimit\\\\|rate-limit\")",
+      "Bash(xargs grep -l \"useState.*useState.*useState.*useState.*useState\")",
+      "Bash(Remove-Item \"c:\\\\Users\\\\elveg\\\\Downloads\\\\Mesa\\\\src\\\\lib\\\\cloudinary\\\\delete-image.ts\" -Force)",
+      "Bash(npm run *)"
+    ]
+  }
+}

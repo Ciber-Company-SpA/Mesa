@@ -1,43 +1,20 @@
 import { useRef, useState } from "react"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteProductAction } from "@/app/actions/product-actions"
-
-type PendingDeleteProduct = {
-  productId: number
-  productImagePublicId?: string
-}
 
 export function useDeleteProduct() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const pendingDeleteRef = useRef<PendingDeleteProduct | null>(null)
+  const pendingProductIdRef = useRef<number | null>(null)
   const { confirm, dialog } = useConfirmDialog()
 
   const { run: deleteProductWithRetry, isPending } = useOfflineRetry(async () => {
-    const pendingDelete = pendingDeleteRef.current
-    if (!pendingDelete) return false
+    const productId = pendingProductIdRef.current
+    if (!productId) return false
 
-    // 1. Borrar imagen de Cloudinary (si tiene)
-    if (pendingDelete.productImagePublicId) {
-      const response = await fetch("/api/cloudinary/delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          publicId: pendingDelete.productImagePublicId,
-          productId: pendingDelete.productId,
-        }),
-      })
-
-      if (!response.ok) throw new Error("Error al eliminar imagen")
-    }
-
-    // 2. Borrar producto del server
-    const result = await deleteProductAction({
-      productId: pendingDelete.productId,
-      productImagePublicId: pendingDelete.productImagePublicId ?? null,
-    })
+    const result = await deleteProductAction({ productId })
 
     if (!result.ok) {
       throw new Error(result.error)
@@ -46,21 +23,23 @@ export function useDeleteProduct() {
     return true
   })
 
-  async function deleteProduct(productId: number, productImagePublicId?: string) {
+  async function deleteProduct(productId: number) {
     return confirm({
       title: "¿Seguro que quieres eliminar este producto?",
       description: "El producto se borrará del menú y esta acción no se puede deshacer.",
       onConfirm: async () => {
         try {
-          pendingDeleteRef.current = { productId, productImagePublicId }
+          pendingProductIdRef.current = productId
           setLoading(true)
           setError("")
 
           return await deleteProductWithRetry()
         } catch (err: unknown) {
-          if (isNetworkError(err)) return false
-          logger.error("Error eliminando producto", err)
-          setError(err instanceof Error ? err.message : "Error al eliminar producto")
+          handleMutationError(err, {
+            logTag: "Error eliminando producto",
+            fallback: "Error al eliminar producto",
+            setError,
+          })
           return false
         } finally {
           setLoading(false)

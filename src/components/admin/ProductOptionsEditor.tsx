@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import type { ProductOptionForm } from "@/types/product-option-form"
+import type { ProductOptionForm } from "@/lib/validation/product"
 
 type ProductOptionsEditorProps = {
   options: ProductOptionForm[]

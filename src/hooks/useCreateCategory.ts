@@ -1,8 +1,8 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { logger } from "@/lib/logger"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createCategoryAction } from "@/app/actions/category-actions"
 
 export function useCreateCategory() {
@@ -44,9 +44,11 @@ export function useCreateCategory() {
 
       await createCategoryWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error creando categoria", err)
-      setError(err instanceof Error ? err.message : "Error al crear categoría")
+      handleMutationError(err, {
+        logTag: "Error creando categoria",
+        fallback: "Error al crear categoría",
+        setError,
+      })
     } finally {
       setLoading(false)
     }

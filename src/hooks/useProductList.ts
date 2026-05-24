@@ -54,8 +54,8 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
   ).length
   const totalVisibleProducts = Math.max(0, total - optimisticDeletedCount)
 
-  async function deleteVisibleProduct(productId: number, product_image_public_id: string | null) {
-    const success = await deleteProduct(productId, product_image_public_id ?? undefined)
+  async function deleteVisibleProduct(productId: number) {
+    const success = await deleteProduct(productId)
 
     if (success) {
       setDeletedProductIds((prev) =>

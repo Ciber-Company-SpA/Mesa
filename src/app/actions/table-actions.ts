@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import {
   createTable as createTableService,
   updateTable as updateTableService,
@@ -19,19 +19,37 @@ import type { Result } from "@/services/result"
 export async function createTableAction(
   input: CreateTableInput
 ): Promise<Result<CreatedTable>> {
-  return createTableService(input)
+  const result = await createTableService(input)
+
+  if (result.ok) {
+    updateTag("menu")
+  }
+
+  return result
 }
 
 export async function updateTableAction(
   input: UpdateTableInput
 ): Promise<Result<{ id: number }>> {
-  return updateTableService(input)
+  const result = await updateTableService(input)
+
+  if (result.ok) {
+    updateTag("menu")
+  }
+
+  return result
 }
 
 export async function deleteTableAction(
   input: DeleteTableInput
 ): Promise<Result<{ id: number }>> {
-  return deleteTableService(input)
+  const result = await deleteTableService(input)
+
+  if (result.ok) {
+    updateTag("menu")
+  }
+
+  return result
 }
 
 export async function getTableForEditAction(

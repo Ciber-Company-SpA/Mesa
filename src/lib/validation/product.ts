@@ -33,6 +33,22 @@ export const UpdateProductOptionSchema = z.object({
 
 export type UpdateProductOptionInput = z.infer<typeof UpdateProductOptionSchema>
 
+/**
+ * Forma del estado de UI para una opción de producto (cliente). Contiene
+ * campos pre-validación (price como string, imageFile pendiente de upload).
+ * Conceptualmente es el "borrador" que termina convertido a CreateProductOptionInput
+ * o UpdateProductOptionInput tras validación + upload.
+ */
+export type ProductOptionForm = {
+  localId: string
+  variantId?: number
+  name: string
+  price: string
+  imageFile: File | null
+  imageUrl: string | null
+  imagePublicId: string | null
+}
+
 export const UpdateProductSchema = z.object({
   productId: z.number().int().positive(),
   name: z.string().trim().min(1, "El nombre del producto es obligatorio"),
@@ -46,7 +62,6 @@ export type UpdateProductInput = z.infer<typeof UpdateProductSchema>
 
 export const DeleteProductSchema = z.object({
   productId: z.number().int().positive(),
-  productImagePublicId: z.string().nullable().optional(),
 })
 
 export type DeleteProductInput = z.infer<typeof DeleteProductSchema>

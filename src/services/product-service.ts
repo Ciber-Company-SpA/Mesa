@@ -10,6 +10,7 @@ import {
   type UpdateProductStatusInput,
 } from "@/lib/validation/product"
 import { ok, fail, type Result } from "@/services/result"
+import { deleteImagesBestEffort } from "@/lib/cloudinary/delete-image-server"
 
 export type CreatedProduct = {
   id: number
@@ -141,11 +142,29 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
   const supabase = await createSupabaseServerClient()
 
-  // 1. Calcular opción de portada
+  // 1. Leer estado previo de imágenes para detectar huérfanas al final
+  const [previousProductRes, previousVariantsRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select("product_image_public_id")
+      .eq("id", productId)
+      .maybeSingle(),
+    supabase
+      .from("product_variants")
+      .select("id, variant_image_public_id")
+      .eq("product_id", productId),
+  ])
+
+  const previousProductImagePublicId = previousProductRes.data?.product_image_public_id ?? null
+  const previousVariantImagePublicIds = new Map<number, string | null>(
+    (previousVariantsRes.data ?? []).map((v) => [v.id, v.variant_image_public_id])
+  )
+
+  // 2. Calcular opción de portada
   const coverIndex = Math.floor((options.length - 1) / 2)
   const coverOption = options[coverIndex]
 
-  // 2. UPDATE del producto
+  // 3. UPDATE del producto
   const { error: productError } = await supabase
     .from("products")
     .update({
@@ -160,9 +179,19 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
   if (productError) return fail("Error al actualizar producto")
 
-  // 3. Sincronizar variantes
+  // 4. Sincronizar variantes
+  const orphanedImagePublicIds: Array<string | null | undefined> = []
+
+  if (previousProductImagePublicId && previousProductImagePublicId !== coverOption.imagePublicId) {
+    orphanedImagePublicIds.push(previousProductImagePublicId)
+  }
+
   if (options.length === 1) {
     // Producto simple: borrar todas las variantes existentes
+    for (const [, publicId] of previousVariantImagePublicIds) {
+      if (publicId) orphanedImagePublicIds.push(publicId)
+    }
+
     const { error: deleteError } = await supabase
       .from("product_variants")
       .delete()
@@ -181,6 +210,11 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
     // Borrar las variantes que el user eliminó
     if (removedVariantIds.length > 0) {
+      for (const variantId of removedVariantIds) {
+        const publicId = previousVariantImagePublicIds.get(variantId)
+        if (publicId) orphanedImagePublicIds.push(publicId)
+      }
+
       const { error: deleteError } = await supabase
         .from("product_variants")
         .delete()
@@ -192,7 +226,12 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
     // Insert/Update de cada opción restante
     for (const option of options) {
       if (option.variantId) {
-        // Variante existente: UPDATE
+        // Variante existente: UPDATE (detectar reemplazo de imagen)
+        const previousPublicId = previousVariantImagePublicIds.get(option.variantId) ?? null
+        if (previousPublicId && previousPublicId !== option.imagePublicId) {
+          orphanedImagePublicIds.push(previousPublicId)
+        }
+
         const { error: updateError } = await supabase
           .from("product_variants")
           .update({
@@ -221,6 +260,11 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
     }
   }
 
+  // Best-effort: limpiar imágenes que ya no están referenciadas por ningún row
+  if (orphanedImagePublicIds.length > 0) {
+    await deleteImagesBestEffort(orphanedImagePublicIds)
+  }
+
   return ok({ id: productId })
 }
 
@@ -235,6 +279,24 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
 
   const supabase = await createSupabaseServerClient()
 
+  // Recolectar public_ids antes del DELETE (post-delete ya no se pueden leer).
+  const [productImageRes, variantImagesRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select("product_image_public_id")
+      .eq("id", productId)
+      .maybeSingle(),
+    supabase
+      .from("product_variants")
+      .select("variant_image_public_id")
+      .eq("product_id", productId),
+  ])
+
+  const publicIds: Array<string | null | undefined> = [
+    productImageRes.data?.product_image_public_id,
+    ...(variantImagesRes.data ?? []).map((v) => v.variant_image_public_id),
+  ]
+
   const { error } = await supabase
     .from("products")
     .delete()
@@ -243,6 +305,9 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
   if (error) {
     return fail("Error al eliminar el producto")
   }
+
+  // Best-effort: si Cloudinary falla, el row ya está borrado y queda un blob huérfano (preferible a UI rota).
+  await deleteImagesBestEffort(publicIds)
 
   return ok({ id: productId })
 }

@@ -1,7 +1,17 @@
-import { useState } from "react"
-import { logger } from "@/lib/logger"
+import { useRef, useState } from "react"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createVariantAction } from "@/app/actions/variant-actions"
+import { CreateVariantSchema } from "@/lib/validation/variant"
+
+type PendingCreateVariant = {
+  productId: number
+  name: string
+  price: number
+  imageUrl: string | null
+  imagePublicId: string | null
+}
 
 export function useCreateVariant(productId: number) {
   const { uploadImage, uploading } = useUploadImage()
@@ -13,8 +23,21 @@ export function useCreateVariant(productId: number) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const pendingPayloadRef = useRef<PendingCreateVariant | null>(null)
+
+  const { run: createVariantWithRetry, isPending } = useOfflineRetry(async () => {
+    const payload = pendingPayloadRef.current
+    if (!payload) return
+
+    const result = await createVariantAction(payload)
+
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
+  })
+
   async function createVariant() {
-    if (loading) return
+    if (loading || uploading) return
 
     try {
       setLoading(true)
@@ -24,38 +47,42 @@ export function useCreateVariant(productId: number) {
       let imagePublicId: string | null = null
 
       if (variantImage) {
-        const result = await uploadImage(
+        const uploaded = await uploadImage(
           variantImage,
           process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
 
-        if (!result) throw new Error("Error al subir imagen")
+        if (!uploaded) throw new Error("Error al subir imagen")
 
-        imageUrl = result.secure_url
-        imagePublicId = result.public_id
+        imageUrl = uploaded.secure_url
+        imagePublicId = uploaded.public_id
       }
 
-      const result = await createVariantAction({
+      const payload = {
         productId,
         name: variantName.trim(),
         price: Number(variantPrice),
         imageUrl,
         imagePublicId,
-      })
-
-      if (!result.ok) {
-        throw new Error(result.error)
       }
+
+      const validation = CreateVariantSchema.safeParse(payload)
+      if (!validation.success) {
+        throw new Error(validation.error.issues[0]?.message ?? "Datos inválidos")
+      }
+
+      pendingPayloadRef.current = validation.data
+      await createVariantWithRetry()
 
       setVariantName("")
       setVariantPrice("")
       setVariantImage(null)
-
-      return true
     } catch (err: unknown) {
-      logger.error("Error creando variante", err)
-      setError(err instanceof Error ? err.message : "Error al crear variante")
-      return false
+      handleMutationError(err, {
+        logTag: "Error creando variante",
+        fallback: "Error al crear variante",
+        setError,
+      })
     } finally {
       setLoading(false)
     }
@@ -65,7 +92,7 @@ export function useCreateVariant(productId: number) {
     variantName, setVariantName,
     variantPrice, setVariantPrice,
     variantImage, setVariantImage,
-    loading: loading || uploading,
+    loading: loading || uploading || isPending,
     error,
     createVariant,
   }

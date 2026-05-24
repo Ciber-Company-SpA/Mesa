@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
-import { logger } from "@/lib/logger"
 import { useUploadImage } from "@/hooks/useUploadImage"
-import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { useOfflineRetry } from "@/hooks/useOfflineRetry"
+import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
   updateProductAction,
   getProductForEditAction,
@@ -12,8 +12,8 @@ import {
   UpdateProductOptionSchema,
   UpdateProductSchema,
   type UpdateProductOptionInput,
+  type ProductOptionForm,
 } from "@/lib/validation/product"
-import type { ProductOptionForm } from "@/types/product-option-form"
 
 let optionIdSeed = 0
 
@@ -104,9 +104,11 @@ export function useEditProduct() {
         setLoadError("")
         await loadProductWithRetry()
       } catch (err: unknown) {
-        if (isNetworkError(err)) return
-        logger.error("Error cargando producto", err)
-        setLoadError(err instanceof Error ? err.message : "Error al cargar producto")
+        handleMutationError(err, {
+          logTag: "Error cargando producto",
+          fallback: "Error al cargar producto",
+          setError: setLoadError,
+        })
       } finally {
         setLoading(false)
       }
@@ -259,9 +261,11 @@ export function useEditProduct() {
       setError("")
       await updateProductWithRetry()
     } catch (err: unknown) {
-      if (isNetworkError(err)) return
-      logger.error("Error actualizando producto", err)
-      setError(err instanceof Error ? err.message : "Error al guardar cambios")
+      handleMutationError(err, {
+        logTag: "Error actualizando producto",
+        fallback: "Error al guardar cambios",
+        setError,
+      })
     } finally {
       setSaving(false)
     }
