@@ -3,9 +3,11 @@ import {
   CreateProductSchema,
   UpdateProductSchema,
   DeleteProductSchema,
+  UpdateProductStatusSchema,
   type CreateProductInput,
   type UpdateProductInput,
   type DeleteProductInput,
+  type UpdateProductStatusInput,
 } from "@/lib/validation/product"
 import { ok, fail, type Result } from "@/services/result"
 
@@ -240,6 +242,29 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
 
   if (error) {
     return fail("Error al eliminar el producto")
+  }
+
+  return ok({ id: productId })
+}
+
+export async function updateProductStatus(input: UpdateProductStatusInput): Promise<Result<{ id: number }>> {
+  const validation = UpdateProductStatusSchema.safeParse(input)
+
+  if (!validation.success) {
+    return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const { productId, statusId } = validation.data
+
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from("products")
+    .update({ status_id: statusId })
+    .eq("id", productId)
+
+  if (error) {
+    return fail("Error al actualizar el estado del producto")
   }
 
   return ok({ id: productId })

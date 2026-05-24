@@ -50,3 +50,10 @@ export const DeleteProductSchema = z.object({
 })
 
 export type DeleteProductInput = z.infer<typeof DeleteProductSchema>
+
+export const UpdateProductStatusSchema = z.object({
+  productId: z.number().int().positive(),
+  statusId: z.number().int().positive("Estado inválido"),
+})
+
+export type UpdateProductStatusInput = z.infer<typeof UpdateProductStatusSchema>

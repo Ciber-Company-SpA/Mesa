@@ -1,9 +1,8 @@
 import { useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useProducts } from "@/hooks/useProducts"
 import { useDeleteProduct } from "@/hooks/useDeleteProduct"
+import { updateProductStatusAction } from "@/app/actions/product-actions"
 
 const statusNames: Record<number, string> = {
   1: "Disponible",
@@ -75,12 +74,14 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
       setUpdatingStatusId(productId)
       setStatusError("")
 
-      const { error } = await supabase
-        .from("products")
-        .update({ status_id: nextStatusId })
-        .eq("id", productId)
+      const result = await updateProductStatusAction({
+        productId,
+        statusId: nextStatusId,
+      })
 
-      if (error) throw error
+      if (!result.ok) {
+        throw new Error(result.error)
+      }
 
       setStatusOverrides((currentOverrides) => ({
         ...currentOverrides,
@@ -89,11 +90,11 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
           status_name: statusNames[nextStatusId] ?? "",
         },
       }))
-      await revalidateMenu()
+
       return true
     } catch (err: unknown) {
       logger.error("Error actualizando estado de producto", err)
-      setStatusError("Error al actualizar estado")
+      setStatusError(err instanceof Error ? err.message : "Error al actualizar estado")
       return false
     } finally {
       setUpdatingStatusId(null)
