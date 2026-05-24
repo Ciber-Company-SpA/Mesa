@@ -1,7 +1,15 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import {
+  Staff,
+  clearStaffSession,
+  getStaffRoleLabel,
+  getStaffTimeoutSetting,
+  getStoredStaffSession,
+} from "@/lib/waiter-session"
 
 // Types for the dashboard
 interface OrderItem {
@@ -36,7 +44,7 @@ const INITIAL_ORDERS: Order[] = [
     items: [
       { name: "Burger MESA Premium", quantity: 2, price: 11990 },
       { name: "Papas Trufadas", quantity: 1, price: 6990 },
-      { name: "Jugo Natural Orgánico", quantity: 2, price: 3490 }
+      { name: "Jugo Natural OrgÃ¡nico", quantity: 2, price: 3490 }
     ],
     minutes: 4,
     status: "Nuevo",
@@ -59,7 +67,7 @@ const INITIAL_ORDERS: Order[] = [
     id: 103,
     table: "Mesa 07",
     items: [
-      { name: "Pizza Diábola Familiar", quantity: 1, price: 15990 },
+      { name: "Pizza DiÃ¡bola Familiar", quantity: 1, price: 15990 },
       { name: "Aperol Spritz", quantity: 1, price: 6990 }
     ],
     minutes: 21,
@@ -71,7 +79,7 @@ const INITIAL_ORDERS: Order[] = [
     table: "Mesa 01",
     items: [
       { name: "Ramen Tonkotsu Ahumado", quantity: 2, price: 13990 },
-      { name: "Tacos de Entraña (3 pzs)", quantity: 1, price: 9990 },
+      { name: "Tacos de EntraÃ±a (3 pzs)", quantity: 1, price: 9990 },
       { name: "Espresso Doble", quantity: 1, price: 2990 }
     ],
     minutes: 32,
@@ -82,7 +90,7 @@ const INITIAL_ORDERS: Order[] = [
     id: 105,
     table: "Mesa 03",
     items: [
-      { name: "Ensalada César con Pollo", quantity: 1, price: 10990 },
+      { name: "Ensalada CÃ©sar con Pollo", quantity: 1, price: 10990 },
       { name: "Jugo Natural", quantity: 1, price: 3490 }
     ],
     minutes: 8,
@@ -116,10 +124,10 @@ const INITIAL_TABLES: Table[] = [
 const ITEM_POOL = [
   { name: "Burger MESA Premium", price: 11990 },
   { name: "Papas Trufadas", price: 6990 },
-  { name: "Tacos de Entraña (3 pzs)", price: 9990 },
-  { name: "Pizza Diábola Familiar", price: 15990 },
+  { name: "Tacos de EntraÃ±a (3 pzs)", price: 9990 },
+  { name: "Pizza DiÃ¡bola Familiar", price: 15990 },
   { name: "Fettuccine Alfredo", price: 12990 },
-  { name: "Ensalada César con Pollo", price: 10990 },
+  { name: "Ensalada CÃ©sar con Pollo", price: 10990 },
   { name: "Ramen Tonkotsu Ahumado", price: 13990 },
   { name: "Copa de Chardonnay", price: 5990 },
   { name: "Aperol Spritz", price: 6990 },
@@ -129,6 +137,7 @@ const ITEM_POOL = [
 ]
 
 export default function WaiterControlSystem() {
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS)
   const [tables, setTables] = useState<Table[]>(INITIAL_TABLES)
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
@@ -143,11 +152,68 @@ export default function WaiterControlSystem() {
 
   const nextOrderId = useRef(107)
 
+  const [loggedInStaff, setLoggedInStaff] = useState<Staff | null>(() => getStoredStaffSession()?.staff ?? null)
+  const [sessionTimeoutSetting] = useState(() => getStaffTimeoutSetting())
+  const [secondsRemaining, setSecondsRemaining] = useState(() => getStaffTimeoutSetting())
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false)
+
   // Toast Helper
   const triggerToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
   }
+
+  const handleLogout = useCallback(() => {
+    clearStaffSession()
+    setLoggedInStaff(null)
+    router.replace("/waiter/login")
+  }, [router])
+
+  const handleLockSession = useCallback(() => {
+    clearStaffSession()
+    setLoggedInStaff(null)
+    router.replace("/waiter/login")
+  }, [router])
+
+  useEffect(() => {
+    if (!loggedInStaff) {
+      router.replace("/waiter/login")
+    }
+  }, [loggedInStaff, router])
+
+  // Inactivity detection & automatic timeout
+  useEffect(() => {
+    if (!loggedInStaff) return
+
+    const mainTimer = setInterval(() => {
+      setSecondsRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(mainTimer)
+          handleLogout()
+          return 0
+        }
+        if (prev <= 16) {
+          setShowTimeoutWarning(true)
+        } else {
+          setShowTimeoutWarning(false)
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    const resetTimer = () => {
+      setSecondsRemaining(sessionTimeoutSetting)
+      setShowTimeoutWarning(false)
+    }
+
+    const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"]
+    events.forEach((ev) => window.addEventListener(ev, resetTimer))
+
+    return () => {
+      clearInterval(mainTimer)
+      events.forEach((ev) => window.removeEventListener(ev, resetTimer))
+    }
+  }, [loggedInStaff, sessionTimeoutSetting, handleLogout])
 
   // Cancel order callback (frees the table and filters out the order)
   const cancelOrder = useCallback((orderId: number) => {
@@ -155,7 +221,7 @@ export default function WaiterControlSystem() {
       const targetOrder = prevOrders.find((ord) => ord.id === orderId)
       if (!targetOrder) return prevOrders
 
-      triggerToast(`Pedido #${orderId} de ${targetOrder.table} cancelado 🛑`)
+      triggerToast(`Pedido #${orderId} de ${targetOrder.table} cancelado ðŸ›‘`)
 
       // Sync Table status - release the table back to Libre!
       setTables((prevTables) =>
@@ -181,14 +247,14 @@ export default function WaiterControlSystem() {
         let nextStatus: Order["status"] = "Nuevo"
         if (ord.status === "Nuevo") {
           nextStatus = "Preparando"
-          triggerToast(`Pedido #${orderId} en preparación en Cocina 🍳`)
+          triggerToast(`Pedido #${orderId} en preparaciÃ³n en Cocina ðŸ³`)
         } else if (ord.status === "Preparando") {
           nextStatus = "Listo"
-          triggerToast(`¡Pedido #${orderId} LISTO para servir! 🛎️`)
+          triggerToast(`Â¡Pedido #${orderId} LISTO para servir! ðŸ›Žï¸`)
         } else if (ord.status === "Listo") {
           nextStatus = "Entregado"
           setDailySales((prev) => prev + ord.price)
-          triggerToast(`Pedido #${orderId} entregado y pagado en ${ord.table} ✅`)
+          triggerToast(`Pedido #${orderId} entregado y pagado en ${ord.table} âœ…`)
         } else {
           return ord
         }
@@ -250,7 +316,7 @@ export default function WaiterControlSystem() {
       )
     )
 
-    triggerToast(`⚡ Nuevo pedido ingresado: ${targetTable.number} ($${total.toLocaleString("es-CL")})`)
+    triggerToast(`âš¡ Nuevo pedido ingresado: ${targetTable.number} ($${total.toLocaleString("es-CL")})`)
   }, [tables])
 
   // Simulation loop
@@ -355,21 +421,29 @@ export default function WaiterControlSystem() {
       generateRandomOrder()
     } else if (query === "pausa" || query === "stop") {
       setIsLive(false)
-      triggerToast("Simulación en vivo pausada ⏸️")
+      triggerToast("SimulaciÃ³n en vivo pausada â¸ï¸")
     } else if (query === "play" || query === "play") {
       setIsLive(true)
-      triggerToast("Simulación en vivo activada ▶️")
+      triggerToast("SimulaciÃ³n en vivo activada â–¶ï¸")
     } else if (query === "reset" || query === "reiniciar") {
       setOrders(INITIAL_ORDERS)
       setTables(INITIAL_TABLES)
       setDailySales(438500)
       setAvgWaitTime(14)
-      triggerToast("Consola de simulación restablecida 🔄")
+      triggerToast("Consola de simulaciÃ³n restablecida ðŸ”„")
     } else {
       triggerToast(`Comando no reconocido: "${cmd}"`)
     }
     setConsoleQuery("")
     setShowRaycastConsole(false)
+  }
+
+  if (!loggedInStaff) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#FAF9F5] px-6 text-sm font-semibold text-stone-600">
+        Redirigiendo al login de mesero...
+      </main>
+    )
   }
 
   return (
@@ -414,19 +488,19 @@ export default function WaiterControlSystem() {
             <div className="p-2 bg-stone-50 max-h-48 overflow-y-auto">
               <div className="text-[11px] font-bold tracking-wider text-stone-400 px-3 py-1">COMANDOS SUGERIDOS</div>
               <button onClick={() => executeConsoleCommand("nuevo")} className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-stone-700 hover:bg-stone-200/50">
-                <span>⚡ Simular nuevo pedido</span>
+                <span>âš¡ Simular nuevo pedido</span>
                 <kbd className="text-[10px] text-stone-400 border border-stone-200 px-1.5 py-0.5 rounded bg-white font-mono">nuevo</kbd>
               </button>
               <button onClick={() => executeConsoleCommand("pausa")} className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-stone-700 hover:bg-stone-200/50">
-                <span>⏸️ Pausar simulación en vivo</span>
+                <span>â¸ï¸ Pausar simulaciÃ³n en vivo</span>
                 <kbd className="text-[10px] text-stone-400 border border-stone-200 px-1.5 py-0.5 rounded bg-white font-mono">pausa</kbd>
               </button>
               <button onClick={() => executeConsoleCommand("play")} className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-stone-700 hover:bg-stone-200/50">
-                <span>▶️ Reanudar simulación en vivo</span>
+                <span>â–¶ï¸ Reanudar simulaciÃ³n en vivo</span>
                 <kbd className="text-[10px] text-stone-400 border border-stone-200 px-1.5 py-0.5 rounded bg-white font-mono">play</kbd>
               </button>
               <button onClick={() => executeConsoleCommand("reset")} className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-stone-700 hover:bg-stone-200/50">
-                <span>🔄 Restablecer todas las mesas</span>
+                <span>ðŸ”„ Restablecer todas las mesas</span>
                 <kbd className="text-[10px] text-stone-400 border border-stone-200 px-1.5 py-0.5 rounded bg-white font-mono">reset</kbd>
               </button>
             </div>
@@ -455,8 +529,45 @@ export default function WaiterControlSystem() {
             </div>
           </div>
 
-          {/* Quick Simulation controls (Raycast style button) */}
+          {/* Quick Simulation controls & Active Session */}
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Active Staff Session Indicator */}
+            {loggedInStaff && (
+              <>
+                <div className="flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 shadow-sm text-xs font-semibold text-stone-700 backdrop-blur-md">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
+                  <div className={`h-5 w-5 rounded-full bg-gradient-to-tr ${loggedInStaff.avatar_color} flex items-center justify-center text-white text-[8px] font-bold`}>
+                    {loggedInStaff.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <span>
+                    <strong className="text-stone-900">{loggedInStaff.name}</strong>
+                    <span className="text-stone-400 font-normal"> ({getStaffRoleLabel(loggedInStaff.role)})</span>
+                  </span>
+                  
+                  <div className="h-3.5 w-[1px] bg-stone-200 mx-1" />
+                  
+                  <button 
+                    onClick={handleLockSession} 
+                    className="text-orange-600 hover:text-orange-700 font-bold transition cursor-pointer"
+                    title="Bloquear pantalla de control"
+                  >
+                    Bloquear
+                  </button>
+                  
+                  <div className="h-3.5 w-[1px] bg-stone-200 mx-1" />
+                  
+                  <button 
+                    onClick={handleLogout} 
+                    className="text-stone-500 hover:text-stone-700 font-medium transition cursor-pointer"
+                    title="Cerrar sesiÃ³n de staff"
+                  >
+                    Salir
+                  </button>
+                </div>
+                <div className="hidden lg:block h-6 w-[1px] bg-stone-200 mx-1" />
+              </>
+            )}
+
             <button
               onClick={() => setShowRaycastConsole(true)}
               className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
@@ -466,7 +577,7 @@ export default function WaiterControlSystem() {
                 <path d="m21 21-4.3-4.3" />
               </svg>
               Consola de Comandos
-              <kbd className="hidden sm:inline-flex text-[9px] text-stone-400 border border-stone-200 px-1 py-0.2 rounded bg-stone-50 font-mono ml-1">⌘K</kbd>
+              <kbd className="hidden sm:inline-flex text-[9px] text-stone-400 border border-stone-200 px-1 py-0.2 rounded bg-stone-50 font-mono ml-1">âŒ˜K</kbd>
             </button>
 
             <button
@@ -519,7 +630,7 @@ export default function WaiterControlSystem() {
           </div>
 
           <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm transition hover:border-stone-300">
-            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">OCUPACIÓN MESAS</p>
+            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">OCUPACIÃ“N MESAS</p>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-3xl font-extrabold tracking-tight text-stone-950">
                 {Math.round((tables.filter((t) => t.status !== "Libre").length / tables.length) * 100)}%
@@ -551,7 +662,7 @@ export default function WaiterControlSystem() {
                 Restaurante Control Hub
               </div>
               <h2 className="text-lg font-bold tracking-tight text-stone-950">Mapa Interactivo del Local</h2>
-              <p className="text-xs text-stone-500 mt-1">Monitorea estados de cada mesa en tiempo real. Presiona una mesa para desplegar información del pedido.</p>
+              <p className="text-xs text-stone-500 mt-1">Monitorea estados de cada mesa en tiempo real. Presiona una mesa para desplegar informaciÃ³n del pedido.</p>
             </div>
             
             {/* Map Legend */}
@@ -633,19 +744,19 @@ export default function WaiterControlSystem() {
                     return ord ? (
                       <div className="mt-2 text-xs text-stone-600">
                         <p className="font-semibold text-stone-800">
-                          Pedido #{ord.id} • ${ord.price.toLocaleString("es-CL")} • Hace {ord.minutes} min
+                          Pedido #{ord.id} â€¢ ${ord.price.toLocaleString("es-CL")} â€¢ Hace {ord.minutes} min
                         </p>
                         <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
                           {ord.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}
                         </p>
-                        {ord.notes && <p className="mt-1 text-[10px] text-orange-600 italic">💡 Nota: {ord.notes}</p>}
+                        {ord.notes && <p className="mt-1 text-[10px] text-orange-600 italic">ðŸ’¡ Nota: {ord.notes}</p>}
                       </div>
                     ) : (
-                      <p className="text-xs text-stone-500 mt-1">No se encontró información del pedido activo.</p>
+                      <p className="text-xs text-stone-500 mt-1">No se encontrÃ³ informaciÃ³n del pedido activo.</p>
                     )
                   })()
                 ) : (
-                  <p className="text-xs text-stone-500 mt-1">Mesa vacía. Presiona "+ Simular Pedido" para simular que un cliente se sienta a ordenar.</p>
+                  <p className="text-xs text-stone-500 mt-1">Mesa vacÃ­a. Presiona &quot;+ Simular Pedido&quot; para simular que un cliente se sienta a ordenar.</p>
                 )}
               </div>
 
@@ -657,7 +768,7 @@ export default function WaiterControlSystem() {
                       onClick={() => advanceOrderStatus(ord.id)}
                       className="rounded-full bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-orange-500/20 hover:bg-orange-600 transition"
                     >
-                      Avanzar Pedido (→ {ord.status === "Nuevo" ? "Preparando" : ord.status === "Preparando" ? "Listo" : "Entregar"})
+                      Avanzar Pedido (â†’ {ord.status === "Nuevo" ? "Preparando" : ord.status === "Preparando" ? "Listo" : "Entregar"})
                     </button>
                   ) : null
                 })()}
@@ -794,7 +905,7 @@ export default function WaiterControlSystem() {
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Detalles del Pedido</span>
-                <h2 className="text-xl font-bold tracking-tight text-stone-950 mt-1">Pedido #{selectedOrder.id} • {selectedOrder.table}</h2>
+                <h2 className="text-xl font-bold tracking-tight text-stone-950 mt-1">Pedido #{selectedOrder.id} â€¢ {selectedOrder.table}</h2>
               </div>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${statusColors[selectedOrder.status].bg}`}>
                 <span className={`h-2 w-2 rounded-full ${statusColors[selectedOrder.status].dot}`} />
@@ -803,7 +914,7 @@ export default function WaiterControlSystem() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-stone-200/60 bg-white p-4">
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">Artículos Ordenados</p>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">ArtÃ­culos Ordenados</p>
               <ul className="divide-y divide-stone-100 text-sm text-stone-700">
                 {selectedOrder.items.map((item, idx) => (
                   <li key={idx} className="py-2.5 flex justify-between font-semibold">
@@ -820,7 +931,7 @@ export default function WaiterControlSystem() {
 
             {selectedOrder.notes && (
               <div className="mt-4 rounded-xl bg-orange-50 border border-orange-100/50 p-3.5 text-xs text-orange-800">
-                <p className="font-bold">📝 NOTAS DE COCINA:</p>
+                <p className="font-bold">ðŸ“ NOTAS DE COCINA:</p>
                 <p className="mt-1 leading-relaxed italic">{selectedOrder.notes}</p>
               </div>
             )}
@@ -831,7 +942,7 @@ export default function WaiterControlSystem() {
                 <p className="font-semibold text-stone-700 mt-0.5">{selectedOrder.minutes} minutos transcurridos</p>
               </div>
               <div className="text-right">
-                <span className="font-bold uppercase text-[9px] text-stone-400">TÁCTICA</span>
+                <span className="font-bold uppercase text-[9px] text-stone-400">TÃCTICA</span>
                 <p className="font-semibold text-stone-700 mt-0.5">Operado por Mesero</p>
               </div>
             </div>
@@ -842,7 +953,7 @@ export default function WaiterControlSystem() {
                   onClick={() => cancelOrder(selectedOrder.id)}
                   className="rounded-full bg-red-50 border border-red-200 px-5 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 transition cursor-pointer"
                 >
-                  Cancelar Pedido 🛑
+                  Cancelar Pedido ðŸ›‘
                 </button>
               )}
               
@@ -861,10 +972,39 @@ export default function WaiterControlSystem() {
                   }}
                   className="rounded-full bg-stone-950 px-5 py-2.5 text-xs font-bold text-white hover:bg-stone-800 transition cursor-pointer"
                 >
-                  {selectedOrder.status === "Nuevo" ? "Iniciar Preparación 🍳" : selectedOrder.status === "Preparando" ? "Listo para Servir 🛎️" : "Marcar como Entregado ✅"}
+                  {selectedOrder.status === "Nuevo" ? "Iniciar PreparaciÃ³n ðŸ³" : selectedOrder.status === "Preparando" ? "Listo para Servir ðŸ›Žï¸" : "Marcar como Entregado âœ…"}
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-lock Warning Modal */}
+      {showTimeoutWarning && loggedInStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-red-100 bg-[#FAF9F5] p-6 shadow-2xl text-center animate-card-entrance">
+            <div className="mx-auto h-12 w-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold animate-bounce mb-4">
+              âš ï¸
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">Â¿Sigues ahÃ­, {loggedInStaff.name}?</h3>
+            <p className="text-xs text-stone-500 mt-2 leading-relaxed">
+              Por seguridad del restaurante, tu sesiÃ³n se cerrarÃ¡ automÃ¡ticamente debido a inactividad en:
+            </p>
+            <div className="my-5 text-4xl font-extrabold text-orange-600 tracking-tight">
+              {secondsRemaining}s
+            </div>
+            
+            <button
+              onClick={() => {
+                setSecondsRemaining(sessionTimeoutSetting)
+                setShowTimeoutWarning(false)
+                triggerToast("SesiÃ³n reanudada")
+              }}
+              className="w-full rounded-full bg-stone-950 py-3 text-xs font-bold text-white hover:bg-stone-800 transition cursor-pointer shadow-lg shadow-stone-900/10"
+            >
+              Mantener SesiÃ³n Activa
+            </button>
           </div>
         </div>
       )}
@@ -917,7 +1057,7 @@ function OrderCard({
 
       {order.notes && (
         <div className="mt-2 text-[10px] text-orange-600 italic bg-orange-50/50 p-2 rounded-lg border border-orange-100/50">
-          ⚠️ Note: {order.notes}
+          âš ï¸ Note: {order.notes}
         </div>
       )}
 
@@ -936,7 +1076,7 @@ function OrderCard({
               }}
               className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 hover:border-red-300 transition cursor-pointer"
             >
-              Cancelar 🛑
+              Cancelar ðŸ›‘
             </button>
           )}
 
