@@ -24,3 +24,75 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Antigravity Design System Custom Animations */
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px var(--glow-color, rgba(249, 115, 22, 0.2)));
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 8px var(--glow-color, rgba(249, 115, 22, 0.6)));
+    opacity: 1;
+  }
+}
+
+@keyframes floatCard {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(0.5deg);
+  }
+}
+
+@keyframes flowLine {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-float-card {
+  animation: floatCard 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-flow-line {
+  stroke-dasharray: 5, 5;
+  animation: flowLine 1.5s linear infinite;
+}
+
+.animate-card-entrance {
+  animation: cardEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.text-glow-orange {
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+}
+
+.bg-warm-canvas {
+  background-color: #FAF9F6;
+}
+
+.bg-warm-card {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+}
+
