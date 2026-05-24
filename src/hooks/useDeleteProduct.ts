@@ -1,9 +1,8 @@
 import { useRef, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { deleteProductAction } from "@/app/actions/product-actions"
 
 type PendingDeleteProduct = {
   productId: number
@@ -20,26 +19,30 @@ export function useDeleteProduct() {
     const pendingDelete = pendingDeleteRef.current
     if (!pendingDelete) return false
 
+    // 1. Borrar imagen de Cloudinary (si tiene)
     if (pendingDelete.productImagePublicId) {
-    const response = await fetch("/api/cloudinary/delete", {
+      const response = await fetch("/api/cloudinary/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           publicId: pendingDelete.productImagePublicId,
           productId: pendingDelete.productId,
         }),
+      })
+
+      if (!response.ok) throw new Error("Error al eliminar imagen")
+    }
+
+    // 2. Borrar producto del server
+    const result = await deleteProductAction({
+      productId: pendingDelete.productId,
+      productImagePublicId: pendingDelete.productImagePublicId ?? null,
     })
 
-    if (!response.ok) throw new Error("Error al eliminar imagen")
-  }
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", pendingDelete.productId)
-
-    if (error) throw error
-    await revalidateMenu()
     return true
   })
 
@@ -57,7 +60,7 @@ export function useDeleteProduct() {
         } catch (err: unknown) {
           if (isNetworkError(err)) return false
           logger.error("Error eliminando producto", err)
-          setError("Error al eliminar producto")
+          setError(err instanceof Error ? err.message : "Error al eliminar producto")
           return false
         } finally {
           setLoading(false)
