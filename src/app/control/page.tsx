@@ -807,7 +807,8 @@ export default function WaiterControlSystem() {
               <ul className="divide-y divide-stone-100 text-sm text-stone-700">
                 {selectedOrder.items.map((item, idx) => (
                   <li key={idx} className="py-2.5 flex justify-between font-semibold">
-                    <span>{item}</span>
+                    <span>{item.quantity}x {item.name}</span>
+                    <span className="text-stone-500 font-medium">${(item.price * item.quantity).toFixed(2)}</span>
                   </li>
                 ))}
               </ul>
