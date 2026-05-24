@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
-import { logger } from "@/lib/logger"
 import { decodeId } from "@/lib/hashids"
-import { getSafeErrorMessage } from "@/lib/safe-error"
+import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
-
-const safeErrors = [
-  "Categoria no encontrada",
-  "El nombre de la categoria es obligatorio"
-]
+import {
+  updateCategoryAction,
+  getCategoryForEditAction,
+} from "@/app/actions/category-actions"
 
 export function useEditCategory() {
   const router = useRouter()
@@ -25,35 +21,30 @@ export function useEditCategory() {
   const [error, setError] = useState("")
 
   const { run: loadCategoryWithRetry, isPending: isLoadPending } = useOfflineRetry(async () => {
-    if (!categoryId) throw new Error("Categoria no encontrada")
+    if (!categoryId) throw new Error("Categoría no encontrada")
 
-    const { data, error } = await supabase
-      .from("categories")
-      .select("id, category_name")
-      .eq("id", categoryId)
-      .maybeSingle()
+    const result = await getCategoryForEditAction(categoryId)
 
-    if (error) throw error
-    if (!data) throw new Error("Categoria no encontrada")
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
-    setCategoryName(data.category_name)
+    setCategoryName(result.data.name)
     setLoadError("")
   })
 
   const { run: updateCategoryWithRetry, isPending: isSavePending } = useOfflineRetry(async () => {
-    const cleanCategoryName = pendingNameRef.current.trim()
+    if (!categoryId) throw new Error("Categoría no encontrada")
 
-    if (!cleanCategoryName) {
-      throw new Error("El nombre de la categoria es obligatorio")
+    const result = await updateCategoryAction({
+      categoryId,
+      name: pendingNameRef.current.trim(),
+    })
+
+    if (!result.ok) {
+      throw new Error(result.error)
     }
 
-    const { error } = await supabase
-      .from("categories")
-      .update({ category_name: cleanCategoryName })
-      .eq("id", categoryId)
-
-    if (error) throw error
-    await revalidateMenu()
     router.replace("/admin/categories")
   })
 
@@ -67,7 +58,7 @@ export function useEditCategory() {
       } catch (err: unknown) {
         if (isNetworkError(err)) return
         logger.error("Error cargando categoria", err)
-        setLoadError(getSafeErrorMessage(err, "Error al cargar categoria", safeErrors))
+        setLoadError(err instanceof Error ? err.message : "Error al cargar categoría")
       } finally {
         setLoading(false)
       }
@@ -87,7 +78,7 @@ export function useEditCategory() {
     } catch (err: unknown) {
       if (isNetworkError(err)) return
       logger.error("Error actualizando categoria", err)
-      setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
+      setError(err instanceof Error ? err.message : "Error al guardar cambios")
     } finally {
       setSaving(false)
     }
@@ -100,6 +91,6 @@ export function useEditCategory() {
     saving: saving || isSavePending,
     loadError,
     error,
-    updateCategory
+    updateCategory,
   }
 }

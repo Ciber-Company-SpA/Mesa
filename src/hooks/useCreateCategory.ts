@@ -1,19 +1,13 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
-import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
-
-const safeErrors = [
-  "El nombre de la categoria es obligatorio",
-  "Usuario no autenticado",
-  "No se encontro el restaurante del usuario"
-]
+import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { createCategoryAction } from "@/app/actions/category-actions"
 
 export function useCreateCategory() {
   const router = useRouter()
+  const { restaurantId, loading: loadingId } = useRestaurantId()
   const pendingNameRef = useRef("")
 
   const [categoryName, setCategoryName] = useState("")
@@ -21,51 +15,27 @@ export function useCreateCategory() {
   const [error, setError] = useState("")
 
   const { run: createCategoryWithRetry, isPending } = useOfflineRetry(async () => {
-    const cleanCategoryName = pendingNameRef.current.trim()
-
-    if (!cleanCategoryName) {
-      throw new Error("El nombre de la categoria es obligatorio")
-    }
-
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser()
-
-    if (userError) throw userError
-
-    if (!user) {
+    if (!restaurantId) {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         throw { isNetworkError: true, message: "Sin conexion" }
       }
-
-      throw new Error("Usuario no autenticado")
+      throw new Error("No se encontró el restaurante")
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("restaurant_id")
-      .eq("auth_user_id", user.id)
-      .single()
+    const result = await createCategoryAction({
+      name: pendingNameRef.current.trim(),
+      restaurantId,
+    })
 
-    if (profileError || !profile) {
-      throw new Error("No se encontro el restaurante del usuario")
+    if (!result.ok) {
+      throw new Error(result.error)
     }
 
-    const { error: categoryError } = await supabase
-      .from("categories")
-      .insert({
-        category_name: cleanCategoryName,
-        restaurant_id: profile.restaurant_id
-      })
-
-    if (categoryError) throw categoryError
-    await revalidateMenu()
     router.replace("/admin/categories")
   })
 
   async function createCategory(trimmedName: string) {
-    if (loading) return
+    if (loading || loadingId) return
 
     try {
       pendingNameRef.current = trimmedName
@@ -76,7 +46,7 @@ export function useCreateCategory() {
     } catch (err: unknown) {
       if (isNetworkError(err)) return
       logger.error("Error creando categoria", err)
-      setError(getSafeErrorMessage(err, "Error al crear categoria", safeErrors))
+      setError(err instanceof Error ? err.message : "Error al crear categoría")
     } finally {
       setLoading(false)
     }
@@ -87,6 +57,6 @@ export function useCreateCategory() {
     setCategoryName,
     loading: loading || isPending,
     error,
-    createCategory
+    createCategory,
   }
 }

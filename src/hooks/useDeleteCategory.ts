@@ -1,9 +1,8 @@
 import { useRef, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { deleteCategoryAction } from "@/app/actions/category-actions"
 
 export function useDeleteCategory() {
   const [loading, setLoading] = useState(false)
@@ -14,13 +13,14 @@ export function useDeleteCategory() {
   const { run: deleteCategoryWithRetry, isPending } = useOfflineRetry(async () => {
     if (!categoryIdRef.current) return false
 
-    const { error } = await supabase
-      .from("categories")
-      .delete()
-      .eq("id", categoryIdRef.current)
+    const result = await deleteCategoryAction({
+      categoryId: categoryIdRef.current,
+    })
 
-    if (error) throw error
-    await revalidateMenu()
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
+
     return true
   })
 
@@ -37,7 +37,7 @@ export function useDeleteCategory() {
         } catch (err: unknown) {
           if (isNetworkError(err)) return false
           logger.error("Error eliminando categoria", err)
-          setError("Error al eliminar categoría")
+          setError(err instanceof Error ? err.message : "Error al eliminar categoría")
           return false
         } finally {
           setLoading(false)
