@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { revalidateMenu } from "@/app/actions/revalidate-menu"
 import { logger } from "@/lib/logger"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { deleteVariantAction } from "@/app/actions/variant-actions"
 
 export function useDeleteVariant() {
   const [loading, setLoading] = useState(false)
@@ -18,26 +17,27 @@ export function useDeleteVariant() {
           setLoading(true)
           setError("")
 
+          // 1. Borrar imagen de Cloudinary (si tiene)
           if (variantImagePublicId) {
             await fetch("/api/cloudinary/delete", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 publicId: variantImagePublicId,
-                variantId: variantId,
+                variantId,
               }),
             })
           }
 
-          const { error } = await supabase
-            .from("product_variants")
-            .delete()
-            .eq("id", variantId)
+          // 2. Borrar variante del server (valida + DELETE + invalida cache)
+          const result = await deleteVariantAction({ variantId })
 
-          if (error) throw error
-          await revalidateMenu()
+          if (!result.ok) {
+            throw new Error(result.error)
+          }
+
           return true
-        } catch (err) {
+        } catch (err: unknown) {
           logger.error("Error eliminando variante", err)
           setError(err instanceof Error ? err.message : "Error al eliminar variante")
           return false
