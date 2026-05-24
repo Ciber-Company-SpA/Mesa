@@ -2,8 +2,6 @@ import type { CartItem } from "@/types/cart-item"
 
 export type StoredOrder = {
   id: number
-  qrCode: string
-  qrCodeId: number
   statusId: number | null
   statusName: string | null
   createdAt: string

@@ -1,14 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from "react"
-import { QRCodeSVG } from "qrcode.react"
+import { useEffect } from "react"
 import { useCartStore, useCartTotal } from "@/store/cartStore"
 import { CartItem } from "@/types/cart-item"
 import { CartDrawerProps } from "@/types/cart-drawer"
 import type { StoredOrder } from "@/types/cart-store"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
 import { isStoredOrderInProgress, useLastOrder } from "@/hooks/useLastOrder"
-import { useOrderRegistration } from "@/hooks/useOrderRegistration"
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
@@ -193,105 +191,16 @@ function ActiveOrderView({
   )
 }
 
-function QrView({
-  total,
-  qrCode,
-  tableId,
-  restaurantId,
-  onCancel,
-  onOrderCompleted,
-}: {
-  total: number
-  qrCode: string
-  tableId: number
-  restaurantId: number
-  onCancel: () => void
-  onOrderCompleted: () => void
-}) {
-  const { isRegistered, isOffline } = useOrderRegistration({
-    qrCode,
-    tableId,
-    restaurantId,
-    total,
-    onOrderCompleted,
-  })
-
-  const scanUrl = useMemo(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin
-    const url = new URL(`/scan/${qrCode}`, baseUrl)
-    url.searchParams.set("tableId", String(tableId))
-    url.searchParams.set("restaurantId", String(restaurantId))
-    url.searchParams.set("total", String(total))
-    return url.toString()
-  }, [qrCode, restaurantId, tableId, total])
-
-  return (
-    <>
-      <div className="flex-1 overflow-y-auto px-5 py-5 text-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <h3 className="text-xl font-black tracking-tight text-white sm:text-2xl">
-          {isRegistered ? "Pedido registrado, espera a que lo preparen" : "Muestra este codigo al mesero"}
-        </h3>
-        <p className="mx-auto mt-2 max-w-xs text-sm leading-5 text-stone-300">
-          {isRegistered
-            ? "Ya lo enviamos al equipo. Te avisaran cuando este listo."
-            : isOffline
-              ? "Sin conexion. Reconectando..."
-              : "El mesero confirmara tu pedido desde la mesa."}
-        </p>
-
-        {isRegistered ? (
-          <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-[1.75rem] bg-emerald-500/15 text-6xl font-black text-emerald-200 shadow-2xl shadow-emerald-500/10 ring-1 ring-emerald-200/30 sm:h-52 sm:w-52">
-            OK
-          </div>
-        ) : (
-          <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-[1.75rem] bg-white p-4 shadow-2xl shadow-orange-500/10 ring-1 ring-orange-200/30 sm:h-52 sm:w-52">
-            <QRCodeSVG
-              value={scanUrl}
-              size={156}
-              bgColor="#ffffff"
-              fgColor="#0c0a09"
-              className="h-full w-full"
-            />
-          </div>
-        )}
-
-        <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-orange-200">
-          Codigo del pedido
-        </p>
-      </div>
-
-      <footer className="shrink-0 border-t border-white/10 px-5 py-4">
-        <div className="mb-4 flex items-center justify-between rounded-[1.25rem] bg-white/10 px-4 py-3 ring-1 ring-white/10">
-          <span className="text-sm font-black text-stone-300">Total</span>
-          <span className="text-2xl font-black text-orange-200">{formatPrice(total)}</span>
-        </div>
-
-        {!isRegistered && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex w-full items-center justify-center rounded-[1.35rem] bg-red-500/10 px-5 py-4 text-sm font-black text-red-100 ring-1 ring-red-300/20 transition hover:bg-red-500/15"
-          >
-            Cancelar pedido
-          </button>
-        )}
-      </footer>
-    </>
-  )
-}
-
 export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawerProps) {
   const items = useCartStore((state) => state.items)
   const total = useCartTotal()
   const hasItems = items.length > 0
 
   const {
-    qrCode,
     isLoading,
     isWaitingConnection,
     error,
     createOrder,
-    cancelOrder,
     resetOrderDraft,
   } = useCreateOrder({
     items,
@@ -299,8 +208,7 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
     restaurantId,
   })
 
-  const { activeOrder, lastOrder, isChecking, syncOrder } = useLastOrder()
-  const activeOrderIdRef = useRef<number | null>(null)
+  const { activeOrder, isChecking, syncOrder } = useLastOrder()
 
   useEffect(() => {
     if (!isOpen || !activeOrder) return
@@ -308,28 +216,13 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
     return () => window.clearTimeout(timeoutId)
   }, [isOpen, activeOrder, syncOrder])
 
-  useEffect(() => {
-    if (activeOrder) {
-      activeOrderIdRef.current = activeOrder.id
-      return
-    }
-
-    if (activeOrderIdRef.current && !lastOrder && qrCode) {
-      resetOrderDraft()
-      activeOrderIdRef.current = null
-    }
-  }, [activeOrder, lastOrder, qrCode, resetOrderDraft])
-
   async function refreshActiveOrder(order: StoredOrder) {
     await syncOrder(order)
 
     if (!isStoredOrderInProgress(useCartStore.getState().lastOrder)) {
       resetOrderDraft()
-      activeOrderIdRef.current = null
     }
   }
-
-  const isQrVisible = !!qrCode
 
   if (!isOpen) return null
 
@@ -345,10 +238,10 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
         <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
           <div>
             <p className="text-sm font-semibold text-orange-200/80">
-              {activeOrder ? "Pedido en curso" : isQrVisible ? "" : "Pedido actual"}
+              {activeOrder ? "Pedido en curso" : "Pedido actual"}
             </p>
             <h2 className="text-2xl font-black tracking-tight">
-              {activeOrder ? "Espera un momento" : isQrVisible ? "Pedido listo" : "Tu carrito"}
+              {activeOrder ? "Espera un momento" : "Tu carrito"}
             </h2>
           </div>
 
@@ -367,15 +260,6 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
             order={activeOrder}
             isChecking={isChecking}
             onRefresh={() => refreshActiveOrder(activeOrder)}
-          />
-        ) : isQrVisible ? (
-          <QrView
-            total={total}
-            qrCode={qrCode}
-            tableId={tableId}
-            restaurantId={restaurantId}
-            onCancel={cancelOrder}
-            onOrderCompleted={resetOrderDraft}
           />
         ) : (
           <CartView

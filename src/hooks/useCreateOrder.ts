@@ -1,9 +1,13 @@
 import { useCallback, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { CartItem } from "@/types/cart-item"
-import { createOrderQR } from "@/hooks/useCreateQR"
+import type { CartItem } from "@/types/cart-item"
+import type { Order } from "@/types/order"
+import { useCartStore } from "@/store/cartStore"
 import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
+
+type OrderStatusName = Pick<NonNullable<Order["order_status"]>, "status_name">
+type OrderStatusRelation = OrderStatusName | OrderStatusName[] | null
 
 type UseCreateOrderProps = {
   items: CartItem[]
@@ -11,42 +15,57 @@ type UseCreateOrderProps = {
   restaurantId: number
 }
 
+function getOrderStatusName(orderStatus: OrderStatusRelation) {
+  if (Array.isArray(orderStatus)) return orderStatus[0]?.status_name ?? null
+  return orderStatus?.status_name ?? null
+}
+
+function getCreateOrderErrorMessage(err: unknown) {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    err.code === "42501"
+  ) {
+    return "Supabase esta bloqueando la creacion del pedido por permisos."
+  }
+
+  return getSafeErrorMessage(err, "Error al crear el pedido, intenta de nuevo.", [])
+}
+
 export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderProps) {
-  const [qrCode, setQrCode] = useState<string | null>(null)
+  const clearCart = useCartStore((state) => state.clear)
+  const setLastOrder = useCartStore((state) => state.setLastOrder)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { run: createOrderQrWithRetry, isPending: isCreateRetryPending } =
-    useOfflineRetry(async () => {
-      const orderQrCode = await createOrderQR()
-      setQrCode(orderQrCode)
+  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+  const { run: createOrderWithRetry, isPending } = useOfflineRetry(async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({
+        total,
+        table_id: tableId,
+        restaurant_id: restaurantId,
+        status_id: 1,
+      })
+      .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")
+      .single()
+
+    if (error) throw error
+
+    setLastOrder({
+      id: data.id,
+      statusId: data.status_id,
+      statusName: getOrderStatusName(data.order_status) ?? "Nuevo",
+      createdAt: data.created_at,
+      tableId: data.table_id,
+      restaurantId: data.restaurant_id,
+      total: data.total,
     })
-
-  const { run: cancelOrderWithRetry, isPending: isCancelRetryPending } =
-    useOfflineRetry(async () => {
-      if (!qrCode) return
-
-      const { error } = await supabase
-        .from("order_qr_codes")
-        .update({ qr_active: false })
-        .eq("qr_code", qrCode)
-
-      if (error) throw error
-      setQrCode(null)
-    })
-
-  function getCreateQrErrorMessage(err: unknown) {
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      err.code === "42501"
-    ) {
-      return "Supabase esta bloqueando la creacion del QR por permisos."
-    }
-
-    return getSafeErrorMessage(err, "Error al crear el pedido, intenta de nuevo.", [])
-  }
+    clearCart()
+  })
 
   async function createOrder() {
     if (!items.length) return
@@ -59,37 +78,24 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
     setError(null)
 
     try {
-      await createOrderQrWithRetry()
+      await createOrderWithRetry()
     } catch (err) {
       if (isNetworkError(err)) return
-      setError(getCreateQrErrorMessage(err))
+      setError(getCreateOrderErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
   }
 
-  async function cancelOrder() {
-    if (!qrCode) return
-
-    try {
-      await cancelOrderWithRetry()
-    } catch (err) {
-      setError(getSafeErrorMessage(err, "Error al cancelar el pedido.", []))
-    }
-  }
-
   const resetOrderDraft = useCallback(() => {
-    setQrCode(null)
     setError(null)
   }, [])
 
   return {
-    qrCode,
-    isLoading: isLoading || isCreateRetryPending || isCancelRetryPending,
-    isWaitingConnection: isCreateRetryPending,
+    isLoading: isLoading || isPending,
+    isWaitingConnection: isPending,
     error,
     createOrder,
-    cancelOrder,
     resetOrderDraft,
   }
 }

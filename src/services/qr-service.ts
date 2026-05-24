@@ -19,7 +19,7 @@ export async function createTableQR(): Promise<Result<CreatedQRCode>> {
     .single()
 
   if (error || !data) {
-    return fail("Error al crear el código QR")
+    return fail("Error al crear el codigo QR")
   }
 
   return ok({
@@ -30,7 +30,7 @@ export async function createTableQR(): Promise<Result<CreatedQRCode>> {
 
 export async function deleteTableQR(qrCodeId: number): Promise<Result<{ id: number }>> {
   if (!qrCodeId || qrCodeId <= 0) {
-    return fail("ID de QR inválido")
+    return fail("ID de QR invalido")
   }
 
   const supabase = await createSupabaseServerClient()
@@ -41,25 +41,8 @@ export async function deleteTableQR(qrCodeId: number): Promise<Result<{ id: numb
     .eq("id", qrCodeId)
 
   if (error) {
-    return fail("Error al eliminar el código QR")
+    return fail("Error al eliminar el codigo QR")
   }
 
   return ok({ id: qrCodeId })
-}
-
-// TODO: deprecar cuando se elimine el flujo de pedidos con QR
-export async function createOrderQR(): Promise<Result<{ qrCode: string }>> {
-  const supabase = await createSupabaseServerClient()
-
-  const qrCode = nanoid(8)
-
-  const { error } = await supabase
-    .from("order_qr_codes")
-    .insert({ qr_code: qrCode, qr_active: true })
-
-  if (error) {
-    return fail("Error al crear el código QR del pedido")
-  }
-
-  return ok({ qrCode })
 }

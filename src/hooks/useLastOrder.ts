@@ -68,7 +68,7 @@ export function useLastOrder() {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("id, status_id, created_at, qr_code_id, table_id, restaurant_id, total, order_status(status_name)")
+      .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")
       .eq("id", orderToSync.id)
       .maybeSingle()
 
@@ -96,7 +96,6 @@ export function useLastOrder() {
         statusId: data.status_id,
         statusName: nextStatusName,
         createdAt: data.created_at,
-        qrCodeId: data.qr_code_id,
         tableId: data.table_id,
         restaurantId: data.restaurant_id,
         total: data.total,
@@ -143,7 +142,6 @@ export function useLastOrder() {
             const updatedOrder = payload.new as Partial<{
               status_id: number | null
               created_at: string
-              qr_code_id: number
               table_id: number
               restaurant_id: number
               total: number
@@ -165,7 +163,6 @@ export function useLastOrder() {
               statusId: nextStatusId,
               statusName: nextStatusName,
               createdAt: updatedOrder.created_at ?? currentLastOrder.createdAt,
-              qrCodeId: updatedOrder.qr_code_id ?? currentLastOrder.qrCodeId,
               tableId: updatedOrder.table_id ?? currentLastOrder.tableId,
               restaurantId: updatedOrder.restaurant_id ?? currentLastOrder.restaurantId,
               total: updatedOrder.total ?? currentLastOrder.total,
