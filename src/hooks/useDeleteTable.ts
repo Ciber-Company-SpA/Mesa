@@ -1,8 +1,8 @@
 import { useRef, useState } from "react"
-import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
+import { deleteTableAction } from "@/app/actions/table-actions"
 
 type PendingDeleteTable = {
   tableId: number
@@ -19,19 +19,14 @@ export function useDeleteTable() {
     const pendingDelete = pendingDeleteRef.current
     if (!pendingDelete) return false
 
-    const { error: tableError } = await supabase
-      .from("tables")
-      .delete()
-      .eq("id", pendingDelete.tableId)
+    const result = await deleteTableAction({
+      tableId: pendingDelete.tableId,
+      qrCodeId: pendingDelete.qrCodeId,
+    })
 
-    if (tableError) throw tableError
-
-    const { error: qrError } = await supabase
-      .from("table_qr_codes")
-      .delete()
-      .eq("id", pendingDelete.qrCodeId)
-
-    if (qrError) throw qrError
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
     return true
   })
@@ -50,7 +45,7 @@ export function useDeleteTable() {
         } catch (err: unknown) {
           if (isNetworkError(err)) return false
           logger.error("Error eliminando mesa", err)
-          setError("Error al eliminar mesa")
+          setError(err instanceof Error ? err.message : "Error al eliminar mesa")
           return false
         } finally {
           setLoading(false)

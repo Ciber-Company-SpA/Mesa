@@ -1,16 +1,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useRestaurantId } from "@/hooks/useRestaurantId"
-import { createQR } from "@/hooks/useCreateQR"
-import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
-
-const safeErrors = [
-  "El numero de mesa debe ser mayor a 0",
-  "No se encontro el restaurante"
-]
+import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { createTableAction } from "@/app/actions/table-actions"
 
 export function useCreateTable() {
   const router = useRouter()
@@ -21,31 +14,21 @@ export function useCreateTable() {
   const [error, setError] = useState("")
 
   const { run: createTableWithRetry, isPending } = useOfflineRetry(async () => {
-    const cleanNumber = Number(tableNumber)
-
-    if (!cleanNumber || cleanNumber <= 0) {
-      throw new Error("El numero de mesa debe ser mayor a 0")
-    }
-
     if (!restaurantId) {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         throw { isNetworkError: true, message: "Sin conexion" }
       }
-
-      throw new Error("No se encontro el restaurante")
+      throw new Error("No se encontró el restaurante")
     }
 
-    const qrData = await createQR("table_qr_codes")
+    const result = await createTableAction({
+      tableNumber: Number(tableNumber),
+      restaurantId,
+    })
 
-    const { error: tableError } = await supabase
-      .from("tables")
-      .insert({
-        table_number: cleanNumber,
-        restaurant_id: restaurantId,
-        qr_code_id: qrData.id
-      })
-
-    if (tableError) throw tableError
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
     router.replace("/admin/tables")
   })
@@ -56,12 +39,11 @@ export function useCreateTable() {
     try {
       setLoading(true)
       setError("")
-
       await createTableWithRetry()
     } catch (err: unknown) {
       if (isNetworkError(err)) return
       logger.error("Error creando mesa", err)
-      setError(getSafeErrorMessage(err, "Error al crear mesa", safeErrors))
+      setError(err instanceof Error ? err.message : "Error al crear mesa")
     } finally {
       setLoading(false)
     }
@@ -72,6 +54,6 @@ export function useCreateTable() {
     setTableNumber,
     loading: loading || isPending,
     error,
-    createTable
+    createTable,
   }
 }

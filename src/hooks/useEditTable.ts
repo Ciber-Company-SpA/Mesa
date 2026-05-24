@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { decodeId } from "@/lib/hashids"
-import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { getSafeErrorMessage } from "@/lib/safe-error"
 import { isNetworkError, useOfflineRetry } from "@/hooks/useOfflineRetry"
-
-const safeErrors = [
-  "Mesa no encontrada",
-  "El numero de mesa debe ser mayor a 0"
-]
+import {
+  updateTableAction,
+  getTableForEditAction,
+} from "@/app/actions/table-actions"
 
 export function useEditTable() {
   const router = useRouter()
@@ -26,32 +23,27 @@ export function useEditTable() {
   const { run: loadTableWithRetry, isPending: isLoadPending } = useOfflineRetry(async () => {
     if (!tableId) throw new Error("Mesa no encontrada")
 
-    const { data, error } = await supabase
-      .from("tables")
-      .select("*")
-      .eq("id", tableId)
-      .maybeSingle()
+    const result = await getTableForEditAction(tableId)
 
-    if (error) throw error
-    if (!data) throw new Error("Mesa no encontrada")
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
 
-    setTableNumber(String(data.table_number))
+    setTableNumber(String(result.data.tableNumber))
     setLoadError("")
   })
 
   const { run: updateTableWithRetry, isPending: isSavePending } = useOfflineRetry(async () => {
-    const cleanNumber = Number(pendingTableNumberRef.current)
+    if (!tableId) throw new Error("Mesa no encontrada")
 
-    if (!cleanNumber || cleanNumber <= 0) {
-      throw new Error("El numero de mesa debe ser mayor a 0")
+    const result = await updateTableAction({
+      tableId,
+      tableNumber: Number(pendingTableNumberRef.current),
+    })
+
+    if (!result.ok) {
+      throw new Error(result.error)
     }
-
-    const { error } = await supabase
-      .from("tables")
-      .update({ table_number: cleanNumber })
-      .eq("id", tableId)
-
-    if (error) throw error
 
     router.replace("/admin/tables")
   })
@@ -65,7 +57,7 @@ export function useEditTable() {
       } catch (err: unknown) {
         if (isNetworkError(err)) return
         logger.error("Error cargando mesa", err)
-        setLoadError(getSafeErrorMessage(err, "Error al cargar mesa", safeErrors))
+        setLoadError(err instanceof Error ? err.message : "Error al cargar mesa")
       } finally {
         setLoading(false)
       }
@@ -85,7 +77,7 @@ export function useEditTable() {
     } catch (err: unknown) {
       if (isNetworkError(err)) return
       logger.error("Error actualizando mesa", err)
-      setError(getSafeErrorMessage(err, "Error al guardar cambios", safeErrors))
+      setError(err instanceof Error ? err.message : "Error al guardar cambios")
     } finally {
       setSaving(false)
     }
@@ -98,6 +90,6 @@ export function useEditTable() {
     saving: saving || isSavePending,
     loadError,
     error,
-    updateTable
+    updateTable,
   }
 }
