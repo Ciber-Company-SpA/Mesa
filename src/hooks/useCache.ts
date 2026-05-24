@@ -72,9 +72,9 @@ export function useCache<T>(
   fetcher: () => Promise<T>,
   { ttl, enabled = true, revalidateOnMount = false, initialDelay, factor, maxDelay }: CacheOptions = {}
 ): CacheState<T> {
-  const [data, setData] = useState<T | null>(() => (enabled ? readCache<T>(key, ttl) : null))
-  const [isFromCache, setIsFromCache] = useState(() => enabled && data !== null)
-  const [isLoading, setIsLoading] = useState(() => enabled && data === null)
+  const [data, setData] = useState<T | null>(null)
+  const [isFromCache, setIsFromCache] = useState(false)
+  const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<unknown>(null)
 
   const fetcherForRetry = useCallback(async (): Promise<T> => {

@@ -1,104 +1,95 @@
 "use client"
 
 import Link from "next/link"
-import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
 import { useOrderStats } from "@/hooks/useOrderStats"
 
 const statusConfig: Record<string, string> = {
-  "Nuevo":          "bg-orange-100 text-orange-700",
-  "En preparación": "bg-stone-950 text-white",
-  "Listo":          "bg-emerald-100 text-emerald-700",
+  "Nuevo":          "bg-orange-50 text-orange-700 ring-orange-200/50",
+  "En preparación": "bg-stone-950 text-white ring-stone-900/50",
+  "Listo":          "bg-emerald-50 text-emerald-700 ring-emerald-200/50",
 }
 
-const quickLinks = [
-  { label: "Categorías", href: "/admin/categories" },
-  { label: "Productos",  href: "/admin/products" },
-  { label: "Mesas",      href: "/admin/tables" },
-  { label: "Pedidos",    href: "/admin/orders" },
-]
-
 export default function AdminPage() {
-  const { restaurant, loading: loadingRestaurant } = useRestaurant()
   const { totalTables, loading: loadingTables } = useTableList()
   const { orders, activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 4 })
   const { dailySales, completedOrders, loading: loadingStats } = useOrderStats()
 
   return (
-    <main className="min-h-screen bg-stone-50 px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-
-        <header className="mb-7 flex items-start justify-between gap-4">
+    <div className="space-y-6">
+      
+      {/* Sección principal de métricas de ventas */}
+      <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-stone-600">Panel admin</p>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {loadingRestaurant ? "Cargando..." : restaurant?.restaurant_name ?? "Mi Restaurante"}
-            </h1>
-          </div>
-          <span className="rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm">
-            Abierto
-          </span>
-        </header>
-
-        <nav className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {quickLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-center text-sm font-semibold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:text-orange-600 hover:shadow-md"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-stone-600">Ventas del día</p>
-              <p className="text-4xl font-bold tracking-tight">
-                {loadingStats ? "..." : `$${dailySales.toLocaleString("es-CL")}`}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-orange-50 px-4 py-3 text-right">
-              <p className="text-sm font-bold text-orange-700">
-                {loadingStats ? "..." : `${completedOrders} completados`}
-              </p>
-              <p className="text-sm text-stone-600">pedidos cerrados</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/admin/orders"
-            className="rounded-[2rem] bg-orange-500 p-5 text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600"
-          >
-            <p className="text-sm font-medium text-orange-50">Pedidos activos</p>
-            <p className="mt-3 text-4xl font-bold tracking-tight">
-              {loadingOrders ? "..." : activeOrdersCount}
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Ventas del día</p>
+            <p className="mt-1 text-4xl font-extrabold tracking-tight text-stone-900 tabular-nums">
+              {loadingStats ? "..." : `$${dailySales.toLocaleString("es-CL")}`}
             </p>
-          </Link>
-
-          <Link
-            href="/admin/tables"
-            className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <p className="text-sm text-stone-600">Mesas</p>
-            <p className="mt-3 text-4xl font-bold tracking-tight">
-              {loadingTables ? "..." : totalTables}
+          </div>
+          <div className="rounded-2xl bg-orange-50 px-4 py-3 ring-1 ring-orange-200/50 sm:text-right">
+            <p className="text-xs font-semibold text-orange-800">pedidos cerrados</p>
+            <p className="mt-0.5 text-2xl font-bold tracking-tight text-orange-700 tabular-nums">
+              {loadingStats ? "..." : completedOrders}
             </p>
-          </Link>
-        </section>
+          </div>
+        </div>
+      </section>
 
-        <section className="mt-4 space-y-3">
-          {loadingOrders ? (
-            <p className="py-4 text-center text-sm text-stone-500">Cargando pedidos...</p>
-          ) : orders.length === 0 ? (
-            <p className="py-4 text-center text-sm text-stone-500">No hay pedidos activos</p>
-          ) : (
-            orders.map((order) => {
+      {/* Cartas rápidas operacionales */}
+      <section className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/orders"
+          className="group rounded-3xl bg-orange-500 p-6 text-white shadow-xl shadow-orange-500/10 transition duration-200 hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/25"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-orange-100 uppercase tracking-wider">Pedidos activos</p>
+            <span className="text-lg">▣</span>
+          </div>
+          <p className="mt-4 text-5xl font-extrabold tracking-tight tabular-nums">
+            {loadingOrders ? "..." : activeOrdersCount}
+          </p>
+          <p className="mt-2 text-xs font-medium text-orange-100 transition group-hover:text-white">
+            Ver panel de comandas en preparación →
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/tables"
+          className="group rounded-3xl border border-stone-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Mesas totales</p>
+            <span className="text-lg text-stone-400 group-hover:text-orange-500 transition">◫</span>
+          </div>
+          <p className="mt-4 text-5xl font-extrabold tracking-tight text-stone-900 tabular-nums">
+            {loadingTables ? "..." : totalTables}
+          </p>
+          <p className="mt-2 text-xs font-medium text-stone-500 group-hover:text-orange-600 transition">
+            Ver códigos QR y estados de mesa →
+          </p>
+        </Link>
+      </section>
+
+      {/* Listado de pedidos activos recientes */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider">Pedidos Recientes</h3>
+          <Link href="/admin/orders" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+            Ver todos
+          </Link>
+        </div>
+
+        {loadingOrders ? (
+          <p className="py-8 text-center text-xs font-medium text-stone-500 animate-pulse">Cargando pedidos...</p>
+        ) : orders.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-stone-200 bg-white p-8 text-center shadow-inner">
+            <p className="text-xs font-semibold text-stone-500">No hay pedidos activos en este momento.</p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {orders.map((order) => {
               const statusName = order.order_status?.status_name ?? ""
               const badgeClass = statusConfig[statusName] ?? "bg-stone-100 text-stone-700"
 
@@ -106,28 +97,28 @@ export default function AdminPage() {
                 <Link
                   key={order.id}
                   href="/admin/orders"
-                  className="block rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="block rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h2 className="font-bold">
+                      <h4 className="font-bold text-stone-900">
                         {`Mesa ${order.tables?.[0]?.table_number ?? order.table_id}`}
-                      </h2>
-                      <p className="mt-2 text-sm text-stone-600">
+                      </h4>
+                      <p className="mt-1 text-xs font-medium text-stone-500 tabular-nums">
                         Pedido #{order.id} · ${order.total.toLocaleString("es-CL")}
                       </p>
                     </div>
-                    <span className={`rounded-full px-4 py-2 text-sm font-bold ${badgeClass}`}>
+                    <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 ring-stone-950/5 ${badgeClass}`}>
                       {statusName}
                     </span>
                   </div>
                 </Link>
               )
-            })
-          )}
-        </section>
+            })}
+          </div>
+        )}
+      </section>
 
-      </div>
-    </main>
+    </div>
   )
 }
