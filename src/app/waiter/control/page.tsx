@@ -104,11 +104,11 @@ export default function WaiterControlSystem() {
       router.replace("/waiter/login")
       return
     }
-    // Si la sesión actual es de admin/manager, no estamos sin login: estamos
-    // en la pestaña equivocada. Mandamos al home de su rol para que admin y
-    // mesero no se pisen mutuamente.
+    // Acceso cruzado: si un admin entra a esta URL, lo mandamos al login de
+    // mesero sin cerrar su sesión. Si decide loguearse como mesero, ese signIn
+    // reemplaza su sesión; si vuelve a /admin sigue logueado como admin.
     if (isAdminRole(loggedInStaff.role)) {
-      router.replace("/admin")
+      router.replace("/waiter/login")
     }
   }, [profileLoading, loggedInStaff, router])
 

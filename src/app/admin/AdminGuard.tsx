@@ -24,7 +24,12 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         .eq("auth_user_id", user.id)
         .single()
       const role = roleIdToRole(profile?.role_id ?? 1)
-      if (!isAdminRole(role)) router.replace("/waiter/control")
+      if (!isAdminRole(role)) {
+        // Acceso cruzado: un mesero/cocina/caja intentó entrar a /admin.
+        // Lo mandamos al login de admin sin cerrar su sesión; solo si
+        // efectivamente se loguea como admin se reemplaza la sesión.
+        router.replace("/login")
+      }
     }
     checkRole()
 

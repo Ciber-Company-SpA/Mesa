@@ -22,9 +22,10 @@ export default function WaiterLoginPage() {
   const [error, setError] = useState("")
   const [sessionChecked, setSessionChecked] = useState(false)
 
-  // Si ya hay sesión Supabase, redirigir a la home del rol (admin → /admin,
-  // mesero/cocina/caja → /waiter/control). Sin esta distinción, un admin
-  // logueado caía a /waiter/control y rebotaba al login.
+  // Si ya hay sesión de mesero/cocina/caja, salta directo a /waiter/control.
+  // Si la sesión es de admin, NO redirigimos: el admin pudo haber llegado acá
+  // queriendo loguearse como mesero. La sesión actual queda viva hasta que
+  // efectivamente complete el login de mesero (ahí signIn la reemplaza).
   useEffect(() => {
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -39,8 +40,10 @@ export default function WaiterLoginPage() {
             .eq("auth_user_id", user.id)
             .single()
           const role = roleIdToRole(profile?.role_id ?? 1)
-          router.replace(isAdminRole(role) ? "/admin" : "/waiter/control")
-          return
+          if (!isAdminRole(role)) {
+            router.replace("/waiter/control")
+            return
+          }
         }
       }
       setSessionChecked(true)
@@ -73,6 +76,19 @@ export default function WaiterLoginPage() {
       const user = data.user
       if (!user) {
         setError("No se pudo iniciar sesión")
+        return
+      }
+
+      // Rechazar credenciales de admin/manager en este portal.
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role_id")
+        .eq("auth_user_id", user.id)
+        .single()
+      const role = roleIdToRole(profile?.role_id ?? 1)
+      if (isAdminRole(role)) {
+        await supabase.auth.signOut()
+        setError("Esta cuenta es de administrador. Ingresa en el portal de admin.")
         return
       }
 

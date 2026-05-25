@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
+import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
 
 export function useLogin() {
   const router = useRouter()
@@ -19,9 +20,26 @@ export function useLogin() {
       setLoading(true)
       setError("")
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) throw error
+      if (!data.user) {
+        setError("No se pudo iniciar sesión")
+        return
+      }
+
+      // Rechazar credenciales de mesero/cocina/caja en este portal.
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role_id")
+        .eq("auth_user_id", data.user.id)
+        .single()
+      const role = roleIdToRole(profile?.role_id ?? 1)
+      if (!isAdminRole(role)) {
+        await supabase.auth.signOut()
+        setError("Esta cuenta no es de administrador. Ingresa en el portal de mesero.")
+        return
+      }
 
       router.push("/admin")
     } catch (err: unknown) {
