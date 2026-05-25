@@ -180,9 +180,17 @@ export default function WaiterLoginPage() {
             </div>
 
             <div>
-              <label htmlFor="waiter-password" className="mb-1.5 block text-xs font-semibold text-stone-700">
-                Contraseña
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="waiter-password" className="block text-xs font-semibold text-stone-700">
+                  Contraseña
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[10px] font-semibold text-orange-600 transition hover:text-orange-700"
+                >
+                  ¿La olvidaste?
+                </Link>
+              </div>
               <input
                 id="waiter-password"
                 type="password"
