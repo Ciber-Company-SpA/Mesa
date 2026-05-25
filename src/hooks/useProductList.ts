@@ -112,5 +112,6 @@ export function useProductList({ page = 1, pageSize = 12 }: UseProductListOption
     deleteProduct: deleteVisibleProduct,
     updateProductStatus,
     deleteDialog,
+    refresh,
   }
 }

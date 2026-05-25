@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { Pagination } from "@/components/ui/Pagination"
-import { encodeId } from "@/lib/hashids"
 import { useProductList } from "@/hooks/useProductList"
+import { CreateProductDialog } from "@/components/admin/CreateProductDialog"
+import { EditProductDialog } from "@/components/admin/EditProductDialog"
 
 const statusLabels: Record<number, string> = {
   1: "Disponible",
@@ -44,6 +44,8 @@ function getStatusActions(statusId: number) {
 
 export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1)
+  const [showCreate, setShowCreate] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const {
     products,
     totalProducts,
@@ -55,6 +57,7 @@ export default function ProductsPage() {
     deleteProduct,
     updateProductStatus,
     deleteDialog,
+    refresh,
   } = useProductList({ page: currentPage, pageSize: 12 })
   const [openMenuProductId, setOpenMenuProductId] = useState<number | null>(null)
 
@@ -68,22 +71,39 @@ export default function ProductsPage() {
     <div className="space-y-6">
       {deleteDialog}
 
-      {/* Encabezado local minimalista con acción de creación */}
+      <CreateProductDialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={refresh}
+      />
+      <EditProductDialog
+        open={editingId !== null}
+        productId={editingId}
+        onClose={() => setEditingId(null)}
+        onSaved={refresh}
+      />
+
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-stone-900">Carta y Productos</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">Carta y Productos</h2>
+            <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-bold text-stone-700 ring-1 ring-stone-200">
+              {totalProducts}
+            </span>
+          </div>
           <p className="text-sm text-stone-600">
             Administra los platos, tragos, precios y categorías del menú digital.
           </p>
         </div>
 
-        <Link
-          href="/admin/products/create"
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
           aria-label="Crear producto"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
         >
           <span>+ Agregar Producto</span>
-        </Link>
+        </button>
       </div>
 
       {/* Panel Principal de Productos */}
@@ -120,12 +140,13 @@ export default function ProductsPage() {
             <p className="mx-auto mt-2 max-w-xs text-xs text-stone-550 leading-relaxed">
               Crea tu primer producto para comenzar a armar el menú digital de tu restaurante.
             </p>
-            <Link
-              href="/admin/products/create"
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
               className="mx-auto mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-orange-600"
             >
               + Crear primer producto
-            </Link>
+            </button>
           </div>
         )}
 
@@ -228,12 +249,13 @@ export default function ProductsPage() {
                     </div>
 
                     <div className="mt-auto grid grid-cols-2 gap-2">
-                      <Link
-                        href={`/admin/products/${encodeId(product.id)}/edit`}
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(product.id)}
                         className="min-w-0 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-center text-xs font-bold text-stone-750 transition hover:bg-stone-100"
                       >
                         Editar
-                      </Link>
+                      </button>
 
                       <button
                         type="button"

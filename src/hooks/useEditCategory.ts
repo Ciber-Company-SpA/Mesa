@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { decodeId } from "@/lib/hashids"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
@@ -8,11 +6,9 @@ import {
   getCategoryForEditAction,
 } from "@/app/actions/category-actions"
 
-export function useEditCategory() {
-  const router = useRouter()
-  const params = useParams()
-  const categoryId = decodeId(params.id as string)
+export function useEditCategory(categoryId: number | null) {
   const pendingNameRef = useRef("")
+  const successRef = useRef(false)
 
   const [categoryName, setCategoryName] = useState("")
   const [loading, setLoading] = useState(true)
@@ -45,10 +41,17 @@ export function useEditCategory() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/categories")
+    successRef.current = true
   })
 
   useEffect(() => {
+    if (!categoryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal cerrado: no hay id, salimos del estado de carga inicial.
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
     async function loadCategory() {
       try {
         setLoading(true)
@@ -56,33 +59,39 @@ export function useEditCategory() {
         setError("")
         await loadCategoryWithRetry()
       } catch (err: unknown) {
+        if (cancelled) return
         handleMutationError(err, {
           logTag: "Error cargando categoria",
           fallback: "Error al cargar categoría",
           setError: setLoadError,
         })
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadCategory()
-  }, [loadCategoryWithRetry])
+    return () => { cancelled = true }
+  }, [categoryId, loadCategoryWithRetry])
 
-  async function updateCategory(trimmedName: string) {
-    if (saving) return
+  async function updateCategory(trimmedName: string): Promise<boolean> {
+    if (saving) return false
+
+    successRef.current = false
 
     try {
       pendingNameRef.current = trimmedName
       setSaving(true)
       setError("")
       await updateCategoryWithRetry()
+      return successRef.current
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error actualizando categoria",
         fallback: "Error al guardar cambios",
         setError,
       })
+      return false
     } finally {
       setSaving(false)
     }

@@ -4,12 +4,11 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  Staff,
-  clearStaffSession,
   getStaffRoleLabel,
   getStaffTimeoutSetting,
-  getStoredStaffSession,
 } from "@/lib/waiter-session"
+import { useStaffProfile } from "@/hooks/useStaffProfile"
+import { supabase } from "@/lib/supabase"
 
 // Types for the dashboard
 interface OrderItem {
@@ -152,22 +151,16 @@ export default function WaiterControlSystem() {
 
   const nextOrderId = useRef(107)
 
-  // La sesión vive en localStorage — no se puede leer durante SSR sin causar
-  // hydration mismatch. Se carga en un useEffect tras montar.
-  const [loggedInStaff, setLoggedInStaff] = useState<Staff | null>(null)
-  const [sessionChecked, setSessionChecked] = useState(false)
+  const { profile: loggedInStaff, loading: profileLoading } = useStaffProfile()
   const [sessionTimeoutSetting, setSessionTimeoutSetting] = useState(0)
   const [secondsRemaining, setSecondsRemaining] = useState(0)
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false)
 
   useEffect(() => {
-    const staff = getStoredStaffSession()?.staff ?? null
     const timeout = getStaffTimeoutSetting()
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga única de localStorage al montar; no se puede hacer en lazy init de useState porque rompe SSR.
-    setLoggedInStaff(staff)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura única de localStorage al montar.
     setSessionTimeoutSetting(timeout)
     setSecondsRemaining(timeout)
-    setSessionChecked(true)
   }, [])
 
   // Toast Helper
@@ -176,23 +169,21 @@ export default function WaiterControlSystem() {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  const handleLogout = useCallback(() => {
-    clearStaffSession()
-    setLoggedInStaff(null)
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut()
     router.replace("/waiter/login")
   }, [router])
 
-  const handleLockSession = useCallback(() => {
-    clearStaffSession()
-    setLoggedInStaff(null)
+  const handleLockSession = useCallback(async () => {
+    await supabase.auth.signOut()
     router.replace("/waiter/login")
   }, [router])
 
   useEffect(() => {
-    if (sessionChecked && !loggedInStaff) {
+    if (!profileLoading && !loggedInStaff) {
       router.replace("/waiter/login")
     }
-  }, [sessionChecked, loggedInStaff, router])
+  }, [profileLoading, loggedInStaff, router])
 
   // Inactivity detection & automatic timeout
   useEffect(() => {
@@ -451,10 +442,7 @@ export default function WaiterControlSystem() {
     setShowRaycastConsole(false)
   }
 
-  // SSR y primer render del cliente: misma salida neutral (evita hydration mismatch).
-  // Tras el useEffect que lee localStorage: si no hay sesión, mostramos "Redirigiendo..."
-  // mientras el otro effect ejecuta router.replace.
-  if (!sessionChecked) {
+  if (profileLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#FAF9F5] px-6 text-sm font-semibold text-stone-600">
         Cargando...

@@ -54,6 +54,7 @@ export function useCategoryList({ page = 1, pageSize = 12 }: UseCategoryListOpti
     deleting,
     error: error ?? deleteError,
     deleteCategory: deleteVisibleCategory,
-    deleteDialog
+    deleteDialog,
+    refresh,
   }
 }

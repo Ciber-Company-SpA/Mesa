@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
@@ -7,8 +6,8 @@ import { createTableAction } from "@/app/actions/table-actions"
 import { CreateTableSchema } from "@/lib/validation/table"
 
 export function useCreateTable() {
-  const router = useRouter()
   const { restaurantId, loading: loadingId } = useRestaurantId()
+  const successRef = useRef(false)
 
   const [tableNumber, setTableNumber] = useState("")
   const [loading, setLoading] = useState(false)
@@ -37,22 +36,30 @@ export function useCreateTable() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/tables")
+    successRef.current = true
   })
 
-  async function createTable() {
-    if (loading || loadingId) return
+  async function createTable(): Promise<boolean> {
+    if (loading || loadingId) return false
+
+    successRef.current = false
 
     try {
       setLoading(true)
       setError("")
       await createTableWithRetry()
+      if (successRef.current) {
+        setTableNumber("")
+        return true
+      }
+      return false
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error creando mesa",
         fallback: "Error al crear mesa",
         setError,
       })
+      return false
     } finally {
       setLoading(false)
     }

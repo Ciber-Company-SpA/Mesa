@@ -48,5 +48,6 @@ export function useTableList({ page = 1, pageSize = 12 }: UseTableListOptions = 
     error: error || deleteError,
     deleteTable: deleteVisibleTable,
     deleteDialog,
+    refresh,
   }
 }

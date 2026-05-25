@@ -1,14 +1,13 @@
 import { useRef, useState } from "react"
-import { useRouter } from "next/navigation"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createCategoryAction } from "@/app/actions/category-actions"
 
 export function useCreateCategory() {
-  const router = useRouter()
   const { restaurantId, loading: loadingId } = useRestaurantId()
   const pendingNameRef = useRef("")
+  const successRef = useRef(false)
 
   const [categoryName, setCategoryName] = useState("")
   const [loading, setLoading] = useState(false)
@@ -31,11 +30,13 @@ export function useCreateCategory() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/categories")
+    successRef.current = true
   })
 
-  async function createCategory(trimmedName: string) {
-    if (loading || loadingId) return
+  async function createCategory(trimmedName: string): Promise<boolean> {
+    if (loading || loadingId) return false
+
+    successRef.current = false
 
     try {
       pendingNameRef.current = trimmedName
@@ -43,12 +44,19 @@ export function useCreateCategory() {
       setError("")
 
       await createCategoryWithRetry()
+
+      if (successRef.current) {
+        setCategoryName("")
+        return true
+      }
+      return false
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error creando categoria",
         fallback: "Error al crear categoría",
         setError,
       })
+      return false
     } finally {
       setLoading(false)
     }

@@ -56,17 +56,17 @@ function OptionImageInput({
 
       {imageToShow ? (
         <div
-          className="group relative aspect-video overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 bg-contain bg-center bg-no-repeat shadow-xl"
+          className="group relative aspect-video overflow-hidden rounded-xl border border-stone-200 bg-stone-100 bg-contain bg-center bg-no-repeat shadow-sm"
           style={{ backgroundImage: `url("${imageToShow}")` }}
           onMouseLeave={() => setMenuOpen(false)}
         >
-          <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" />
+          <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
 
           <button
             type="button"
             disabled={disabled}
             onClick={() => setMenuOpen((open) => !open)}
-            className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/70 text-sm font-bold leading-none text-white shadow-lg backdrop-blur transition group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-sm font-bold leading-none text-stone-700 shadow ring-1 ring-stone-200 transition group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50 ${
               menuOpen ? "opacity-100" : "opacity-0"
             }`}
             aria-label="Opciones de imagen"
@@ -77,7 +77,7 @@ function OptionImageInput({
           {menuOpen && (
             <label
               htmlFor={inputId}
-              className="absolute right-3 top-14 cursor-pointer rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black"
+              className="absolute right-2 top-12 cursor-pointer rounded-full bg-stone-900 px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg transition hover:bg-stone-800"
             >
               Cambiar imagen
             </label>
@@ -86,15 +86,15 @@ function OptionImageInput({
       ) : (
         <label
           htmlFor={inputId}
-          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-800 px-4 py-10 text-center transition hover:border-orange-500 hover:bg-zinc-800/80"
+          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center transition hover:border-orange-400 hover:bg-orange-50/40"
         >
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-700 text-2xl">
+          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-stone-200 text-xl text-stone-600">
             +
           </div>
-          <span className="text-sm font-semibold text-white">
+          <span className="text-xs font-semibold text-stone-800">
             Seleccionar imagen
           </span>
-          <span className="mt-1 text-xs text-zinc-400">
+          <span className="mt-0.5 text-[10px] text-stone-500">
             PNG, JPG o WEBP
           </span>
         </label>
@@ -115,11 +115,11 @@ export function ProductOptionsEditor({
   const isSingleOption = options.length === 1
 
   return (
-    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
+    <section className="space-y-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white">Opciones</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-sm font-bold text-stone-900">Opciones</h2>
+          <p className="mt-0.5 text-xs text-stone-500">
             {isSingleOption ? "Producto simple" : "Variantes del producto"}
           </p>
         </div>
@@ -128,7 +128,7 @@ export function ProductOptionsEditor({
           type="button"
           disabled={disabled}
           onClick={onAddOption}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500 text-2xl font-bold leading-none text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-lg font-bold leading-none text-white shadow transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Agregar opcion"
         >
           +
@@ -136,9 +136,9 @@ export function ProductOptionsEditor({
       </div>
 
       {isSingleOption ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="mb-2 block text-sm text-zinc-300">
+            <label className="mb-1.5 block text-xs font-semibold text-stone-700">
               Precio
             </label>
             <input
@@ -146,12 +146,12 @@ export function ProductOptionsEditor({
               placeholder="8990"
               value={options[0]?.price ?? ""}
               onChange={(event) => onOptionPriceChange(options[0].localId, event.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 outline-none transition focus:border-orange-500"
+              className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-zinc-300">
+            <label className="mb-1.5 block text-xs font-semibold text-stone-700">
               Imagen del producto
             </label>
             <OptionImageInput
@@ -163,25 +163,25 @@ export function ProductOptionsEditor({
           </div>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {options.map((option, index) => (
             <article
               key={option.localId}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+              className="rounded-xl border border-stone-200 bg-white p-3"
             >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="font-bold text-white">Opcion {index + 1}</h3>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-stone-900">Opción {index + 1}</h3>
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => onRemoveOption(option.localId)}
-                  className="rounded-full border border-red-500/30 px-3 py-1 text-xs font-bold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Quitar
                 </button>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-[0.95fr_1fr]">
+              <div className="grid gap-3 sm:grid-cols-[0.95fr_1fr]">
                 <OptionImageInput
                   option={option}
                   disabled={disabled}
@@ -189,22 +189,22 @@ export function ProductOptionsEditor({
                   onImageChange={(file) => onOptionImageChange(option.localId, file)}
                 />
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm text-zinc-300">
-                      Nombre de opcion
+                    <label className="mb-1.5 block text-xs font-semibold text-stone-700">
+                      Nombre
                     </label>
                     <input
                       type="text"
                       placeholder="Mediana"
                       value={option.name}
                       onChange={(event) => onOptionNameChange(option.localId, event.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 outline-none transition focus:border-orange-500"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm text-zinc-300">
+                    <label className="mb-1.5 block text-xs font-semibold text-stone-700">
                       Precio
                     </label>
                     <input
@@ -212,7 +212,7 @@ export function ProductOptionsEditor({
                       placeholder="8990"
                       value={option.price}
                       onChange={(event) => onOptionPriceChange(option.localId, event.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 outline-none transition focus:border-orange-500"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
                 </div>

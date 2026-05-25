@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { decodeId } from "@/lib/hashids"
+import { useEffect, useRef, useState } from "react"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
@@ -31,12 +29,9 @@ function createLocalOption(values?: Partial<ProductOptionForm>): ProductOptionFo
   }
 }
 
-export function useEditProduct() {
-  const router = useRouter()
-  const params = useParams()
+export function useEditProduct(productId: number | null) {
   const { uploadImage, uploading } = useUploadImage()
-
-  const productId = decodeId(params.id as string)
+  const successRef = useRef(false)
 
   const [productName, setProductName] = useState("")
   const [productDescription, setProductDescription] = useState("")
@@ -98,24 +93,33 @@ export function useEditProduct() {
   })
 
   useEffect(() => {
+    if (!productId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal cerrado: no hay id, salimos del estado de carga inicial.
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
     async function loadProduct() {
       try {
         setLoading(true)
         setLoadError("")
         await loadProductWithRetry()
       } catch (err: unknown) {
+        if (cancelled) return
         handleMutationError(err, {
           logTag: "Error cargando producto",
           fallback: "Error al cargar producto",
           setError: setLoadError,
         })
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadProduct()
-  }, [loadProductWithRetry])
+    return () => { cancelled = true }
+  }, [productId, loadProductWithRetry])
 
   // ============ FORM HELPERS ============
 
@@ -250,22 +254,26 @@ export function useEditProduct() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/products")
+    successRef.current = true
   })
 
-  async function updateProduct() {
-    if (saving) return
+  async function updateProduct(): Promise<boolean> {
+    if (saving) return false
+
+    successRef.current = false
 
     try {
       setSaving(true)
       setError("")
       await updateProductWithRetry()
+      return successRef.current
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error actualizando producto",
         fallback: "Error al guardar cambios",
         setError,
       })
+      return false
     } finally {
       setSaving(false)
     }

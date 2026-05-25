@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
@@ -28,9 +27,9 @@ function createLocalOption(name = ""): ProductOptionForm {
 }
 
 export function useCreateProduct() {
-  const router = useRouter()
   const { restaurantId, loading: loadingId } = useRestaurantId()
   const { uploadImage, uploading } = useUploadImage()
+  const successRef = useRef(false)
 
   const [productName, setProductName] = useState("")
   const [productDescription, setProductDescription] = useState("")
@@ -176,22 +175,26 @@ export function useCreateProduct() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/products")
+    successRef.current = true
   })
 
-  async function createProduct() {
-    if (loading || loadingId) return
+  async function createProduct(): Promise<boolean> {
+    if (loading || loadingId) return false
+
+    successRef.current = false
 
     try {
       setLoading(true)
       setError("")
       await createProductWithRetry()
+      return successRef.current
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error creando producto",
         fallback: "Error al crear producto",
         setError,
       })
+      return false
     } finally {
       setLoading(false)
     }

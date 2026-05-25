@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { decodeId } from "@/lib/hashids"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
@@ -8,11 +6,9 @@ import {
   getTableForEditAction,
 } from "@/app/actions/table-actions"
 
-export function useEditTable() {
-  const router = useRouter()
-  const params = useParams()
-  const tableId = decodeId(params.id as string)
+export function useEditTable(tableId: number | null) {
   const pendingTableNumberRef = useRef("")
+  const successRef = useRef(false)
 
   const [tableNumber, setTableNumber] = useState("")
   const [loading, setLoading] = useState(true)
@@ -45,43 +41,56 @@ export function useEditTable() {
       throw new Error(result.error)
     }
 
-    router.replace("/admin/tables")
+    successRef.current = true
   })
 
   useEffect(() => {
+    if (!tableId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal cerrado: no hay id, salimos del estado de carga inicial.
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
     async function loadTable() {
       try {
         setLoading(true)
         setLoadError("")
         await loadTableWithRetry()
       } catch (err: unknown) {
+        if (cancelled) return
         handleMutationError(err, {
           logTag: "Error cargando mesa",
           fallback: "Error al cargar mesa",
           setError: setLoadError,
         })
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadTable()
-  }, [loadTableWithRetry])
+    return () => { cancelled = true }
+  }, [tableId, loadTableWithRetry])
 
-  async function updateTable() {
-    if (saving) return
+  async function updateTable(): Promise<boolean> {
+    if (saving) return false
+
+    successRef.current = false
 
     try {
       pendingTableNumberRef.current = tableNumber
       setSaving(true)
       setError("")
       await updateTableWithRetry()
+      return successRef.current
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error actualizando mesa",
         fallback: "Error al guardar cambios",
         setError,
       })
+      return false
     } finally {
       setSaving(false)
     }

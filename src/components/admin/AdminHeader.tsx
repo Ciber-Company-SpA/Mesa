@@ -6,11 +6,10 @@ import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
-import { useOrderStats } from "@/hooks/useOrderStats"
 import { useAdminProfile } from "@/hooks/useAdminProfile"
 import { useProductList } from "@/hooks/useProductList"
 import { useCategoryList } from "@/hooks/useCategoryList"
-import { INITIAL_WAITERS } from "@/lib/mock-waiters"
+import { useWaiters } from "@/hooks/useWaiters"
 
 export function AdminHeader() {
   const pathname = usePathname()
@@ -21,7 +20,7 @@ export function AdminHeader() {
   const { totalProducts, loading: loadingProducts } = useProductList()
   const { totalCategories, loading: loadingCategories } = useCategoryList()
   const { activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 50 })
-  const { dailySales, loading: loadingStats } = useOrderStats()
+  const { waiters, loading: loadingWaiters } = useWaiters()
 
   const formatBadge = (loading: boolean, value: number) => {
     if (loading) return "..."
@@ -44,22 +43,12 @@ export function AdminHeader() {
       ),
     },
     {
-      label: "Pedidos",
-      href: "/admin/orders",
-      badge: formatBadge(loadingOrders, activeOrdersCount),
+      label: "Categorias",
+      href: "/admin/categories",
+      badge: formatBadge(loadingCategories, totalCategories),
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-        </svg>
-      ),
-    },
-    {
-      label: "Mesas",
-      href: "/admin/tables",
-      badge: formatBadge(loadingTables, totalTables),
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
     },
@@ -74,19 +63,29 @@ export function AdminHeader() {
       ),
     },
     {
-      label: "Categorias",
-      href: "/admin/categories",
-      badge: formatBadge(loadingCategories, totalCategories),
+      label: "Mesas",
+      href: "/admin/tables",
+      badge: formatBadge(loadingTables, totalTables),
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Pedidos",
+      href: "/admin/orders",
+      badge: formatBadge(loadingOrders, activeOrdersCount),
+      icon: (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       ),
     },
     {
       label: "Meseros",
       href: "/admin/waiters",
-      badge: String(INITIAL_WAITERS.length),
+      badge: formatBadge(loadingWaiters, waiters.length),
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -214,31 +213,6 @@ export function AdminHeader() {
             })}
           </nav>
 
-          {/* Metricas Minimalistas en el Header */}
-          <div className="flex items-center justify-between border-t border-stone-100 pt-2 sm:justify-end sm:border-0 sm:pt-0 gap-4">
-            <div className="flex items-center gap-4 text-[11px] font-bold text-stone-500">
-              <div className="flex items-center gap-1">
-                <span className="text-stone-400">Pedidos:</span>
-                <span className="rounded-md bg-orange-50 px-1.5 py-0.5 font-bold text-orange-700 tabular-nums ring-1 ring-orange-200/50">
-                  {loadingOrders ? "..." : activeOrdersCount}
-                </span>
-              </div>
-              <div className="h-3.5 w-[1px] bg-stone-200" />
-              <div className="flex items-center gap-1">
-                <span className="text-stone-400">Mesas:</span>
-                <span className="rounded-md bg-stone-100 px-1.5 py-0.5 font-bold text-stone-850 tabular-nums ring-1 ring-stone-300/40">
-                  {loadingTables ? "..." : totalTables}
-                </span>
-              </div>
-              <div className="h-3.5 w-[1px] bg-stone-200" />
-              <div className="flex items-center gap-1">
-                <span className="text-stone-400">Ventas:</span>
-                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-700 tabular-nums ring-1 ring-emerald-200/50">
-                  {loadingStats ? "..." : `$${dailySales.toLocaleString("es-CL")}`}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </header>
