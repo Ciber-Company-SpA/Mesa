@@ -154,9 +154,11 @@ export default function WaiterControlSystem() {
 
   const liveOrdersCount = orders.length
   const avgWaitTime = useMemo(() => {
-    if (!orders.length) return 0
-    const total = orders.reduce((acc, o) => acc + minutesSince(o.createdAt), 0)
-    return Math.round(total / orders.length)
+    // Solo pedidos aún en preparación; los Listos ya no estiman cuánto falta.
+    const inProgress = orders.filter((o) => o.statusId < STATUS_LISTO)
+    if (!inProgress.length) return 0
+    const total = inProgress.reduce((acc, o) => acc + minutesSince(o.createdAt), 0)
+    return Math.round(total / inProgress.length)
   }, [orders])
 
   if (profileLoading) {
@@ -396,7 +398,9 @@ export default function WaiterControlSystem() {
               <div>
                 <span className="font-bold uppercase text-[9px] text-stone-400">Tiempo</span>
                 <p className="font-semibold text-stone-700 mt-0.5">
-                  {minutesSince(selectedOrder.createdAt)} min
+                  {selectedOrder.statusId >= STATUS_LISTO
+                    ? "—"
+                    : `${minutesSince(selectedOrder.createdAt)} min`}
                 </p>
               </div>
               <div className="text-right">
@@ -517,7 +521,9 @@ function OrderCard({
       <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3">
         <div>
           <p className="text-[9px] text-stone-400 font-bold uppercase">Tiempo</p>
-          <p className="text-xs font-semibold text-stone-700">{mins} min</p>
+          <p className="text-xs font-semibold text-stone-700">
+            {isTerminal ? "—" : `${mins} min`}
+          </p>
         </div>
 
         {!isTerminal ? (
