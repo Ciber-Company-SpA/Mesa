@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   getStaffRoleLabel,
   getStaffTimeoutSetting,
+  isAdminRole,
 } from "@/lib/waiter-session"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
@@ -98,16 +99,38 @@ export default function WaiterControlSystem() {
   }, [router])
 
   useEffect(() => {
-    if (!profileLoading && !loggedInStaff) {
+    if (profileLoading) return
+    if (!loggedInStaff) {
       router.replace("/waiter/login")
+      return
+    }
+    // Si la sesión actual es de admin/manager, no estamos sin login: estamos
+    // en la pestaña equivocada. Mandamos al home de su rol para que admin y
+    // mesero no se pisen mutuamente.
+    if (isAdminRole(loggedInStaff.role)) {
+      router.replace("/admin")
     }
   }, [profileLoading, loggedInStaff, router])
+
+  // Reacciona si la sesión cambia desde otra pestaña (login/logout en otro lado).
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session) router.replace("/waiter/login")
+      }
+    )
+    return () => subscription.unsubscribe()
+  }, [router])
 
   // Inactivity timer
   useEffect(() => {
     if (!loggedInStaff || !sessionTimeoutSetting) return
 
     const mainTimer = setInterval(() => {
+      // No descontar mientras la pestaña esté oculta: cambiar de tab no debe
+      // contar como inactividad real del usuario.
+      if (typeof document !== "undefined" && document.hidden) return
+
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(mainTimer)
@@ -125,12 +148,20 @@ export default function WaiterControlSystem() {
       setShowTimeoutWarning(false)
     }
 
+    const handleVisibility = () => {
+      if (!document.hidden) resetTimer()
+    }
+
     const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"]
     events.forEach((ev) => window.addEventListener(ev, resetTimer))
+    document.addEventListener("visibilitychange", handleVisibility)
+    window.addEventListener("focus", resetTimer)
 
     return () => {
       clearInterval(mainTimer)
       events.forEach((ev) => window.removeEventListener(ev, resetTimer))
+      document.removeEventListener("visibilitychange", handleVisibility)
+      window.removeEventListener("focus", resetTimer)
     }
   }, [loggedInStaff, sessionTimeoutSetting, handleLogout])
 

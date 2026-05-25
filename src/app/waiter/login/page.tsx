@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
+import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
 
 type View = "login" | "change-password"
 
@@ -21,7 +22,9 @@ export default function WaiterLoginPage() {
   const [error, setError] = useState("")
   const [sessionChecked, setSessionChecked] = useState(false)
 
-  // Si ya hay sesión Supabase, redirigir a control (a menos que deba cambiar password)
+  // Si ya hay sesión Supabase, redirigir a la home del rol (admin → /admin,
+  // mesero/cocina/caja → /waiter/control). Sin esta distinción, un admin
+  // logueado caía a /waiter/control y rebotaba al login.
   useEffect(() => {
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -30,7 +33,13 @@ export default function WaiterLoginPage() {
         if (mustChange) {
           setView("change-password")
         } else {
-          router.replace("/waiter/control")
+          const { data: profile } = await supabase
+            .from("users")
+            .select("role_id")
+            .eq("auth_user_id", user.id)
+            .single()
+          const role = roleIdToRole(profile?.role_id ?? 1)
+          router.replace(isAdminRole(role) ? "/admin" : "/waiter/control")
           return
         }
       }

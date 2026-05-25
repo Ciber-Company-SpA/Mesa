@@ -39,6 +39,22 @@ export function roleIdToRole(roleId: number): Staff["role"] {
   return "waiter"
 }
 
+// Decide a qué home pertenece cada rol. Con una sola sesión por navegador,
+// los guards usan esto para redirigir al usuario a su sección correcta en vez
+// de mandarlo al login y entrar en loop.
+export function getHomeRouteForRole(role: Staff["role"]): string {
+  if (role === "admin" || role === "manager") return "/admin"
+  return "/waiter/control"
+}
+
+export function isWaiterRole(role: Staff["role"]): boolean {
+  return role === "waiter" || role === "kitchen" || role === "cashier"
+}
+
+export function isAdminRole(role: Staff["role"]): boolean {
+  return role === "admin" || role === "manager"
+}
+
 export function getStaffRoleLabel(role: Staff["role"]) {
   if (role === "waiter") return "Mesero"
   if (role === "kitchen") return "Cocina"
