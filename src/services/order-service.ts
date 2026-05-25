@@ -154,6 +154,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
       restaurant_id: restaurantId,
       total,
       status_id: 1,
+      created_at: new Date().toISOString(),
     })
     .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")
     .single()

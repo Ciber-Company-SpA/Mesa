@@ -77,6 +77,10 @@ export function useWaiterOrders(restaurantId: number | null) {
   useEffect(() => {
     if (!restaurantId) return
 
+    const refetch = () => {
+      fetchOrders().catch(() => undefined)
+    }
+
     const channel = supabase
       .channel(`waiter-orders-${restaurantId}`)
       .on(
@@ -87,21 +91,29 @@ export function useWaiterOrders(restaurantId: number | null) {
           table: "orders",
           filter: `restaurant_id=eq.${restaurantId}`,
         },
-        () => {
-          fetchOrders().catch(() => undefined)
-        }
+        refetch
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
-        () => {
-          fetchOrders().catch(() => undefined)
-        }
+        refetch
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn(`Realtime orders channel: ${status}`)
+        }
+      })
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refetch()
+    }
+    window.addEventListener("focus", refetch)
+    document.addEventListener("visibilitychange", onVisible)
 
     return () => {
       supabase.removeChannel(channel)
+      window.removeEventListener("focus", refetch)
+      document.removeEventListener("visibilitychange", onVisible)
     }
   }, [restaurantId, fetchOrders])
 
