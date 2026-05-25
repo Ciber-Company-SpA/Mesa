@@ -107,12 +107,16 @@ export async function advanceOrderStatus(
 
   const nextStatus = currentStatus + 1
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("orders")
     .update({ status_id: nextStatus })
     .eq("id", orderId)
+    .select("id, status_id")
 
   if (updateError) return fail("Error al avanzar la orden")
+  if (!updated || updated.length === 0) {
+    return fail("No tienes permisos para actualizar esta orden (RLS)")
+  }
 
   return ok({ id: orderId, statusId: nextStatus })
 }
