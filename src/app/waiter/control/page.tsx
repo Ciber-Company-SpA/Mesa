@@ -42,7 +42,11 @@ const STATUS_STYLE: Record<number, { dot: string; bg: string; glow: string }> = 
 
 function minutesSince(iso: string | null): number {
   if (!iso) return 0
-  const created = new Date(iso).getTime()
+  // La columna en DB es `timestamp without time zone` y Postgres la guarda en
+  // UTC. Si el string viene sin "Z" ni offset, JS lo parsea como hora local
+  // del navegador → da diferencia negativa. Forzamos UTC añadiendo "Z".
+  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`
+  const created = new Date(normalized).getTime()
   if (Number.isNaN(created)) return 0
   return Math.max(0, Math.floor((Date.now() - created) / 60000))
 }
