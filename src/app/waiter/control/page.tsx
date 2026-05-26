@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   getStaffRoleLabel,
   getStaffTimeoutSetting,
@@ -60,6 +60,13 @@ function tableLabel(o: WaiterOrder): string {
 
 export default function WaiterControlSystem() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const focusTableId = (() => {
+    const raw = searchParams.get("tableId")
+    const n = raw ? Number(raw) : NaN
+    return Number.isFinite(n) && n > 0 ? n : null
+  })()
+  const focusTableNumber = searchParams.get("tableNumber") || null
   const { profile: loggedInStaff, loading: profileLoading } = useStaffProfile()
 
   const restaurantId = loggedInStaff?.restaurantId ?? null
@@ -179,9 +186,17 @@ export default function WaiterControlSystem() {
   )
 
   const filteredOrders = useMemo(
-    () => orders.filter((o) => activeTab === "all" || o.statusId === activeTab),
-    [orders, activeTab]
+    () =>
+      orders.filter((o) => {
+        if (focusTableId != null && o.tableId !== focusTableId) return false
+        return activeTab === "all" || o.statusId === activeTab
+      }),
+    [orders, activeTab, focusTableId]
   )
+
+  const clearTableFocus = useCallback(() => {
+    router.replace("/waiter/control")
+  }, [router])
 
   const liveOrdersCount = orders.length
   const avgWaitTime = useMemo(() => {
@@ -263,6 +278,31 @@ export default function WaiterControlSystem() {
         {ordersError && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {ordersError}
+          </div>
+        )}
+
+        {focusTableId != null && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-orange-200/70 bg-orange-50/80 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold">
+                {focusTableNumber || `#${focusTableId}`}
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-orange-700">
+                  Mesa escaneada
+                </p>
+                <p className="text-sm font-semibold text-stone-800">
+                  Mostrando solo pedidos de{" "}
+                  {focusTableNumber ? `Mesa ${focusTableNumber}` : `Mesa #${focusTableId}`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={clearTableFocus}
+              className="rounded-full border border-orange-300/70 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 hover:border-orange-400 hover:bg-orange-50 transition cursor-pointer"
+            >
+              Quitar filtro
+            </button>
           </div>
         )}
 
