@@ -2,48 +2,51 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
-export type AssignedTable = {
+export type RestaurantTable = {
   id: number
   tableNumber: number | null
+  currentWaiterId: number | null
 }
 
-// Devuelve las mesas que el mesero (staffId) está atendiendo ahora mismo,
-// según `tables.current_waiter_id`. Reescucha cambios en realtime para
-// reflejar inmediatamente cuando se asigna o libera una mesa.
-export function useAssignedTables(staffId: number | null, restaurantId: number | null) {
-  const [tables, setTables] = useState<AssignedTable[]>([])
+// Todas las mesas del restaurante con su estado de ocupación. Se usa para
+// mostrar al mesero qué mesas están libres vs ocupadas. Se suscribe a
+// `tables` en realtime para reflejar asignaciones/liberaciones al instante.
+export function useRestaurantTables(restaurantId: number | null) {
+  const [tables, setTables] = useState<RestaurantTable[]>([])
   const [loading, setLoading] = useState(true)
 
-  const staffIdRef = useRef(staffId)
+  const restaurantIdRef = useRef(restaurantId)
   useEffect(() => {
-    staffIdRef.current = staffId
-  }, [staffId])
+    restaurantIdRef.current = restaurantId
+  }, [restaurantId])
 
   const fetchTables = useCallback(async () => {
-    const id = staffIdRef.current
-    if (!id) {
+    const rid = restaurantIdRef.current
+    if (!rid) {
       setTables([])
       return
     }
     const { data, error } = await supabase
       .from("tables")
-      .select("id, table_number")
-      .eq("current_waiter_id", id)
+      .select("id, table_number, current_waiter_id")
+      .eq("restaurant_id", rid)
+      .order("table_number", { ascending: true })
 
     if (error) {
-      logger.error("Error cargando mesas asignadas", error)
+      logger.error("Error cargando mesas del restaurante", error)
       return
     }
     setTables(
       (data ?? []).map((row) => ({
         id: row.id,
         tableNumber: row.table_number,
+        currentWaiterId: row.current_waiter_id,
       }))
     )
   }, [])
 
   useEffect(() => {
-    if (!staffId) {
+    if (!restaurantId) {
       setTables([])
       setLoading(false)
       return
@@ -56,21 +59,21 @@ export function useAssignedTables(staffId: number | null, restaurantId: number |
     return () => {
       cancelled = true
     }
-  }, [staffId, fetchTables])
+  }, [restaurantId, fetchTables])
 
   useEffect(() => {
-    if (!staffId || !restaurantId) return
+    if (!restaurantId) return
 
     const refetch = () => {
       fetchTables().catch(() => undefined)
     }
 
     const channel = supabase
-      .channel(`tables-assignment-${restaurantId}`)
+      .channel(`restaurant-tables-${restaurantId}`)
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "tables",
           filter: `restaurant_id=eq.${restaurantId}`,
@@ -82,7 +85,7 @@ export function useAssignedTables(staffId: number | null, restaurantId: number |
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [staffId, restaurantId, fetchTables])
+  }, [restaurantId, fetchTables])
 
   return { tables, loading, refresh: fetchTables }
 }

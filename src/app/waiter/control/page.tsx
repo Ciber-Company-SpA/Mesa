@@ -10,7 +10,7 @@ import {
 } from "@/lib/waiter-session"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
-import { useAssignedTables } from "@/hooks/useAssignedTables"
+import { useRestaurantTables } from "@/hooks/useRestaurantTables"
 import { supabase } from "@/lib/supabase"
 import type { WaiterOrder } from "@/services/order-service"
 
@@ -88,7 +88,24 @@ function WaiterControlSystem() {
   const staffId = loggedInStaff?.id ?? null
   const { orders, loading: ordersLoading, error: ordersError, advance, markPaid, advancingId } =
     useWaiterOrders(restaurantId)
-  const { tables: assignedTables } = useAssignedTables(staffId, restaurantId)
+  const { tables: allTables } = useRestaurantTables(restaurantId)
+
+  // Derivamos del listado global: mías, libres y ocupadas por otros.
+  const assignedTables = useMemo(
+    () => allTables.filter((t) => staffId != null && t.currentWaiterId === staffId),
+    [allTables, staffId]
+  )
+  const availableTables = useMemo(
+    () => allTables.filter((t) => t.currentWaiterId == null),
+    [allTables]
+  )
+  const occupiedByOthers = useMemo(
+    () =>
+      allTables.filter(
+        (t) => t.currentWaiterId != null && t.currentWaiterId !== staffId
+      ),
+    [allTables, staffId]
+  )
 
   const assignedTableIds = useMemo(
     () => new Set(assignedTables.map((t) => t.id)),
@@ -343,6 +360,70 @@ function WaiterControlSystem() {
             </button>
           </div>
         )}
+
+        <section className="mb-8 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-sm font-bold tracking-tight text-stone-900">Mesas del restaurante</h2>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+              {assignedTables.length} tuya{assignedTables.length === 1 ? "" : "s"} · {availableTables.length} libre{availableTables.length === 1 ? "" : "s"} · {occupiedByOthers.length} ocupada{occupiedByOthers.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                Disponibles ({availableTables.length})
+              </p>
+              {availableTables.length === 0 ? (
+                <p className="text-xs text-stone-400 italic">No hay mesas libres ahora.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableTables.map((t) => (
+                    <span
+                      key={t.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/70 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Mesa {t.tableNumber ?? `#${t.id}`}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-500">
+                No disponibles ({assignedTables.length + occupiedByOthers.length})
+              </p>
+              {assignedTables.length + occupiedByOthers.length === 0 ? (
+                <p className="text-xs text-stone-400 italic">Todas las mesas están libres.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {assignedTables.map((t) => (
+                    <span
+                      key={t.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-orange-200/70 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-800"
+                      title="Atendida por ti"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                      Mesa {t.tableNumber ?? `#${t.id}`} · tú
+                    </span>
+                  ))}
+                  {occupiedByOthers.map((t) => (
+                    <span
+                      key={t.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-600"
+                      title="Atendida por otro mesero"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+                      Mesa {t.tableNumber ?? `#${t.id}`}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 sm:grid-cols-3 mb-8">
           <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
