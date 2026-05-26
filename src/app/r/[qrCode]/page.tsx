@@ -10,10 +10,13 @@ export const dynamic = "force-dynamic"
 
 export default async function QrEntryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ qrCode: string }>
+  searchParams: Promise<{ debug?: string }>
 }) {
   const { qrCode } = await params
+  const { debug } = await searchParams
 
   const supabase = await createSupabaseServerClient()
 
@@ -33,20 +36,50 @@ export default async function QrEntryPage({
 
   if (!tableRow) notFound()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    const { data: profile } = await supabase
+  const { data: userResult, error: userError } = await supabase.auth.getUser()
+  let profile: { role_id: number | null } | null = null
+  let profileError: string | null = null
+  if (userResult.user) {
+    const r = await supabase
       .from("users")
       .select("role_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", userResult.user.id)
       .maybeSingle()
-    if (profile?.role_id === 1) {
-      const sp = new URLSearchParams({
-        tableId: String(tableRow.id),
-        tableNumber: String(tableRow.table_number ?? ""),
-      })
-      redirect(`/waiter/control?${sp.toString()}`)
-    }
+    profile = r.data
+    profileError = r.error?.message ?? null
+  }
+
+  if (debug === "1") {
+    return (
+      <pre style={{ padding: 16, fontSize: 12, whiteSpace: "pre-wrap" }}>
+        {JSON.stringify(
+          {
+            qrCode,
+            tableId: tableRow.id,
+            tableNumber: tableRow.table_number,
+            authUserId: userResult.user?.id ?? null,
+            authEmail: userResult.user?.email ?? null,
+            authError: userError?.message ?? null,
+            profileRoleId: profile?.role_id ?? null,
+            profileError,
+            wouldRedirectTo:
+              profile?.role_id === 1
+                ? `/waiter/control?tableId=${tableRow.id}`
+                : `/${qrCode}/menu`,
+          },
+          null,
+          2
+        )}
+      </pre>
+    )
+  }
+
+  if (userResult.user && profile?.role_id === 1) {
+    const sp = new URLSearchParams({
+      tableId: String(tableRow.id),
+      tableNumber: String(tableRow.table_number ?? ""),
+    })
+    redirect(`/waiter/control?${sp.toString()}`)
   }
 
   redirect(`/${qrCode}/menu`)
