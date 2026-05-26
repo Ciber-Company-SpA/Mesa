@@ -5,12 +5,49 @@ import { QRCodeSVG } from "qrcode.react"
 import { Pagination } from "@/components/ui/Pagination"
 import { useTableList } from "@/hooks/useTableList"
 import { CreateTableDialog } from "@/components/admin/CreateTableDialog"
-import { EditTableDialog } from "@/components/admin/EditTableDialog"
+
+// Abre una ventana imprimible con el QR de la mesa a tamaño grande.
+// Usamos un endpoint público de QR para que el render funcione en la
+// ventana nueva sin depender del componente QRCodeSVG.
+function printTableQr(qrCode: string, tableNumber: number) {
+  if (typeof window === "undefined") return
+  const url = `${window.location.origin}/r/${qrCode}`
+  const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(url)}`
+  const w = window.open("", "_blank", "width=520,height=720")
+  if (!w) return
+  w.document.write(`<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>QR Mesa ${tableNumber}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; color: #1c1917; background: #fff; display: flex; flex-direction: column; align-items: center; padding: 32px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.url { color: #78716c; font-size: 12px; margin: 4px 0 24px; word-break: break-all; }
+  .qr { border: 2px solid #1c1917; border-radius: 16px; padding: 16px; background: #fff; }
+  img { display: block; width: 360px; height: 360px; }
+  button { margin-top: 24px; padding: 10px 20px; background: #1c1917; color: #fff; border: 0; border-radius: 999px; font-weight: 700; cursor: pointer; }
+  @media print {
+    button { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <h1>Mesa ${tableNumber}</h1>
+  <p class="url">${url}</p>
+  <div class="qr"><img src="${qrImgSrc}" alt="QR Mesa ${tableNumber}" /></div>
+  <button onclick="window.print()">Imprimir</button>
+  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 400));</script>
+</body>
+</html>`)
+  w.document.close()
+}
 
 export default function TablesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
 
   const {
     tables,
@@ -38,12 +75,6 @@ export default function TablesPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={refresh}
-      />
-      <EditTableDialog
-        open={editingId !== null}
-        tableId={editingId}
-        onClose={() => setEditingId(null)}
-        onSaved={refresh}
       />
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -137,10 +168,10 @@ export default function TablesPage() {
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditingId(table.id)}
-                    className="min-w-0 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-center text-xs font-bold text-stone-750 transition hover:bg-stone-100"
+                    onClick={() => printTableQr(table.qr_codes.qr_code, table.table_number)}
+                    className="min-w-0 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-center text-xs font-bold text-stone-700 transition hover:bg-stone-100"
                   >
-                    Editar
+                    🖨️ Imprimir QR
                   </button>
 
                   <button

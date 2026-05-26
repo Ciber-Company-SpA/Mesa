@@ -249,10 +249,6 @@ function WaiterControlSystem() {
     [ownOrders, activeTab, focusTableId]
   )
 
-  const clearTableFocus = useCallback(() => {
-    router.replace("/waiter/control")
-  }, [router])
-
   const liveOrdersCount = ownOrders.length
   const avgWaitTime = useMemo(() => {
     // Solo pedidos aún en preparación; los Listos ya no estiman cuánto falta.
@@ -337,27 +333,19 @@ function WaiterControlSystem() {
         )}
 
         {focusTableId != null && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-orange-200/70 bg-orange-50/80 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold">
-                {focusTableNumber || `#${focusTableId}`}
-              </span>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-orange-700">
-                  Mesa escaneada
-                </p>
-                <p className="text-sm font-semibold text-stone-800">
-                  Mostrando solo pedidos de{" "}
-                  {focusTableNumber ? `Mesa ${focusTableNumber}` : `Mesa #${focusTableId}`}
-                </p>
-              </div>
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-orange-200/70 bg-orange-50/80 px-4 py-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold">
+              {focusTableNumber || `#${focusTableId}`}
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-orange-700">
+                Mesa escaneada
+              </p>
+              <p className="text-sm font-semibold text-stone-800">
+                Mostrando solo pedidos de{" "}
+                {focusTableNumber ? `Mesa ${focusTableNumber}` : `Mesa #${focusTableId}`}
+              </p>
             </div>
-            <button
-              onClick={clearTableFocus}
-              className="rounded-full border border-orange-300/70 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 hover:border-orange-400 hover:bg-orange-50 transition cursor-pointer"
-            >
-              Quitar filtro
-            </button>
           </div>
         )}
 
