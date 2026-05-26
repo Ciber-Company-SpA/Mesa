@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
-// Route Handler en vez de Page para que el CDN de Vercel NUNCA cachee la
-// respuesta. Las Pages, incluso con `dynamic = "force-dynamic"`, en algunos
-// casos terminaban cacheando el redirect para usuarios anónimos y luego se
-// servía ese mismo redirect a usuarios logueados.
+
 export const dynamic = "force-dynamic"
 
 export async function GET(
@@ -12,7 +9,14 @@ export async function GET(
   { params }: { params: Promise<{ qrCode: string }> }
 ) {
   const { qrCode } = await params
-  const origin = req.nextUrl.origin
+
+  // Construimos URLs a partir del request real, no de req.nextUrl.origin.
+  // Detrás del proxy de Vercel, .origin puede resolverse a localhost y el
+  // redirect terminaba apuntando ahí.
+  const buildRedirect = (path: string) => {
+    const url = new URL(path, req.url)
+    return url.toString()
+  }
 
   const supabase = await createSupabaseServerClient()
 
@@ -48,13 +52,13 @@ export async function GET(
         tableId: String(tableRow.id),
         tableNumber: String(tableRow.table_number ?? ""),
       })
-      const res = NextResponse.redirect(`${origin}/waiter/control?${sp.toString()}`)
+      const res = NextResponse.redirect(buildRedirect(`/waiter/control?${sp.toString()}`))
       res.headers.set("Cache-Control", "no-store, max-age=0")
       return res
     }
   }
 
-  const res = NextResponse.redirect(`${origin}/${qrCode}/menu`)
+  const res = NextResponse.redirect(buildRedirect(`/${qrCode}/menu`))
   res.headers.set("Cache-Control", "no-store, max-age=0")
   return res
 }
