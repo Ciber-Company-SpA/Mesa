@@ -8,6 +8,7 @@ import { ok, fail, type Result } from "@/services/result"
 export const ORDER_STATUS_NUEVO = 1
 export const ORDER_STATUS_PREPARANDO = 2
 export const ORDER_STATUS_LISTO = 3
+export const ORDER_STATUS_PAGADO = 4
 
 export type WaiterOrderItem = {
   id: number
@@ -119,6 +120,58 @@ export async function advanceOrderStatus(
   }
 
   return ok({ id: orderId, statusId: nextStatus })
+}
+
+// Marca un pedido como Pagado. Si todos los pedidos activos de la mesa
+// quedan en estado Pagado, libera la mesa (current_waiter_id = null) para
+// que otro mesero pueda reclamarla escaneando el QR.
+export async function markOrderAsPaid(
+  orderId: number
+): Promise<Result<{ id: number; statusId: number; tableReleased: boolean }>> {
+  if (!orderId || orderId <= 0) return fail("Orden inválida")
+
+  const supabase = await createSupabaseServerClient()
+
+  const { data: current, error: readError } = await supabase
+    .from("orders")
+    .select("id, status_id, table_id")
+    .eq("id", orderId)
+    .maybeSingle()
+
+  if (readError) return fail("Error al leer la orden")
+  if (!current) return fail("Orden no encontrada")
+  if (current.status_id === ORDER_STATUS_PAGADO) {
+    return fail("La orden ya está pagada")
+  }
+
+  const { error: updateError } = await supabase
+    .from("orders")
+    .update({ status_id: ORDER_STATUS_PAGADO })
+    .eq("id", orderId)
+
+  if (updateError) return fail("Error al marcar la orden como pagada")
+
+  // Auto-release: si la mesa ya no tiene pedidos activos (Nuevo/Preparando/
+  // Listo), la liberamos para que otro mesero pueda atenderla.
+  let tableReleased = false
+  if (current.table_id) {
+    const { count } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("table_id", current.table_id)
+      .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO])
+
+    if ((count ?? 0) === 0) {
+      const { error: releaseError } = await supabase
+        .from("tables")
+        .update({ current_waiter_id: null })
+        .eq("id", current.table_id)
+
+      if (!releaseError) tableReleased = true
+    }
+  }
+
+  return ok({ id: orderId, statusId: ORDER_STATUS_PAGADO, tableReleased })
 }
 
 export type CreatedOrder = {

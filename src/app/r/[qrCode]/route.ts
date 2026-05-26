@@ -31,7 +31,7 @@ export async function GET(
 
   const { data: tableRow } = await supabase
     .from("tables")
-    .select("id, table_number")
+    .select("id, table_number, current_waiter_id")
     .eq("qr_code_id", qrRow.id)
     .maybeSingle()
 
@@ -43,10 +43,28 @@ export async function GET(
   if (user) {
     const { data: profile } = await supabase
       .from("users")
-      .select("role_id")
+      .select("id, role_id")
       .eq("auth_user_id", user.id)
       .maybeSingle()
-    if (profile?.role_id === 1) {
+
+    if (profile?.role_id === 1 && profile.id) {
+      // Si la mesa está libre, este mesero la reclama. Si ya la atiende él
+      // mismo, sigue de largo. Si la atiende otro, lo mandamos a la pantalla
+      // de "mesa ocupada".
+      if (tableRow.current_waiter_id == null) {
+        await supabase
+          .from("tables")
+          .update({ current_waiter_id: profile.id })
+          .eq("id", tableRow.id)
+          .is("current_waiter_id", null) // evita race condition con otro escaneo simultáneo
+      } else if (tableRow.current_waiter_id !== profile.id) {
+        const res = NextResponse.redirect(
+          buildRedirect(`/waiter/busy?tableNumber=${tableRow.table_number ?? ""}`)
+        )
+        res.headers.set("Cache-Control", "no-store, max-age=0")
+        return res
+      }
+
       const sp = new URLSearchParams({
         tableId: String(tableRow.id),
         tableNumber: String(tableRow.table_number ?? ""),

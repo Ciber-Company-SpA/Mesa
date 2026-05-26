@@ -4,6 +4,7 @@ import {
   createOrder as createOrderService,
   listActiveOrdersForRestaurant as listActiveOrdersService,
   advanceOrderStatus as advanceOrderStatusService,
+  markOrderAsPaid as markOrderAsPaidService,
   type CreatedOrder,
   type WaiterOrder,
 } from "@/services/order-service"
@@ -26,4 +27,10 @@ export async function advanceOrderStatusAction(
   orderId: number
 ): Promise<Result<{ id: number; statusId: number }>> {
   return advanceOrderStatusService(orderId)
+}
+
+export async function markOrderAsPaidAction(
+  orderId: number
+): Promise<Result<{ id: number; statusId: number; tableReleased: boolean }>> {
+  return markOrderAsPaidService(orderId)
 }

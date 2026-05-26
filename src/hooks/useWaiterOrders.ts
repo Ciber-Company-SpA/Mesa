@@ -6,6 +6,7 @@ import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import {
   listActiveOrdersAction,
   advanceOrderStatusAction,
+  markOrderAsPaidAction,
 } from "@/app/actions/order-actions"
 import type { WaiterOrder } from "@/services/order-service"
 
@@ -146,5 +147,34 @@ export function useWaiterOrders(restaurantId: number | null) {
     [advancingId]
   )
 
-  return { orders, loading, error, advance, advancingId, reload }
+  const markPaid = useCallback(
+    async (orderId: number): Promise<boolean> => {
+      if (advancingId) return false
+      try {
+        setAdvancingId(orderId)
+        setError("")
+        const result = await markOrderAsPaidAction(orderId)
+        if (!result.ok) {
+          setError(result.error)
+          return false
+        }
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, statusId: result.data.statusId } : o))
+        )
+        return true
+      } catch (err) {
+        handleMutationError(err, {
+          logTag: "Error marcando orden como pagada",
+          fallback: "Error al marcar como pagada",
+          setError,
+        })
+        return false
+      } finally {
+        setAdvancingId(null)
+      }
+    },
+    [advancingId]
+  )
+
+  return { orders, loading, error, advance, markPaid, advancingId, reload }
 }

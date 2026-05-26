@@ -10,6 +10,7 @@ import {
 } from "@/lib/waiter-session"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
+import { useAssignedTables } from "@/hooks/useAssignedTables"
 import { supabase } from "@/lib/supabase"
 import type { WaiterOrder } from "@/services/order-service"
 
@@ -84,8 +85,15 @@ function WaiterControlSystem() {
   const { profile: loggedInStaff, loading: profileLoading } = useStaffProfile()
 
   const restaurantId = loggedInStaff?.restaurantId ?? null
-  const { orders, loading: ordersLoading, error: ordersError, advance, advancingId } =
+  const staffId = loggedInStaff?.id ?? null
+  const { orders, loading: ordersLoading, error: ordersError, advance, markPaid, advancingId } =
     useWaiterOrders(restaurantId)
+  const { tables: assignedTables } = useAssignedTables(staffId, restaurantId)
+
+  const assignedTableIds = useMemo(
+    () => new Set(assignedTables.map((t) => t.id)),
+    [assignedTables]
+  )
 
   const [selectedOrder, setSelectedOrder] = useState<WaiterOrder | null>(null)
   const [activeTab, setActiveTab] = useState<"all" | 1 | 2 | 3>("all")
@@ -199,27 +207,43 @@ function WaiterControlSystem() {
     [advance, triggerToast]
   )
 
+  const handleMarkPaid = useCallback(
+    async (order: WaiterOrder) => {
+      const ok = await markPaid(order.id)
+      if (!ok) return
+      triggerToast(`Pedido #${order.id} pagado 💸`)
+    },
+    [markPaid, triggerToast]
+  )
+
+  // Mesero solo ve pedidos de mesas que tiene asignadas ahora mismo.
+  // Si además escaneó una mesa específica (focusTableId), filtra a esa.
+  const ownOrders = useMemo(
+    () => orders.filter((o) => o.tableId != null && assignedTableIds.has(o.tableId)),
+    [orders, assignedTableIds]
+  )
+
   const filteredOrders = useMemo(
     () =>
-      orders.filter((o) => {
+      ownOrders.filter((o) => {
         if (focusTableId != null && o.tableId !== focusTableId) return false
         return activeTab === "all" || o.statusId === activeTab
       }),
-    [orders, activeTab, focusTableId]
+    [ownOrders, activeTab, focusTableId]
   )
 
   const clearTableFocus = useCallback(() => {
     router.replace("/waiter/control")
   }, [router])
 
-  const liveOrdersCount = orders.length
+  const liveOrdersCount = ownOrders.length
   const avgWaitTime = useMemo(() => {
     // Solo pedidos aún en preparación; los Listos ya no estiman cuánto falta.
-    const inProgress = orders.filter((o) => o.statusId < STATUS_LISTO)
+    const inProgress = ownOrders.filter((o) => o.statusId < STATUS_LISTO)
     if (!inProgress.length) return 0
     const total = inProgress.reduce((acc, o) => acc + minutesSince(o.createdAt), 0)
     return Math.round(total / inProgress.length)
-  }, [orders])
+  }, [ownOrders])
 
   if (profileLoading) {
     return (
@@ -344,7 +368,7 @@ function WaiterControlSystem() {
             <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Listos para servir</p>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-3xl font-extrabold tracking-tight text-stone-950">
-                {orders.filter((o) => o.statusId === STATUS_LISTO).length}
+                {ownOrders.filter((o) => o.statusId === STATUS_LISTO).length}
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Listo</span>
             </div>
@@ -381,13 +405,22 @@ function WaiterControlSystem() {
             </div>
           </div>
 
-          {ordersLoading && orders.length === 0 ? (
+          {ordersLoading && ownOrders.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-stone-200 bg-white py-16 text-center text-sm font-medium text-stone-500">
               Cargando órdenes...
             </div>
-          ) : orders.length === 0 ? (
+          ) : assignedTables.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/40 py-16 px-6 text-center">
+              <p className="text-sm font-semibold text-stone-700">
+                No tienes mesas asignadas
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                Escanea el QR de una mesa para empezar a atenderla.
+              </p>
+            </div>
+          ) : ownOrders.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-stone-200 bg-white py-16 text-center text-sm font-medium text-stone-500">
-              No hay órdenes activas por ahora.
+              Sin pedidos en tus mesas por ahora.
             </div>
           ) : (
             <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
@@ -414,6 +447,7 @@ function WaiterControlSystem() {
                           order={ord}
                           config={STATUS_STYLE[ord.statusId]}
                           onAdvance={handleAdvance}
+                          onMarkPaid={handleMarkPaid}
                           onSelect={setSelectedOrder}
                           advancing={advancingId === ord.id}
                         />
@@ -517,6 +551,19 @@ function WaiterControlSystem() {
                     : "Marcar listo 🛎️"}
                 </button>
               )}
+              {selectedOrder.statusId === STATUS_LISTO && (
+                <button
+                  onClick={async () => {
+                    const order = selectedOrder
+                    setSelectedOrder(null)
+                    await handleMarkPaid(order)
+                  }}
+                  disabled={advancingId === selectedOrder.id}
+                  className="rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                >
+                  Marcar pagado 💸
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -555,16 +602,19 @@ function OrderCard({
   order,
   config,
   onAdvance,
+  onMarkPaid,
   onSelect,
   advancing,
 }: {
   order: WaiterOrder
   config: { dot: string; bg: string; glow: string }
   onAdvance: (order: WaiterOrder) => void
+  onMarkPaid: (order: WaiterOrder) => void
   onSelect: (ord: WaiterOrder) => void
   advancing: boolean
 }) {
   const mins = minutesSince(order.createdAt)
+  const isReady = order.statusId === STATUS_LISTO
   const isTerminal = order.statusId >= STATUS_LISTO
 
   return (
@@ -625,12 +675,23 @@ function OrderCard({
               <path d="m9 18 6-6-6-6" />
             </svg>
           </button>
+        ) : isReady ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onMarkPaid(order)
+            }}
+            disabled={advancing}
+            className="flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[10px] font-semibold text-white shadow transition hover:bg-emerald-700 cursor-pointer disabled:opacity-50"
+          >
+            <span>{advancing ? "..." : "Marcar pagado 💸"}</span>
+          </button>
         ) : (
           <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
             <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <path d="M20 6 9 17l-5-5" />
             </svg>
-            Listo
+            Pagado
           </span>
         )}
       </div>
