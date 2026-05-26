@@ -27,6 +27,15 @@ export default function WaiterLoginPage() {
   // queriendo loguearse como mesero. La sesión actual queda viva hasta que
   // efectivamente complete el login de mesero (ahí signIn la reemplaza).
   useEffect(() => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (appUrl) {
+      const canonicalLoginUrl = new URL("/waiter/login", appUrl)
+      if (window.location.origin !== canonicalLoginUrl.origin) {
+        window.location.replace(canonicalLoginUrl.toString())
+        return
+      }
+    }
+
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
