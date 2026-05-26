@@ -10,11 +10,10 @@ export async function GET(
 ) {
   const { qrCode } = await params
 
-  // Construimos URLs a partir del request real, no de req.nextUrl.origin.
-  // Detrás del proxy de Vercel, .origin puede resolverse a localhost y el
-  // redirect terminaba apuntando ahí.
+  // El request interno del proxy puede apuntar a localhost en produccion.
+  // La URL publica configurada debe ser el origen de los redirects del QR.
   const buildRedirect = (path: string) => {
-    const url = new URL(path, req.url)
+    const url = new URL(path, process.env.NEXT_PUBLIC_APP_URL ?? req.url)
     return url.toString()
   }
 
