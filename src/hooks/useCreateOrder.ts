@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 import type { CartItem } from "@/types/cart-item"
 import { useCartStore } from "@/store/cartStore"
+import { useTableCartStore } from "@/store/tableCartStore"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createOrderAction } from "@/app/actions/order-actions"
@@ -13,19 +14,18 @@ type UseCreateOrderProps = {
 }
 
 export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderProps) {
-  const clearCart = useCartStore((state) => state.clear)
+  const clearCart = useTableCartStore((state) => state.clear)
   const setLastOrder = useCartStore((state) => state.setLastOrder)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const { run: createOrderWithRetry, isPending } = useOfflineRetry(async () => {
-    // Mapear CartItem → CreateOrderItemInput
     const orderItems: CreateOrderItemInput[] = items.map((item) => ({
-      productId: item.productId ?? item.id,
+      productId: item.productId,
       productName: item.name,
       productPrice: item.price,
       productQuantity: item.quantity,
-      notes: null,
+      notes: item.notes ?? null,
     }))
 
     const result = await createOrderAction({
@@ -48,7 +48,7 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
       total: result.data.total,
     })
 
-    clearCart()
+    await clearCart()
   })
 
   async function createOrder() {

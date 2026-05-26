@@ -10,13 +10,29 @@ export type StoredOrder = {
   total: number
 }
 
-export interface CartStore {
+export type AddCartItemInput = {
+  productId: number
+  variantId?: number | null
+  price: number
+  quantity?: number
+  notes?: string | null
+}
+
+export interface TableCartStore {
   items: CartItem[]
+  tableId: number | null
+  restaurantId: number | null
+  isLoading: boolean
+  setTable: (tableId: number | null, restaurantId: number | null) => void
+  fetchItems: () => Promise<void>
+  addItem: (input: AddCartItemInput) => Promise<void>
+  updateQuantity: (rowId: string, quantity: number) => Promise<void>
+  removeItem: (rowId: string) => Promise<void>
+  clear: () => Promise<void>
+}
+
+export interface LastOrderStore {
   lastOrder: StoredOrder | null
-  addItem: (product: CartItem) => void
-  removeItem: (id: number) => void
-  updateQuantity: (id: number, quantity: number) => void
-  clear: () => void
   setLastOrder: (order: StoredOrder) => void
   clearLastOrder: () => void
 }

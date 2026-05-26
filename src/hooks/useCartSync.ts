@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { useCartStore } from "@/store/cartStore"
+import { useTableCartStore } from "@/store/tableCartStore"
 
 async function syncCartForRestaurant(restaurantId: number) {
   try {
@@ -13,23 +13,24 @@ async function syncCartForRestaurant(restaurantId: number) {
     if (error) throw error
 
     const products = data ?? []
-    const { items: currentItems, removeItem } = useCartStore.getState()
-    const availableIds = new Set(products.filter((p) => p.status_id === 1).map((p) => p.id))
+    const availableIds = new Set(
+      products.filter((p) => p.status_id === 1).map((p) => p.id)
+    )
 
-    currentItems.forEach((item) => {
-      const productId = item.productId ?? item.id
+    const { items, removeItem } = useTableCartStore.getState()
 
-      if (!availableIds.has(productId)) {
-        removeItem(item.id)
+    for (const item of items) {
+      if (!availableIds.has(item.productId)) {
+        await removeItem(item.id)
       }
-    })
+    }
   } catch (err: unknown) {
     logger.error("Error sincronizando carrito", err)
   }
 }
 
 export function useCartSync(restaurantId: number | null) {
-  const items = useCartStore((state) => state.items)
+  const items = useTableCartStore((state) => state.items)
 
   useEffect(() => {
     if (!restaurantId) return
@@ -62,6 +63,6 @@ export function useCartSync(restaurantId: number | null) {
   }, [restaurantId])
 
   return {
-    syncCart: () => restaurantId ? syncCartForRestaurant(restaurantId) : Promise.resolve(),
+    syncCart: () => (restaurantId ? syncCartForRestaurant(restaurantId) : Promise.resolve()),
   }
 }

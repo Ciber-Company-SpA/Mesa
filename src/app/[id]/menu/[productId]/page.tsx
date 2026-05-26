@@ -1,6 +1,7 @@
 "use client"
 
 import { useCartStore } from "@/store/cartStore"
+import { useTableCart } from "@/hooks/useTableCart"
 import { use, useEffect, useRef, useState } from "react"
 import { decodeId } from "@/lib/hashids"
 import { useProductDetail } from "@/hooks/useProductDetail"
@@ -21,7 +22,6 @@ export default function ProductDetailPage({
   params: Promise<{ id: string; productId: string }>
 }) {
   const { id, productId } = use(params)
-  const addItem = useCartStore((state) => state.addItem)
 
   const [activeOptionIndex, setActiveOptionIndex] = useState(0)
   const [unavailableMsg, setUnavailableMsg] = useState("")
@@ -45,6 +45,7 @@ export default function ProductDetailPage({
   } = useProductVariants(realProductId, product?.product_variants ?? menuProduct?.product_variants)
 
   const { syncCart } = useCartSync(product?.restaurant_id ?? null)
+  const { addItem } = useTableCart(tableId ?? null, product?.restaurant_id ?? null)
 
   useEffect(() => {
     if (!activeOrder) return
@@ -219,12 +220,10 @@ export default function ProductDetailPage({
       return
     }
 
-    addItem({
-      id: activeOption.id,
+    await addItem({
       productId: productIdForStatus,
-      name: activeTitle,
+      variantId: variants.length > 0 ? activeOption.id : null,
       price: activeOption.price,
-      image: activeOption.image ?? undefined,
       quantity: 1,
     })
   }

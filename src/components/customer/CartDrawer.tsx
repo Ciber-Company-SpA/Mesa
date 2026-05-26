@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect } from "react"
-import { useCartStore, useCartTotal } from "@/store/cartStore"
+import { useCartStore } from "@/store/cartStore"
+import { useTableCart } from "@/hooks/useTableCart"
+import { useTableCartStore } from "@/store/tableCartStore"
 import { CartItem } from "@/types/cart-item"
 import { CartDrawerProps } from "@/types/cart-drawer"
 import type { StoredOrder } from "@/types/cart-store"
@@ -33,8 +35,8 @@ function CartView({
   error: string | null
   onContinue: () => void
 }) {
-  const updateQuantity = useCartStore((state) => state.updateQuantity)
-  const removeItem = useCartStore((state) => state.removeItem)   
+  const updateQuantity = useTableCartStore((state) => state.updateQuantity)
+  const removeItem = useTableCartStore((state) => state.removeItem)
   return (
     <>
       <div className="max-h-[48vh] overflow-y-auto px-5 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -192,8 +194,7 @@ function ActiveOrderView({
 }
 
 export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawerProps) {
-  const items = useCartStore((state) => state.items)
-  const total = useCartTotal()
+  const { items, total } = useTableCart(tableId, restaurantId)
   const hasItems = items.length > 0
 
   const {

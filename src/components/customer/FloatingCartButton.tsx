@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { CartDrawer } from "@/components/customer/CartDrawer"
-import { useCartStore, useCartTotal } from "@/store/cartStore"
+import { useTableCart } from "@/hooks/useTableCart"
 
 type FloatingCartButtonProps = {
   tableId: number
@@ -11,8 +11,7 @@ type FloatingCartButtonProps = {
 
 export function FloatingCartButton({ tableId, restaurantId }: FloatingCartButtonProps) {
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const items = useCartStore((state) => state.items)
-  const total = useCartTotal()
+  const { items, total } = useTableCart(tableId, restaurantId)
 
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0)
 
