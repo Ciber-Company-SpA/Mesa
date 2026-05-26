@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { useCreateWaiter } from "@/hooks/useCreateWaiter"
 import { useWaiters } from "@/hooks/useWaiters"
 import { useDeleteWaiter } from "@/hooks/useDeleteWaiter"
+import { useAdminProfile } from "@/hooks/useAdminProfile"
+import { useRestaurantTables } from "@/hooks/useRestaurantTables"
 import type { WaiterListItem } from "@/services/waiter-service"
 
 const AVATAR_GRADIENTS = [
@@ -32,6 +34,23 @@ function getInitials(name: string) {
 export default function WaitersPage() {
   const [search, setSearch] = useState("")
   const [showCreateModal, setShowCreateModal] = useState(false)
+
+  const { profile: adminProfile } = useAdminProfile()
+  const restaurantId = adminProfile?.restaurantId ?? null
+  const { tables: allTables } = useRestaurantTables(restaurantId)
+
+  // Mapa waiterId → mesas que está atendiendo ahora mismo. Se actualiza en
+  // tiempo real porque useRestaurantTables se suscribe a `tables`.
+  const tablesByWaiter = useMemo(() => {
+    const m = new Map<number, typeof allTables>()
+    for (const t of allTables) {
+      if (t.currentWaiterId == null) continue
+      const arr = m.get(t.currentWaiterId) ?? []
+      arr.push(t)
+      m.set(t.currentWaiterId, arr)
+    }
+    return m
+  }, [allTables])
 
   const { waiters, loading, error, refresh } = useWaiters()
   const {
@@ -157,6 +176,31 @@ export default function WaitersPage() {
                   <p className="truncate text-xs text-stone-500">{waiter.email ?? "Sin correo"}</p>
                 </div>
               </div>
+
+              {(() => {
+                const tables = tablesByWaiter.get(waiter.id) ?? []
+                return (
+                  <div className="mt-3 border-t border-stone-100 pt-3">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-500">
+                      Mesas atendiendo ({tables.length})
+                    </p>
+                    {tables.length === 0 ? (
+                      <p className="text-xs text-stone-400 italic">Sin mesas asignadas ahora.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {tables.map((t) => (
+                          <span
+                            key={t.id}
+                            className="inline-flex items-center gap-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-800"
+                          >
+                            Mesa {t.tableNumber ?? `#${t.id}`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               <div className="mt-4 flex justify-end border-t border-stone-100 pt-3">
                 <button

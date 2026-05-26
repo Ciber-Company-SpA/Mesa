@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
 import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
+import { InstallPwaButton } from "@/components/InstallPwaButton"
 
 type View = "login" | "change-password"
 
@@ -249,6 +250,8 @@ export default function WaiterLoginPage() {
             >
               {loading ? "Ingresando..." : "Ingresar"}
             </button>
+
+            <InstallPwaButton />
           </form>
         ) : (
           <form onSubmit={handleChangePassword} className="space-y-4">

@@ -1,0 +1,32 @@
+{
+  "name": "MESA — Panel del Mesero",
+  "short_name": "MESA Mesero",
+  "description": "Panel operativo para meseros: ver pedidos en vivo y atender mesas escaneando el QR.",
+  "start_url": "/waiter/login",
+  "scope": "/waiter/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF9F5",
+  "theme_color": "#F97316",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
