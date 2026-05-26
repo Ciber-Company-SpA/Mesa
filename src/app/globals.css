@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #FAF9F5;
   --foreground: #171717;
 }
 
@@ -12,17 +12,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* La app no tiene tema oscuro implementado: forzamos el mismo fondo claro
+   también en navegadores con prefers-color-scheme: dark para evitar que el
+   body negro se asome cuando hay overflow horizontal (móviles). */
 
-body {
+html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
 /* Antigravity Design System Custom Animations */
