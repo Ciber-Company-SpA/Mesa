@@ -13,7 +13,7 @@ function printTableQr(qrCode: string, tableNumber: number) {
   if (typeof window === "undefined") return
   const url = `${window.location.origin}/r/${qrCode}`
   const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(url)}`
-  const w = window.open("", "_blank", "width=520,height=720")
+  const w = window.open("", "_blank", "width=520,height=620")
   if (!w) return
   w.document.write(`<!doctype html>
 <html lang="es">
@@ -21,24 +21,13 @@ function printTableQr(qrCode: string, tableNumber: number) {
 <meta charset="utf-8" />
 <title>QR Mesa ${tableNumber}</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; color: #1c1917; background: #fff; display: flex; flex-direction: column; align-items: center; padding: 32px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  p.url { color: #78716c; font-size: 12px; margin: 4px 0 24px; word-break: break-all; }
-  .qr { border: 2px solid #1c1917; border-radius: 16px; padding: 16px; background: #fff; }
-  img { display: block; width: 360px; height: 360px; }
-  button { margin-top: 24px; padding: 10px 20px; background: #1c1917; color: #fff; border: 0; border-radius: 999px; font-weight: 700; cursor: pointer; }
-  @media print {
-    button { display: none; }
-    body { padding: 0; }
-  }
+  body { margin: 0; background: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  img { display: block; width: 480px; height: 480px; }
+  @media print { body { min-height: auto; } }
 </style>
 </head>
 <body>
-  <h1>Mesa ${tableNumber}</h1>
-  <p class="url">${url}</p>
-  <div class="qr"><img src="${qrImgSrc}" alt="QR Mesa ${tableNumber}" /></div>
-  <button onclick="window.print()">Imprimir</button>
+  <img src="${qrImgSrc}" alt="QR Mesa ${tableNumber}" />
   <script>window.addEventListener('load', () => setTimeout(() => window.print(), 400));</script>
 </body>
 </html>`)
