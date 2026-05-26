@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useMemo } from "react"
+import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -58,7 +58,21 @@ function tableLabel(o: WaiterOrder): string {
   return "Sin mesa"
 }
 
-export default function WaiterControlSystem() {
+export default function WaiterControlPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#FAF9F5] px-6 text-sm font-semibold text-stone-600">
+          Cargando...
+        </main>
+      }
+    >
+      <WaiterControlSystem />
+    </Suspense>
+  )
+}
+
+function WaiterControlSystem() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const focusTableId = (() => {
