@@ -124,7 +124,7 @@ export default function TablesPage() {
                   <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-center">
                     <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-xl bg-white p-2.5 shadow-sm">
                       <QRCodeSVG
-                        value={`${process.env.NEXT_PUBLIC_APP_URL}/${table.qr_codes.qr_code}/menu`}
+                        value={`${process.env.NEXT_PUBLIC_APP_URL}/r/${table.qr_codes.qr_code}`}
                         size={92}
                       />
                     </div>
