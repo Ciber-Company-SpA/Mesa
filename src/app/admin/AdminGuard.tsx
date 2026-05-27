@@ -33,9 +33,12 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     }
     checkRole()
 
+    // Solo redirigir en logout explicito. Una `session` null transitoria
+    // durante un refresh de token NO debe sacar al usuario; Supabase reintenta
+    // por su cuenta y dispara SIGNED_OUT solo si realmente se invalido.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) router.replace("/login")
+      (event) => {
+        if (event === "SIGNED_OUT") router.replace("/login")
       }
     )
 

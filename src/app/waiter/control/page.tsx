@@ -3,11 +3,7 @@
 import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import {
-  getStaffRoleLabel,
-  getStaffTimeoutSetting,
-  isAdminRole,
-} from "@/lib/waiter-session"
+import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
@@ -126,23 +122,12 @@ function WaiterControlSystem() {
   const [activeTab, setActiveTab] = useState<"all" | 1 | 2 | 3>("all")
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  const [sessionTimeoutSetting, setSessionTimeoutSetting] = useState(0)
-  const [secondsRemaining, setSecondsRemaining] = useState(0)
-  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false)
-
   // Tick para refrescar los "minutos transcurridos" cada 30s.
   // Exponemos `nowMs` para que useMemo del promedio recompute con el tick.
   const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 30_000)
     return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    const timeout = getStaffTimeoutSetting()
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura única de localStorage al montar.
-    setSessionTimeoutSetting(timeout)
-    setSecondsRemaining(timeout)
   }, [])
 
   const triggerToast = useCallback((msg: string) => {
@@ -171,56 +156,15 @@ function WaiterControlSystem() {
 
   // Reacciona si la sesión cambia desde otra pestaña (login/logout en otro lado).
   useEffect(() => {
+    // Solo redirigir en logout explicito (ver nota en AdminGuard).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) router.replace("/waiter/login")
+      (event) => {
+        if (event === "SIGNED_OUT") router.replace("/waiter/login")
       }
     )
     return () => subscription.unsubscribe()
   }, [router])
 
-  // Inactivity timer
-  useEffect(() => {
-    if (!loggedInStaff || !sessionTimeoutSetting) return
-
-    const mainTimer = setInterval(() => {
-      // No descontar mientras la pestaña esté oculta: cambiar de tab no debe
-      // contar como inactividad real del usuario.
-      if (typeof document !== "undefined" && document.hidden) return
-
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(mainTimer)
-          handleLogout()
-          return 0
-        }
-        if (prev <= 16) setShowTimeoutWarning(true)
-        else setShowTimeoutWarning(false)
-        return prev - 1
-      })
-    }, 1000)
-
-    const resetTimer = () => {
-      setSecondsRemaining(sessionTimeoutSetting)
-      setShowTimeoutWarning(false)
-    }
-
-    const handleVisibility = () => {
-      if (!document.hidden) resetTimer()
-    }
-
-    const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"]
-    events.forEach((ev) => window.addEventListener(ev, resetTimer))
-    document.addEventListener("visibilitychange", handleVisibility)
-    window.addEventListener("focus", resetTimer)
-
-    return () => {
-      clearInterval(mainTimer)
-      events.forEach((ev) => window.removeEventListener(ev, resetTimer))
-      document.removeEventListener("visibilitychange", handleVisibility)
-      window.removeEventListener("focus", resetTimer)
-    }
-  }, [loggedInStaff, sessionTimeoutSetting, handleLogout])
 
   const handleAdvance = useCallback(
     async (order: WaiterOrder) => {
@@ -649,31 +593,6 @@ function WaiterControlSystem() {
         </div>
       )}
 
-      {showTimeoutWarning && loggedInStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-red-100 bg-[#FAF9F5] p-6 shadow-2xl text-center animate-card-entrance">
-            <div className="mx-auto h-12 w-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold animate-bounce mb-4">
-              ⚠️
-            </div>
-            <h3 className="text-lg font-bold text-stone-900">¿Sigues ahí, {loggedInStaff.name}?</h3>
-            <p className="text-xs text-stone-500 mt-2 leading-relaxed">
-              Por seguridad, tu sesión se cerrará automáticamente en:
-            </p>
-            <div className="my-5 text-4xl font-extrabold text-orange-600 tracking-tight">
-              {secondsRemaining}s
-            </div>
-            <button
-              onClick={() => {
-                setSecondsRemaining(sessionTimeoutSetting)
-                setShowTimeoutWarning(false)
-              }}
-              className="w-full rounded-full bg-stone-950 py-3 text-xs font-bold text-white hover:bg-stone-800 transition cursor-pointer"
-            >
-              Mantener sesión activa
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

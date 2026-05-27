@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -22,11 +22,37 @@ export function useOrders({ limit = 30 }: { limit?: number } = {}) {
     return (data ?? []) as unknown as Order[]
   }, [limit, restaurantId])
 
-  const { data, isLoading, isPendingRetry, error } = useCache<Order[]>(
+  const { data, isLoading, isPendingRetry, error, refresh } = useCache<Order[]>(
     `orders-${restaurantId ?? "pending"}-${limit}`,
     fetchOrders,
     { enabled: Boolean(restaurantId), revalidateOnMount: true }
   )
+
+  useEffect(() => {
+    if (!restaurantId) return
+
+    const channel = supabase
+      .channel(`orders-list-${restaurantId}-${limit}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => refresh()
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn(`Realtime orders-list channel: ${status}`)
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [restaurantId, limit, refresh])
 
   if (error) {
     logger.error("Error cargando pedidos", error)
