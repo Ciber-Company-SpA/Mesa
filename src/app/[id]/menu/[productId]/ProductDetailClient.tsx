@@ -255,20 +255,24 @@ export function ProductDetailClient({
                 type="button"
                 onClick={handlePreviousOption}
                 disabled={activeOptionIndex === 0 || isSliding}
-                className="absolute left-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-3xl font-black text-white shadow-xl ring-1 ring-white/15 backdrop-blur transition hover:bg-black/50 disabled:pointer-events-none disabled:opacity-25"
+                className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/5 border border-white/10 text-stone-300 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white/15 hover:text-white active:scale-90 disabled:pointer-events-none disabled:opacity-0"
                 aria-label="Ver opción anterior"
               >
-                ‹
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
 
               <button
                 type="button"
                 onClick={handleNextOption}
                 disabled={activeOptionIndex === productOptions.length - 1 || isSliding}
-                className="absolute right-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-3xl font-black text-white shadow-xl ring-1 ring-white/15 backdrop-blur transition hover:bg-black/50 disabled:pointer-events-none disabled:opacity-25"
+                className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/5 border border-white/10 text-stone-300 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white/15 hover:text-white active:scale-90 disabled:pointer-events-none disabled:opacity-0"
                 aria-label="Ver siguiente opción"
               >
-                ›
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </>
           )}
@@ -282,16 +286,16 @@ export function ProductDetailClient({
               <div
                 key={option.id}
                 data-option-slide
-                className="relative flex aspect-square w-full shrink-0 snap-center items-center justify-center overflow-hidden rounded-[2.25rem] md:aspect-[4/3]"
+                className="relative flex aspect-[5/4] max-h-[290px] w-full shrink-0 snap-center items-center justify-center overflow-hidden rounded-[2.25rem] md:aspect-[4/3]"
               >
-                <div className="absolute inset-x-10 bottom-6 h-8 rounded-full bg-black/30 blur-xl" />
+                <div className="absolute inset-x-10 bottom-4 h-6 rounded-full bg-black/40 blur-xl" />
 
                 {option.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={option.image}
                     alt={option.name}
-                    className="relative z-10 h-full w-full object-contain p-8 drop-shadow-2xl"
+                    className="relative z-10 h-full max-h-[250px] w-full object-contain p-12 drop-shadow-2xl"
                     loading="lazy"
                   />
                 ) : (
@@ -348,12 +352,12 @@ export function ProductDetailClient({
           )}
 
           <div className="mt-7 flex justify-center">
-            <div className="w-full rounded-[2rem] bg-white/10 px-5 py-5 text-center shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-stone-400">
-                Precio
-              </p>
+            <div className="w-full rounded-[2.25rem] bg-white/5 p-6 text-center shadow-2xl shadow-black/40 border border-white/10 backdrop-blur-md ring-1 ring-white/5 transition-all hover:border-white/15">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-300 border border-orange-500/20 shadow-sm">
+                Precio del Producto
+              </div>
 
-              <p className="mt-2 text-4xl font-black tracking-tight text-orange-200 tabular-nums">
+              <p className="mt-3.5 text-4xl font-black tracking-tight text-orange-200 drop-shadow-[0_0_15px_rgba(251,146,60,0.3)] tabular-nums leading-none">
                 {formatPrice(activeOption.price)}
               </p>
 
@@ -361,10 +365,10 @@ export function ProductDetailClient({
                 type="button"
                 onClick={handleAddToCart}
                 disabled={isAgotado || isDeshabilitado || isAddingToCart}
-                className={`mt-5 flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black shadow-2xl ring-1 transition ${
+                className={`mt-6 flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black ring-1 transition duration-300 ease-out ${
                   isAgotado || isDeshabilitado || isAddingToCart
                     ? "cursor-not-allowed bg-stone-700 text-stone-400 ring-white/10 shadow-none"
-                    : "bg-orange-500 text-stone-950 shadow-orange-500/25 ring-orange-200/50 hover:bg-orange-400"
+                    : "bg-orange-500 text-stone-950 shadow-[0_8px_25px_rgba(249,115,22,0.3)] ring-orange-300/40 hover:bg-orange-400 hover:scale-[1.01] active:scale-[0.99] hover:shadow-[0_12px_30px_rgba(249,115,22,0.45)]"
                 }`}
               >
                 {isAddingToCart
