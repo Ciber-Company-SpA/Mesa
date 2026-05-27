@@ -16,6 +16,7 @@ export type TableOrder = {
   statusId: number | null
   statusName: string | null
   createdAt: string
+  readyAt: string | null
   items: TableOrderItem[]
 }
 
@@ -24,6 +25,7 @@ type OrderRow = {
   total: number
   status_id: number | null
   created_at: string
+  ready_at: string | null
   order_status: { status_name: string | null } | { status_name: string | null }[] | null
   order_items: Array<{
     id: number
@@ -62,6 +64,7 @@ function mapRow(row: OrderRow): TableOrder {
     statusId: row.status_id,
     statusName: pickStatusName(row.order_status),
     createdAt: row.created_at,
+    readyAt: row.ready_at,
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
@@ -86,7 +89,7 @@ export function useTableOrders(tableId: number | null) {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status_id, created_at, order_status(status_name), order_items(id, product_name, product_price, product_quantity, notes)")
+        .select("id, total, status_id, created_at, ready_at, order_status(status_name), order_items(id, product_name, product_price, product_quantity, notes)")
         .eq("table_id", tableId)
         .order("created_at", { ascending: false })
 

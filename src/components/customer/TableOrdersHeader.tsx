@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTableOrders, TableOrder } from "@/hooks/useTableOrders"
 
 type TableOrdersHeaderProps = {
@@ -9,6 +9,21 @@ type TableOrdersHeaderProps = {
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
+}
+
+function getElapsedSeconds(order: TableOrder, nowMs: number) {
+  const start = new Date(order.createdAt).getTime()
+  const end = order.readyAt ? new Date(order.readyAt).getTime() : nowMs
+  return Math.max(0, Math.floor((end - start) / 1000))
+}
+
+function formatElapsed(seconds: number) {
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const remaining = minutes % 60
+  return remaining === 0 ? `${hours}h` : `${hours}h ${remaining}min`
 }
 
 function getOrderStatusStep(statusId: number | null, statusName: string | null): number {
@@ -23,6 +38,15 @@ function getOrderStatusStep(statusId: number | null, statusName: string | null):
 export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
   const { orders } = useTableOrders(tableId)
   const [selectedOrder, setSelectedOrder] = useState<TableOrder | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  const hasLiveCounter = orders.some((o) => !o.readyAt)
+
+  useEffect(() => {
+    if (!hasLiveCounter) return
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [hasLiveCounter])
 
   if (orders.length === 0) return null
 
@@ -65,7 +89,7 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
               >
                 <div className="flex flex-col">
                   <span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-stone-400">
-                    Pedido #{order.id}
+                    Pedido #{order.id} · {formatElapsed(getElapsedSeconds(order, nowMs))}
                   </span>
                   <span className="text-xs font-black text-white mt-0.5">
                     {order.statusName ?? "Actualizando"}
@@ -108,6 +132,12 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
               <h3 className="mt-1 text-xl font-black tracking-tight">
                 Pedido #{liveSelectedOrder.id}
               </h3>
+              <p className="mt-1 text-[0.7rem] font-bold text-stone-400">
+                {liveSelectedOrder.readyAt ? "Tiempo de preparacion: " : "En curso: "}
+                <span className="font-black text-orange-200">
+                  {formatElapsed(getElapsedSeconds(liveSelectedOrder, nowMs))}
+                </span>
+              </p>
             </div>
 
             {/* Rastreador de Progreso */}
