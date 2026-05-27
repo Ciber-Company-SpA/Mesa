@@ -42,15 +42,28 @@ const STATUS_STYLE: Record<number, { dot: string; bg: string; glow: string }> = 
   },
 }
 
-function minutesSince(iso: string | null): number {
-  if (!iso) return 0
-  // La columna en DB es `timestamp without time zone` y Postgres la guarda en
-  // UTC. Si el string viene sin "Z" ni offset, JS lo parsea como hora local
-  // del navegador → da diferencia negativa. Forzamos UTC añadiendo "Z".
+function parseDbTimestamp(iso: string | null): number | null {
+  if (!iso) return null
+  // La columna en DB puede ser `timestamp without time zone` y Postgres la guarda
+  // en UTC. Si el string viene sin "Z" ni offset, JS lo parsea como hora local
+  // del navegador. Forzamos UTC añadiendo "Z" cuando falta.
   const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`
-  const created = new Date(normalized).getTime()
-  if (Number.isNaN(created)) return 0
-  return Math.max(0, Math.floor((Date.now() - created) / 60000))
+  const ms = new Date(normalized).getTime()
+  return Number.isNaN(ms) ? null : ms
+}
+
+function minutesSince(iso: string | null): number {
+  const ms = parseDbTimestamp(iso)
+  if (ms == null) return 0
+  return Math.max(0, Math.floor((Date.now() - ms) / 60000))
+}
+
+function elapsedMinutes(order: { createdAt: string | null; readyAt: string | null }): number {
+  const start = parseDbTimestamp(order.createdAt)
+  if (start == null) return 0
+  const endIso = order.readyAt
+  const end = endIso ? parseDbTimestamp(endIso) ?? Date.now() : Date.now()
+  return Math.max(0, Math.floor((end - start) / 60000))
 }
 
 function tableLabel(o: WaiterOrder): string {
@@ -251,11 +264,12 @@ function WaiterControlSystem() {
 
   const liveOrdersCount = ownOrders.length
   const avgWaitTime = useMemo(() => {
-    // Solo pedidos aún en preparación; los Listos ya no estiman cuánto falta.
-    const inProgress = ownOrders.filter((o) => o.statusId < STATUS_LISTO)
-    if (!inProgress.length) return 0
-    const total = inProgress.reduce((acc, o) => acc + minutesSince(o.createdAt), 0)
-    return Math.round(total / inProgress.length)
+    // Promedio sobre todas las órdenes vivas (Nuevo/Preparando = tiempo en vivo,
+    // Listo = tiempo congelado en ready_at). Así no cae a 0 cuando todas pasan
+    // a Listo y queda como referencia del tiempo medio de atencion.
+    if (!ownOrders.length) return 0
+    const total = ownOrders.reduce((acc, o) => acc + elapsedMinutes(o), 0)
+    return Math.round(total / ownOrders.length)
   }, [ownOrders])
 
   if (profileLoading) {

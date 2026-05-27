@@ -20,6 +20,7 @@ export type WaiterOrderItem = {
 
 export type WaiterOrder = {
   id: number
+  readyAt: string | null
   tableId: number | null
   tableNumber: number | null
   total: number
@@ -34,6 +35,7 @@ type OrderRow = {
   total: number | null
   status_id: number | null
   created_at: string | null
+  ready_at: string | null
   tables: { table_number: number | null } | null
   order_items: Array<{
     id: number
@@ -52,6 +54,7 @@ function mapOrderRow(row: OrderRow): WaiterOrder {
     total: row.total ?? 0,
     statusId: row.status_id ?? ORDER_STATUS_NUEVO,
     createdAt: row.created_at,
+    readyAt: row.ready_at,
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
@@ -74,7 +77,7 @@ export async function listActiveOrdersForRestaurant(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, table_id, total, status_id, created_at, tables(table_number), order_items(id, product_name, product_price, product_quantity, notes)"
+      "id, table_id, total, status_id, created_at, ready_at, tables(table_number), order_items(id, product_name, product_price, product_quantity, notes)"
     )
     .eq("restaurant_id", restaurantId)
     .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO])
