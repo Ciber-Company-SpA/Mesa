@@ -208,12 +208,36 @@ export function subscribeToTableCart(tableId: number) {
     .on(
       "postgres_changes",
       {
-        event: "*",
+        event: "INSERT",
         schema: "public",
         table: "table_cart_items",
         filter: `table_id=eq.${tableId}`,
       },
       () => {
+        useTableCartStore.getState().fetchItems()
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "table_cart_items",
+        filter: `table_id=eq.${tableId}`,
+      },
+      () => {
+        useTableCartStore.getState().fetchItems()
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "table_cart_items",
+      },
+      () => {
+        // Deleted rows do not reliably include table_id for realtime filtering.
         useTableCartStore.getState().fetchItems()
       }
     )
