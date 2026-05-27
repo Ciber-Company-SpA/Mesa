@@ -2,12 +2,21 @@ import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
+export type TableOrderItem = {
+  id: number
+  productName: string
+  productPrice: number
+  productQuantity: number
+  notes: string | null
+}
+
 export type TableOrder = {
   id: number
   total: number
   statusId: number | null
   statusName: string | null
   createdAt: string
+  items: TableOrderItem[]
 }
 
 type OrderRow = {
@@ -16,6 +25,13 @@ type OrderRow = {
   status_id: number | null
   created_at: string
   order_status: { status_name: string | null } | { status_name: string | null }[] | null
+  order_items: Array<{
+    id: number
+    product_name: string | null
+    product_price: number | null
+    product_quantity: number
+    notes: string | null
+  }> | null
 }
 
 function normalize(value: string) {
@@ -46,6 +62,13 @@ function mapRow(row: OrderRow): TableOrder {
     statusId: row.status_id,
     statusName: pickStatusName(row.order_status),
     createdAt: row.created_at,
+    items: (row.order_items ?? []).map((it) => ({
+      id: it.id,
+      productName: it.product_name ?? "",
+      productPrice: Number(it.product_price ?? 0),
+      productQuantity: it.product_quantity,
+      notes: it.notes,
+    })),
   }
 }
 
@@ -63,7 +86,7 @@ export function useTableOrders(tableId: number | null) {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status_id, created_at, order_status(status_name)")
+        .select("id, total, status_id, created_at, order_status(status_name), order_items(id, product_name, product_price, product_quantity, notes)")
         .eq("table_id", tableId)
         .order("created_at", { ascending: false })
 
