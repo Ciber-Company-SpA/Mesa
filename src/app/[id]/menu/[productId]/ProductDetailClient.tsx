@@ -89,6 +89,21 @@ export function ProductDetailClient({
     )
   }
 
+  // Seguridad: el producto debe pertenecer al mismo restaurante que el menu
+  // escaneado. Sin esto, un QR de un restaurante mostraría productos de otro
+  // si se manipula el hashid del producto en la URL.
+  if (restaurant && product.restaurant_id !== restaurant.id) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-stone-950 px-4 text-white">
+        <div className="rounded-[2rem] bg-red-500/10 px-6 py-5 text-center shadow-2xl shadow-black/30 ring-1 ring-red-300/20 backdrop-blur">
+          <p className="text-sm font-semibold text-red-100">
+            Producto no encontrado
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   const currentStatus = realtimeStatus ?? product.status_id
   const isAgotado = currentStatus === 2
   const isDeshabilitado = currentStatus === 3
