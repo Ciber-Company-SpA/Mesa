@@ -19,6 +19,14 @@
 
 # production
 /build
+!/build/icon.ico
+!/build/icon.icns
+
+# electron-builder output
+/dist
+
+# Claude Code workspace
+/.claude/
 
 # misc
 .DS_Store

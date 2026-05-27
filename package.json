@@ -2,17 +2,22 @@
   "name": "mesa",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron": "electron .",
+    "electron:dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\"",
+    "electron:build": "electron-builder"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "cloudinary": "^2.10.0",
+    "dotenv": "^17.4.2",
     "hashids": "^2.3.0",
     "next": "16.2.6",
     "qrcode.react": "^4.2.0",
@@ -29,9 +34,68 @@
     "@types/qrcode.react": "^1.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "wait-on": "^9.0.10"
+  },
+ "build": {
+    "appId": "com.mesa.app",
+    "productName": "Mesa",
+    "compression": "maximum",
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!node_modules/@sentry/**",
+      "!node_modules/@sentry-internal/**",
+      "!node_modules/@opentelemetry/**",
+      "!node_modules/@supabase/**",
+      "!node_modules/cloudinary/**",
+      "!node_modules/resend/**",
+      "!node_modules/tinify/**",
+      "!node_modules/next/**",
+      "!node_modules/react/**",
+      "!node_modules/react-dom/**",
+      "!node_modules/zustand/**",
+      "!node_modules/zod/**",
+      "!node_modules/hashids/**",
+      "!node_modules/qrcode.react/**"
+    ],
+    "extraResources": [
+      {
+        "from": ".env.local",
+        "to": ".env.local"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BenjaminVega-git/Mesa.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BenjaminVega-git/Mesa/issues"
+  },
+  "homepage": "https://github.com/BenjaminVega-git/Mesa#readme"
 }

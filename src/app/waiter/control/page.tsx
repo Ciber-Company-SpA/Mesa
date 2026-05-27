@@ -244,8 +244,9 @@ function WaiterControlSystem() {
     [markPaid, triggerToast]
   )
 
-  // Mesero solo ve pedidos de mesas que tiene asignadas ahora mismo.
-  // Si además escaneó una mesa específica (focusTableId), filtra a esa.
+  // Mesero ve pedidos de TODAS las mesas que tiene asignadas, no solo la
+  // ultima escaneada. La mesa escaneada (focusTableId) solo sirve para
+  // resaltar/identificar en la UI; no restringe la lista.
   const ownOrders = useMemo(
     () => orders.filter((o) => o.tableId != null && assignedTableIds.has(o.tableId)),
     [orders, assignedTableIds]
@@ -254,12 +255,11 @@ function WaiterControlSystem() {
   const filteredOrders = useMemo(
     () =>
       ownOrders.filter((o) => {
-        if (focusTableId != null && o.tableId !== focusTableId) return false
         // Las Pagadas no se listan; solo cuentan para el promedio historico.
         if (o.statusId === 4) return false
         return activeTab === "all" || o.statusId === activeTab
       }),
-    [ownOrders, activeTab, focusTableId]
+    [ownOrders, activeTab]
   )
 
   const liveOrdersCount = ownOrders.filter((o) => o.statusId !== 4).length
