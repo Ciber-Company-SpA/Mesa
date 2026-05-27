@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -58,6 +58,32 @@ export function useTables({ page = 1, pageSize = 12 }: UseTablesOptions = {}) {
   if (error) {
     logger.error("Error cargando mesas", error)
   }
+
+  useEffect(() => {
+    if (!restaurantId) return
+
+    const channel = supabase
+      .channel(`tables-list-${restaurantId}-p${page}-s${pageSize}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tables",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => refresh()
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn(`Realtime tables-list channel: ${status}`)
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [restaurantId, page, pageSize, refresh])
 
   return {
     tables: data?.items ?? [],

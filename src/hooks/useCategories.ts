@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -50,6 +50,32 @@ export function useCategories({ page = 1, pageSize = 12 }: UseCategoriesOptions 
   if (error) {
     logger.error("Error cargando categorias", error)
   }
+
+  useEffect(() => {
+    if (!restaurantId) return
+
+    const channel = supabase
+      .channel(`categories-list-${restaurantId}-p${page}-s${pageSize}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "categories",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => refresh()
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn(`Realtime categories-list channel: ${status}`)
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [restaurantId, page, pageSize, refresh])
 
   return {
     categories: data?.items ?? [],

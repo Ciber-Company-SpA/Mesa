@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -59,6 +59,32 @@ export function useProducts({ page = 1, pageSize = 12 }: UseProductsOptions = {}
   if (error) {
     logger.error("Error cargando productos", error)
   }
+
+  useEffect(() => {
+    if (!restaurantId) return
+
+    const channel = supabase
+      .channel(`products-list-${restaurantId}-p${page}-s${pageSize}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "products",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => refresh()
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          logger.warn(`Realtime products-list channel: ${status}`)
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [restaurantId, page, pageSize, refresh])
 
   return {
     products: data?.items ?? [],
