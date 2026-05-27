@@ -119,13 +119,16 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
 
               return (
                 <div className="relative mt-6 px-4 pb-4">
-                  <div className="absolute top-4 left-4 right-4 h-1 bg-white/10 rounded-full" />
-                  <div
-                    className="absolute top-4 left-4 h-1 bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
-                    style={{
-                      width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%",
-                    }}
-                  />
+                  {/* Riel del track (va exactamente de centro a centro de los círculos extremos) */}
+                  <div className="absolute top-4 left-[34px] right-[34px] h-1 bg-white/10 rounded-full overflow-hidden">
+                    {/* Barra coloreada de progreso activo */}
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
+                      style={{
+                        width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%",
+                      }}
+                    />
+                  </div>
 
                   <div className="relative flex justify-between z-10">
                     {/* Paso 1: Nuevo */}
