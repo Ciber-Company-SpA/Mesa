@@ -1,15 +1,15 @@
 "use client"
 
-import { useCartStore } from "@/store/cartStore"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useEffect, useRef, useState } from "react"
 import { decodeId } from "@/lib/hashids"
 import { useProductDetail } from "@/hooks/useProductDetail"
 import { useProductVariants } from "@/hooks/useProductVariants"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
+import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { BackButton } from "@/components/ui/BackButton"
-import { isStoredOrderInProgress, useLastOrder } from "@/hooks/useLastOrder"
+import { useLastOrder } from "@/hooks/useLastOrder"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
@@ -182,16 +182,6 @@ export function ProductDetailClient({
   }
 
   async function handleAddToCart() {
-    if (activeOrder) {
-      await syncOrder(activeOrder)
-
-      if (isStoredOrderInProgress(useCartStore.getState().lastOrder)) {
-        setUnavailableMsg("Tienes un pedido en curso. Espera a que este listo antes de agregar mas.")
-        setTimeout(() => setUnavailableMsg(""), 3000)
-        return
-      }
-    }
-
     if (isAgotado || isDeshabilitado) {
       setUnavailableMsg(
         isDeshabilitado
@@ -251,6 +241,8 @@ export function ProductDetailClient({
       </div>
 
       <section className="relative mx-auto max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
+        <TableOrdersHeader tableId={tableId ?? null} />
+
         <BackButton
           label="Volver al menú"
           className="mb-6 inline-flex items-center rounded-full bg-white/10 px-5 py-3 text-sm font-black text-orange-100 shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.14] hover:text-orange-200"
@@ -368,17 +360,15 @@ export function ProductDetailClient({
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={!!activeOrder || isAgotado || isDeshabilitado || isAddingToCart}
+                disabled={isAgotado || isDeshabilitado || isAddingToCart}
                 className={`mt-5 flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black shadow-2xl ring-1 transition ${
-                  activeOrder || isAgotado || isDeshabilitado || isAddingToCart
+                  isAgotado || isDeshabilitado || isAddingToCart
                     ? "cursor-not-allowed bg-stone-700 text-stone-400 ring-white/10 shadow-none"
                     : "bg-orange-500 text-stone-950 shadow-orange-500/25 ring-orange-200/50 hover:bg-orange-400"
                 }`}
               >
                 {isAddingToCart
                   ? "Agregando..."
-                  : activeOrder
-                  ? "Pedido en curso"
                   : isAgotado
                   ? "Agotado"
                   : isDeshabilitado

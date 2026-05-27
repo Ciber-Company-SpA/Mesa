@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
+import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
@@ -61,6 +62,8 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
 
       <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
+        <TableOrdersHeader tableId={tableId ?? null} />
+
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-orange-200/80">Mesa {tableNumber}</p>

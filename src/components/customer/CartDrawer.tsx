@@ -14,10 +14,6 @@ function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
 }
 
-function getStoredOrderStatusLabel(order: StoredOrder) {
-  return order.statusName ?? "Actualizando estado"
-}
-
 function CartView({
   items,
   total,
@@ -141,58 +137,6 @@ function CartView({
 }
 
 
-function ActiveOrderView({
-  order,
-  isChecking,
-  onRefresh,
-}: {
-  order: StoredOrder
-  isChecking: boolean
-  onRefresh: () => void
-}) {
-  return (
-    <>
-      <div className="flex-1 overflow-y-auto px-5 py-6 text-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <h3 className="mt-5 text-2xl font-black tracking-tight text-white">
-          Tu pedido ya esta en marcha
-        </h3>
-        <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-stone-300">
-          Lo registramos correctamente. Espera a que el equipo lo prepare antes
-          de hacer otro pedido.
-        </p>
-
-        <div className="mx-auto mt-6 max-w-xs rounded-[1.5rem] bg-white/10 px-4 py-4 text-left ring-1 ring-white/10">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-black uppercase tracking-[0.16em] text-stone-400">
-              Estado
-            </span>
-            <span className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-black text-orange-200 ring-1 ring-orange-200/20">
-              {getStoredOrderStatusLabel(order)}
-            </span>
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <span className="text-sm font-bold text-stone-300">Total</span>
-            <span className="text-xl font-black text-orange-200">
-              {formatPrice(order.total)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <footer className="shrink-0 border-t border-white/10 px-5 py-4">
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={isChecking}
-          className="flex w-full items-center justify-center rounded-[1.35rem] bg-white/10 px-5 py-4 text-sm font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:text-stone-500"
-        >
-          {isChecking ? "Revisando..." : "Actualizar estado"}
-        </button>
-      </footer>
-    </>
-  )
-}
-
 export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawerProps) {
   const { items, total } = useTableCart(tableId, restaurantId)
   const hasItems = items.length > 0
@@ -238,12 +182,8 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
       >
         <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
           <div>
-            <p className="text-sm font-semibold text-orange-200/80">
-              {activeOrder ? "Pedido en curso" : "Pedido actual"}
-            </p>
-            <h2 className="text-2xl font-black tracking-tight">
-              {activeOrder ? "Espera un momento" : "Tu carrito"}
-            </h2>
+            <p className="text-sm font-semibold text-orange-200/80">Pedido actual</p>
+            <h2 className="text-2xl font-black tracking-tight">Tu carrito</h2>
           </div>
 
           <button
@@ -257,22 +197,37 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
         </header>
 
         {activeOrder ? (
-          <ActiveOrderView
-            order={activeOrder}
-            isChecking={isChecking}
-            onRefresh={() => refreshActiveOrder(activeOrder)}
-          />
-        ) : (
-          <CartView
-            items={items}
-            total={total}
-            hasItems={hasItems}
-            isLoading={isLoading}
-            isWaitingConnection={isWaitingConnection}
-            error={error}
-            onContinue={createOrder}
-          />
-        )}
+          <div className="border-b border-white/10 bg-orange-500/10 px-5 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-200/80">
+                  Pedido en curso
+                </p>
+                <p className="mt-1 truncate text-xs font-bold text-stone-200">
+                  {activeOrder.statusName ?? "Actualizando estado"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => refreshActiveOrder(activeOrder)}
+                disabled={isChecking}
+                className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[0.7rem] font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:text-stone-500"
+              >
+                {isChecking ? "..." : "Actualizar"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <CartView
+          items={items}
+          total={total}
+          hasItems={hasItems}
+          isLoading={isLoading}
+          isWaitingConnection={isWaitingConnection}
+          error={error}
+          onContinue={createOrder}
+        />
       </section>
     </div>
   )
