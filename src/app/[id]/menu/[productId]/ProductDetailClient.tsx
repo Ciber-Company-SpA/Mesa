@@ -286,16 +286,16 @@ export function ProductDetailClient({
               <div
                 key={option.id}
                 data-option-slide
-                className="relative flex aspect-[5/4] max-h-[290px] w-full shrink-0 snap-center items-center justify-center overflow-hidden rounded-[2.25rem] md:aspect-[4/3]"
+                className="relative flex aspect-[1.6] max-h-[250px] w-full shrink-0 snap-center items-center justify-center overflow-hidden rounded-[2.25rem] md:aspect-[4/3]"
               >
-                <div className="absolute inset-x-10 bottom-4 h-6 rounded-full bg-black/40 blur-xl" />
+                <div className="absolute inset-x-10 bottom-2 h-4 rounded-full bg-black/40 blur-lg" />
 
                 {option.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={option.image}
                     alt={option.name}
-                    className="relative z-10 h-full max-h-[250px] w-full object-contain p-12 drop-shadow-2xl"
+                    className="relative z-10 h-full max-h-[230px] w-full object-contain p-2 drop-shadow-2xl transition-transform duration-300 hover:scale-[1.03]"
                     loading="lazy"
                   />
                 ) : (
