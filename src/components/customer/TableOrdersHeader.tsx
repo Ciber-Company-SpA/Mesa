@@ -33,34 +33,50 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 -mx-4 mb-4 border-b border-white/10 bg-stone-950/85 px-4 py-3 backdrop-blur-md md:-mx-6 md:px-6">
+      <div className="sticky top-3 z-30 mb-6 rounded-3xl border border-white/10 bg-stone-950/80 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-200/80">
-            {orders.length === 1 ? "1 pedido en curso" : `${orders.length} pedidos en curso`}
-          </p>
+          <div className="flex items-center gap-2 pl-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+            </span>
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-orange-200/90">
+              {orders.length === 1 ? "1 pedido en curso" : `${orders.length} pedidos en curso`}
+            </p>
+          </div>
         </div>
 
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {orders.map((order) => (
-            <button
-              type="button"
-              onClick={() => setSelectedOrder(order)}
-              key={order.id}
-              className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/10 px-3.5 py-2 ring-1 ring-white/10 transition hover:bg-white/15 active:scale-[0.98] text-left cursor-pointer"
-            >
-              <div className="flex flex-col">
-                <span className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-stone-400">
-                  Pedido #{order.id}
+        <div className="mt-3 flex gap-2.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {orders.map((order) => {
+            const step = getOrderStatusStep(order.statusId, order.statusName)
+            const badgeStyles =
+              step === 3
+                ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                : step === 2
+                ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+                : "bg-orange-500/10 text-orange-300 border-orange-500/20"
+
+            return (
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(order)}
+                key={order.id}
+                className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-2.5 ring-1 ring-white/5 transition duration-300 hover:bg-white/10 hover:border-white/20 active:scale-[0.97] text-left cursor-pointer shadow-lg shadow-black/10"
+              >
+                <div className="flex flex-col">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-stone-400">
+                    Pedido #{order.id}
+                  </span>
+                  <span className="text-xs font-black text-white mt-0.5">
+                    {order.statusName ?? "Actualizando"}
+                  </span>
+                </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[0.7rem] font-black tabular-nums ${badgeStyles}`}>
+                  {formatPrice(order.total)}
                 </span>
-                <span className="text-xs font-black text-orange-200">
-                  {order.statusName ?? "Actualizando estado"}
-                </span>
-              </div>
-              <span className="rounded-full bg-orange-500/15 px-2.5 py-1 text-[0.7rem] font-black text-orange-200 ring-1 ring-orange-200/20 tabular-nums">
-                {formatPrice(order.total)}
-              </span>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -112,7 +128,7 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
                   />
 
                   <div className="relative flex justify-between z-10">
-                    {/* Paso 1: Recibido */}
+                    {/* Paso 1: Nuevo */}
                     <div className="flex flex-col items-center">
                       <div
                         className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${
@@ -128,11 +144,11 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
                           currentStep >= 1 ? "text-orange-200" : "text-stone-500"
                         }`}
                       >
-                        Recibido
+                        Nuevo
                       </span>
                     </div>
 
-                    {/* Paso 2: En Cocina */}
+                    {/* Paso 2: En Preparación */}
                     <div className="flex flex-col items-center">
                       <div
                         className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${
@@ -148,7 +164,7 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
                           currentStep >= 2 ? "text-orange-200" : "text-stone-500"
                         }`}
                       >
-                        En Cocina
+                        En Preparación
                       </span>
                     </div>
 
@@ -219,19 +235,37 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
                 </span>
               </div>
 
-              {getOrderStatusStep(liveSelectedOrder.statusId, liveSelectedOrder.statusName) === 3 ? (
-                <div className="mt-4 rounded-2xl bg-emerald-500/10 p-3 text-center ring-1 ring-emerald-500/20">
-                  <p className="text-xs font-bold text-emerald-300">
-                    🛎️ ¡Tu pedido está listo! El mesero lo llevará a tu mesa en unos instantes.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl bg-white/5 p-3 text-center ring-1 ring-white/10">
-                  <p className="text-xs text-stone-300">
-                    🍳 La cocina está elaborando tu pedido. ¡Te notificaremos aquí mismo cuando esté listo!
-                  </p>
-                </div>
-              )}
+              {(() => {
+                const step = getOrderStatusStep(
+                  liveSelectedOrder.statusId,
+                  liveSelectedOrder.statusName
+                )
+                if (step === 3) {
+                  return (
+                    <div className="mt-4 rounded-2xl bg-emerald-500/10 p-3 text-center ring-1 ring-emerald-500/20">
+                      <p className="text-xs font-bold text-emerald-300">
+                        🛎️ ¡Tu pedido está listo! El mesero lo llevará a tu mesa en unos instantes.
+                      </p>
+                    </div>
+                  )
+                }
+                if (step === 2) {
+                  return (
+                    <div className="mt-4 rounded-2xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                      <p className="text-xs text-stone-300">
+                        🍳 Tu pedido está en preparación en la cocina. ¡Te notificaremos cuando esté listo!
+                      </p>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="mt-4 rounded-2xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                    <p className="text-xs text-stone-300">
+                      📝 Tu pedido ha sido recibido y está en la fila de espera. ¡Te notificaremos cuando comience su preparación!
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
