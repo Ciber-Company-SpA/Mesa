@@ -52,17 +52,14 @@ function parseDbTimestamp(iso: string | null): number | null {
   return Number.isNaN(ms) ? null : ms
 }
 
-function minutesSince(iso: string | null): number {
-  const ms = parseDbTimestamp(iso)
-  if (ms == null) return 0
-  return Math.max(0, Math.floor((Date.now() - ms) / 60000))
-}
-
-function elapsedMinutes(order: { createdAt: string | null; readyAt: string | null }): number {
+function elapsedMinutes(
+  order: { createdAt: string | null; readyAt: string | null },
+  nowMs: number = Date.now()
+): number {
   const start = parseDbTimestamp(order.createdAt)
   if (start == null) return 0
   const endIso = order.readyAt
-  const end = endIso ? parseDbTimestamp(endIso) ?? Date.now() : Date.now()
+  const end = endIso ? parseDbTimestamp(endIso) ?? nowMs : nowMs
   return Math.max(0, Math.floor((end - start) / 60000))
 }
 
@@ -133,10 +130,11 @@ function WaiterControlSystem() {
   const [secondsRemaining, setSecondsRemaining] = useState(0)
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false)
 
-  // Tick para refrescar los "minutos transcurridos" cada 30s
-  const [, setNowTick] = useState(0)
+  // Tick para refrescar los "minutos transcurridos" cada 30s.
+  // Exponemos `nowMs` para que useMemo del promedio recompute con el tick.
+  const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
-    const id = setInterval(() => setNowTick((n) => n + 1), 30_000)
+    const id = setInterval(() => setNowMs(Date.now()), 30_000)
     return () => clearInterval(id)
   }, [])
 
@@ -257,20 +255,21 @@ function WaiterControlSystem() {
     () =>
       ownOrders.filter((o) => {
         if (focusTableId != null && o.tableId !== focusTableId) return false
+        // Las Pagadas no se listan; solo cuentan para el promedio historico.
+        if (o.statusId === 4) return false
         return activeTab === "all" || o.statusId === activeTab
       }),
     [ownOrders, activeTab, focusTableId]
   )
 
-  const liveOrdersCount = ownOrders.length
+  const liveOrdersCount = ownOrders.filter((o) => o.statusId !== 4).length
   const avgWaitTime = useMemo(() => {
-    // Promedio sobre todas las órdenes vivas (Nuevo/Preparando = tiempo en vivo,
-    // Listo = tiempo congelado en ready_at). Así no cae a 0 cuando todas pasan
-    // a Listo y queda como referencia del tiempo medio de atencion.
+    // Promedio sobre TODAS las órdenes (incluye Listo con ready_at congelado y
+    // Pagado con su tiempo final). Así no cae a 0 cuando se marcan Listo/Pagado.
     if (!ownOrders.length) return 0
-    const total = ownOrders.reduce((acc, o) => acc + elapsedMinutes(o), 0)
+    const total = ownOrders.reduce((acc, o) => acc + elapsedMinutes(o, nowMs), 0)
     return Math.round(total / ownOrders.length)
-  }, [ownOrders])
+  }, [ownOrders, nowMs])
 
   if (profileLoading) {
     return (
@@ -600,9 +599,7 @@ function WaiterControlSystem() {
               <div>
                 <span className="font-bold uppercase text-[9px] text-stone-400">Tiempo</span>
                 <p className="font-semibold text-stone-700 mt-0.5">
-                  {selectedOrder.statusId >= STATUS_LISTO
-                    ? "—"
-                    : `${minutesSince(selectedOrder.createdAt)} min`}
+                  {`${elapsedMinutes(selectedOrder, nowMs)} min`}
                 </p>
               </div>
               <div className="text-right">
@@ -696,7 +693,7 @@ function OrderCard({
   onSelect: (ord: WaiterOrder) => void
   advancing: boolean
 }) {
-  const mins = minutesSince(order.createdAt)
+  const mins = elapsedMinutes(order)
   const isReady = order.statusId === STATUS_LISTO
   const isTerminal = order.statusId >= STATUS_LISTO
 

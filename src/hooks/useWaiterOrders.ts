@@ -130,7 +130,17 @@ export function useWaiterOrders(restaurantId: number | null) {
           return false
         }
         setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, statusId: result.data.statusId } : o))
+          prev.map((o) => {
+            if (o.id !== orderId) return o
+            const next: WaiterOrder = { ...o, statusId: result.data.statusId }
+            // Cuando recien pasa a Listo, congelamos readyAt localmente para
+            // que el promedio no use el tiempo en vivo hasta que llegue el
+            // evento Realtime con el valor real seteado por el trigger.
+            if (result.data.statusId === 3 && !o.readyAt) {
+              next.readyAt = new Date().toISOString()
+            }
+            return next
+          })
         )
         return true
       } catch (err) {

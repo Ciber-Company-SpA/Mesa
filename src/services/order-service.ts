@@ -80,7 +80,7 @@ export async function listActiveOrdersForRestaurant(
       "id, table_id, total, status_id, created_at, ready_at, tables(table_number), order_items(id, product_name, product_price, product_quantity, notes)"
     )
     .eq("restaurant_id", restaurantId)
-    .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO])
+    .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO, ORDER_STATUS_PAGADO])
     .order("created_at", { ascending: false })
 
   if (error) return fail("Error al cargar las órdenes")
