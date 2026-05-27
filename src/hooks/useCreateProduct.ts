@@ -237,6 +237,16 @@ export function useCreateProduct() {
     successRef.current = true
   })
 
+  function resetForm() {
+    setProductName("")
+    setProductDescription("")
+    setCategoryId(null)
+    setOptions([createLocalOption()])
+    setError("")
+    processingTokens.current.clear()
+    processingPromises.current.clear()
+  }
+
   async function createProduct(): Promise<boolean> {
     if (loading || loadingId) return false
 
@@ -246,6 +256,7 @@ export function useCreateProduct() {
       setLoading(true)
       setError("")
       await createProductWithRetry()
+      if (successRef.current) resetForm()
       return successRef.current
     } catch (err: unknown) {
       handleMutationError(err, {
