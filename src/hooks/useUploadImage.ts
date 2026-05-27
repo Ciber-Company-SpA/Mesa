@@ -1,29 +1,38 @@
 // hooks/useUploadImage.ts
 import { useState } from "react"
 import { logger } from "@/lib/logger"
-import { useProcessImage } from "@/hooks/useProcessImage"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
+import { processImage, type ProcessImageOptions } from "@/lib/image-processing"
 
 type UploadResult = {
   secure_url: string
   public_id: string
 } | null
 
+type UploadOptions = ProcessImageOptions & {
+  /** Si la imagen ya viene procesada (compresión / quitar fondo), saltar el preprocesado. */
+  alreadyProcessed?: boolean
+}
+
 export function useUploadImage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
-  const { processImage, processing } = useProcessImage()
 
-  async function uploadImage(file: File, preset: string): Promise<UploadResult> {
+  async function uploadImage(
+    file: File,
+    preset: string,
+    options: UploadOptions = {}
+  ): Promise<UploadResult> {
     try {
       setUploading(true)
       setError("")
 
-      const processed = await processImage(file)
-      if (!processed) throw new Error("Error al procesar imagen")
+      const finalFile = options.alreadyProcessed
+        ? file
+        : await processImage(file, { removeBg: options.removeBg })
 
       const formData = new FormData()
-      formData.append("file", processed)
+      formData.append("file", finalFile)
       formData.append("upload_preset", preset)
 
       const response = await fetch(
@@ -49,5 +58,5 @@ export function useUploadImage() {
     }
   }
 
-  return { uploadImage, uploading: uploading || processing, error }
+  return { uploadImage, uploading, error }
 }

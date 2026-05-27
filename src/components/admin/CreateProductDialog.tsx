@@ -20,6 +20,7 @@ export function CreateProductDialog({ open, onClose, onCreated }: Props) {
     setOptionName,
     setOptionPrice,
     setOptionImage,
+    setOptionRemoveBg,
     addOption,
     removeOption,
     loading, error,
@@ -104,6 +105,7 @@ export function CreateProductDialog({ open, onClose, onCreated }: Props) {
           onOptionNameChange={setOptionName}
           onOptionPriceChange={setOptionPrice}
           onOptionImageChange={setOptionImage}
+          onOptionRemoveBgChange={setOptionRemoveBg}
         />
 
         {error && (

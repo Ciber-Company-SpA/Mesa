@@ -45,6 +45,9 @@ export type ProductOptionForm = {
   name: string
   price: string
   imageFile: File | null
+  processedFile: File | null
+  processing: boolean
+  removeBg: boolean
   imageUrl: string | null
   imagePublicId: string | null
 }

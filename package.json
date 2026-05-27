@@ -16,6 +16,7 @@
     "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "browser-image-compression": "^2.0.2",
     "cloudinary": "^2.10.0",
     "dotenv": "^17.4.2",
     "hashids": "^2.3.0",
@@ -24,7 +25,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.3",
-    "tinify": "^1.8.2",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },
@@ -43,7 +43,7 @@
     "typescript": "^5",
     "wait-on": "^9.0.10"
   },
- "build": {
+  "build": {
     "appId": "com.mesa.app",
     "productName": "Mesa",
     "compression": "maximum",
@@ -56,7 +56,6 @@
       "!node_modules/@supabase/**",
       "!node_modules/cloudinary/**",
       "!node_modules/resend/**",
-      "!node_modules/tinify/**",
       "!node_modules/next/**",
       "!node_modules/react/**",
       "!node_modules/react-dom/**",

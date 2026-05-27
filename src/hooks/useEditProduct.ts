@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
+import { processImage } from "@/lib/image-processing"
 import {
   updateProductAction,
   getProductForEditAction,
@@ -23,6 +24,9 @@ function createLocalOption(values?: Partial<ProductOptionForm>): ProductOptionFo
     name: "",
     price: "",
     imageFile: null,
+    processedFile: null,
+    processing: false,
+    removeBg: false,
     imageUrl: null,
     imagePublicId: null,
     ...values,
@@ -32,6 +36,8 @@ function createLocalOption(values?: Partial<ProductOptionForm>): ProductOptionFo
 export function useEditProduct(productId: number | null) {
   const { uploadImage, uploading } = useUploadImage()
   const successRef = useRef(false)
+  const processingPromises = useRef<Map<string, Promise<File | null>>>(new Map())
+  const processingTokens = useRef<Map<string, number>>(new Map())
 
   const [productName, setProductName] = useState("")
   const [productDescription, setProductDescription] = useState("")
@@ -131,6 +137,27 @@ export function useEditProduct(productId: number | null) {
     )
   }
 
+  function startProcessing(localId: string, file: File, removeBg: boolean) {
+    const nextToken = (processingTokens.current.get(localId) ?? 0) + 1
+    processingTokens.current.set(localId, nextToken)
+
+    updateOption(localId, { processing: true, processedFile: null })
+
+    const promise = processImage(file, { removeBg })
+      .then((result) => {
+        if (processingTokens.current.get(localId) !== nextToken) return null
+        updateOption(localId, { processedFile: result, processing: false })
+        return result
+      })
+      .catch(() => {
+        if (processingTokens.current.get(localId) !== nextToken) return null
+        updateOption(localId, { processing: false })
+        return null
+      })
+
+    processingPromises.current.set(localId, promise)
+  }
+
   function setProductPrice(value: string) {
     const firstOption = options[0]
     if (!firstOption) return
@@ -140,7 +167,7 @@ export function useEditProduct(productId: number | null) {
   function setProductImage(file: File | null) {
     const firstOption = options[0]
     if (!firstOption) return
-    updateOption(firstOption.localId, { imageFile: file })
+    setOptionImage(firstOption.localId, file)
   }
 
   function setOptionName(localId: string, value: string) {
@@ -152,7 +179,22 @@ export function useEditProduct(productId: number | null) {
   }
 
   function setOptionImage(localId: string, file: File | null) {
-    updateOption(localId, { imageFile: file })
+    updateOption(localId, { imageFile: file, processedFile: null })
+    if (!file) {
+      processingTokens.current.set(localId, (processingTokens.current.get(localId) ?? 0) + 1)
+      processingPromises.current.delete(localId)
+      updateOption(localId, { processing: false })
+      return
+    }
+    const current = options.find((o) => o.localId === localId)
+    startProcessing(localId, file, current?.removeBg ?? false)
+  }
+
+  function setOptionRemoveBg(localId: string, value: boolean) {
+    updateOption(localId, { removeBg: value })
+    const current = options.find((o) => o.localId === localId)
+    if (!current?.imageFile) return
+    startProcessing(localId, current.imageFile, value)
   }
 
   function addOption() {
@@ -174,29 +216,43 @@ export function useEditProduct(productId: number | null) {
       if (currentOptions.length === 1) return currentOptions
       return currentOptions.filter((option) => option.localId !== localId)
     })
+    processingTokens.current.delete(localId)
+    processingPromises.current.delete(localId)
   }
 
-  // ============ PREPARAR OPCIONES (subir imágenes + validar) ============
+  // ============ PREPARAR OPCIONES (subir imágenes en paralelo + validar) ============
 
   async function prepareOptions(): Promise<UpdateProductOptionInput[]> {
-    const preparedOptions: UpdateProductOptionInput[] = []
+    const uploadResults = await Promise.all(
+      options.map(async (option) => {
+        if (!option.imageFile) {
+          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+        }
 
-    for (const option of options) {
-      let imageUrl = option.imageUrl
-      let imagePublicId = option.imagePublicId
+        const pending = processingPromises.current.get(option.localId)
+        const processed = pending ? await pending : option.processedFile
 
-      if (option.imageFile) {
+        const fileToUpload = processed ?? option.imageFile
+
         const result = await uploadImage(
-          option.imageFile,
-          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
+          fileToUpload,
+          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!,
+          { alreadyProcessed: true }
         )
 
         if (!result) throw new Error("Error al subir imagen")
 
-        imageUrl = result.secure_url
-        imagePublicId = result.public_id
-      }
+        return {
+          option,
+          imageUrl: result.secure_url,
+          imagePublicId: result.public_id,
+        }
+      })
+    )
 
+    const preparedOptions: UpdateProductOptionInput[] = []
+
+    for (const { option, imageUrl, imagePublicId } of uploadResults) {
       const rawOption = {
         ...(option.variantId ? { variantId: option.variantId } : {}),
         name: option.name.trim() || "Principal",
@@ -296,6 +352,7 @@ export function useEditProduct(productId: number | null) {
     setOptionName,
     setOptionPrice,
     setOptionImage,
+    setOptionRemoveBg,
     addOption,
     removeOption,
     loading: loading || isLoadPending,

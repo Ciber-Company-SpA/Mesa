@@ -11,6 +11,7 @@ type ProductOptionsEditorProps = {
   onOptionNameChange: (localId: string, value: string) => void
   onOptionPriceChange: (localId: string, value: string) => void
   onOptionImageChange: (localId: string, file: File | null) => void
+  onOptionRemoveBgChange: (localId: string, value: boolean) => void
 }
 
 function OptionImageInput({
@@ -18,11 +19,13 @@ function OptionImageInput({
   disabled,
   inputId,
   onImageChange,
+  onRemoveBgChange,
 }: {
   option: ProductOptionForm
   disabled?: boolean
   inputId: string
   onImageChange: (file: File | null) => void
+  onRemoveBgChange: (value: boolean) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const previewUrl = useMemo(
@@ -41,7 +44,7 @@ function OptionImageInput({
   const imageToShow = previewUrl || option.imageUrl
 
   return (
-    <div>
+    <div className="space-y-2">
       <input
         id={inputId}
         type="file"
@@ -61,6 +64,15 @@ function OptionImageInput({
           onMouseLeave={() => setMenuOpen(false)}
         >
           <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+
+          {option.processing && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+              <div className="flex items-center gap-2 rounded-full bg-stone-900/85 px-3 py-1 text-[10px] font-semibold text-white shadow">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400" />
+                Procesando…
+              </div>
+            </div>
+          )}
 
           <button
             type="button"
@@ -99,6 +111,18 @@ function OptionImageInput({
           </span>
         </label>
       )}
+
+      <label className="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-stone-600 select-none">
+        <input
+          type="checkbox"
+          checked={option.removeBg}
+          disabled={disabled}
+          onChange={(event) => onRemoveBgChange(event.target.checked)}
+          className="h-3.5 w-3.5 rounded border-stone-300 text-orange-500 focus:ring-orange-200"
+        />
+        Quitar fondo
+        <span className="text-stone-400">(más lento)</span>
+      </label>
     </div>
   )
 }
@@ -111,6 +135,7 @@ export function ProductOptionsEditor({
   onOptionNameChange,
   onOptionPriceChange,
   onOptionImageChange,
+  onOptionRemoveBgChange,
 }: ProductOptionsEditorProps) {
   const isSingleOption = options.length === 1
 
@@ -159,6 +184,7 @@ export function ProductOptionsEditor({
               disabled={disabled}
               inputId={`product-option-image-${options[0].localId}`}
               onImageChange={(file) => onOptionImageChange(options[0].localId, file)}
+              onRemoveBgChange={(value) => onOptionRemoveBgChange(options[0].localId, value)}
             />
           </div>
         </div>
@@ -187,6 +213,7 @@ export function ProductOptionsEditor({
                   disabled={disabled}
                   inputId={`product-option-image-${option.localId}`}
                   onImageChange={(file) => onOptionImageChange(option.localId, file)}
+                  onRemoveBgChange={(value) => onOptionRemoveBgChange(option.localId, value)}
                 />
 
                 <div className="space-y-3">

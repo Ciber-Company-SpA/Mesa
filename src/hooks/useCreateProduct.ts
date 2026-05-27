@@ -4,6 +4,7 @@ import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createProductAction } from "@/app/actions/product-actions"
+import { processImage } from "@/lib/image-processing"
 import {
   CreateProductOptionSchema,
   CreateProductSchema,
@@ -21,6 +22,9 @@ function createLocalOption(name = ""): ProductOptionForm {
     name,
     price: "",
     imageFile: null,
+    processedFile: null,
+    processing: false,
+    removeBg: false,
     imageUrl: null,
     imagePublicId: null,
   }
@@ -30,6 +34,10 @@ export function useCreateProduct() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
   const { uploadImage, uploading } = useUploadImage()
   const successRef = useRef(false)
+  // Promesa de procesamiento en curso por localId — para esperar al submit.
+  const processingPromises = useRef<Map<string, Promise<File | null>>>(new Map())
+  // Token por localId para descartar resultados viejos cuando el usuario cambia imagen/toggle.
+  const processingTokens = useRef<Map<string, number>>(new Map())
 
   const [productName, setProductName] = useState("")
   const [productDescription, setProductDescription] = useState("")
@@ -50,6 +58,28 @@ export function useCreateProduct() {
     )
   }
 
+  function startProcessing(localId: string, file: File, removeBg: boolean) {
+    const nextToken = (processingTokens.current.get(localId) ?? 0) + 1
+    processingTokens.current.set(localId, nextToken)
+
+    updateOption(localId, { processing: true, processedFile: null })
+
+    const promise = processImage(file, { removeBg })
+      .then((result) => {
+        if (processingTokens.current.get(localId) !== nextToken) return null
+        updateOption(localId, { processedFile: result, processing: false })
+        return result
+      })
+      .catch(() => {
+        if (processingTokens.current.get(localId) !== nextToken) return null
+        // Si falla el procesado, dejamos processedFile en null para que el upload haga fallback al original.
+        updateOption(localId, { processing: false })
+        return null
+      })
+
+    processingPromises.current.set(localId, promise)
+  }
+
   function setProductPrice(value: string) {
     const firstOption = options[0]
     if (!firstOption) return
@@ -59,7 +89,7 @@ export function useCreateProduct() {
   function setProductImage(file: File | null) {
     const firstOption = options[0]
     if (!firstOption) return
-    updateOption(firstOption.localId, { imageFile: file })
+    setOptionImage(firstOption.localId, file)
   }
 
   function setOptionName(localId: string, value: string) {
@@ -71,7 +101,22 @@ export function useCreateProduct() {
   }
 
   function setOptionImage(localId: string, file: File | null) {
-    updateOption(localId, { imageFile: file })
+    updateOption(localId, { imageFile: file, processedFile: null })
+    if (!file) {
+      processingTokens.current.set(localId, (processingTokens.current.get(localId) ?? 0) + 1)
+      processingPromises.current.delete(localId)
+      updateOption(localId, { processing: false })
+      return
+    }
+    const current = options.find((o) => o.localId === localId)
+    startProcessing(localId, file, current?.removeBg ?? false)
+  }
+
+  function setOptionRemoveBg(localId: string, value: boolean) {
+    updateOption(localId, { removeBg: value })
+    const current = options.find((o) => o.localId === localId)
+    if (!current?.imageFile) return
+    startProcessing(localId, current.imageFile, value)
   }
 
   function addOption() {
@@ -93,28 +138,43 @@ export function useCreateProduct() {
       if (currentOptions.length === 1) return currentOptions
       return currentOptions.filter((option) => option.localId !== localId)
     })
+    processingTokens.current.delete(localId)
+    processingPromises.current.delete(localId)
   }
 
-  // Sube imágenes pendientes y construye los options con URLs ya subidas
+  // Sube imágenes en paralelo y construye los options validados.
   async function prepareOptions(): Promise<CreateProductOptionInput[]> {
-    const preparedOptions: CreateProductOptionInput[] = []
+    const uploadResults = await Promise.all(
+      options.map(async (option) => {
+        if (!option.imageFile) {
+          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+        }
 
-    for (const option of options) {
-      let imageUrl = option.imageUrl
-      let imagePublicId = option.imagePublicId
+        // Esperar al procesado en curso (si lo hay).
+        const pending = processingPromises.current.get(option.localId)
+        const processed = pending ? await pending : option.processedFile
 
-      if (option.imageFile) {
+        const fileToUpload = processed ?? option.imageFile
+
         const result = await uploadImage(
-          option.imageFile,
-          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
+          fileToUpload,
+          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!,
+          { alreadyProcessed: true }
         )
 
         if (!result) throw new Error("Error al subir imagen")
 
-        imageUrl = result.secure_url
-        imagePublicId = result.public_id
-      }
+        return {
+          option,
+          imageUrl: result.secure_url,
+          imagePublicId: result.public_id,
+        }
+      })
+    )
 
+    const preparedOptions: CreateProductOptionInput[] = []
+
+    for (const { option, imageUrl, imagePublicId } of uploadResults) {
       const rawOption = {
         name: option.name.trim() || "Principal",
         price: Number(option.price),
@@ -122,7 +182,6 @@ export function useCreateProduct() {
         imagePublicId,
       }
 
-      // Validar cliente con Zod
       const validation = CreateProductOptionSchema.safeParse(rawOption)
 
       if (!validation.success) {
@@ -215,6 +274,7 @@ export function useCreateProduct() {
     setOptionName,
     setOptionPrice,
     setOptionImage,
+    setOptionRemoveBg,
     addOption,
     removeOption,
     loading: loading || uploading || isPending,

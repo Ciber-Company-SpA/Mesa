@@ -21,6 +21,7 @@ export function EditProductDialog({ open, productId, onClose, onSaved }: Props) 
     setOptionName,
     setOptionPrice,
     setOptionImage,
+    setOptionRemoveBg,
     addOption,
     removeOption,
     loading, saving,
@@ -111,6 +112,7 @@ export function EditProductDialog({ open, productId, onClose, onSaved }: Props) 
             onOptionNameChange={setOptionName}
             onOptionPriceChange={setOptionPrice}
             onOptionImageChange={setOptionImage}
+            onOptionRemoveBgChange={setOptionRemoveBg}
           />
 
           {error && (
