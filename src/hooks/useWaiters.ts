@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useId } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useCache } from "@/hooks/useCache"
@@ -8,6 +8,7 @@ import type { WaiterListItem } from "@/services/waiter-service"
 
 export function useWaiters() {
   const { restaurantId } = useRestaurantId()
+  const instanceId = useId()
 
   const fetchWaiters = useCallback(async (): Promise<WaiterListItem[]> => {
     const result = await listWaitersAction()
@@ -29,7 +30,7 @@ export function useWaiters() {
     if (!restaurantId) return
 
     const channel = supabase
-      .channel(`waiters-list-${restaurantId}`)
+      .channel(`waiters-list-${restaurantId}-${instanceId}`)
       .on(
         "postgres_changes",
         {
@@ -49,7 +50,7 @@ export function useWaiters() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [restaurantId, refresh])
+  }, [restaurantId, refresh, instanceId])
 
   return {
     waiters: data ?? [],

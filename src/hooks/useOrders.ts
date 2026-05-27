@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useId } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -7,6 +7,7 @@ import type { Order } from "@/types/order"
 
 export function useOrders({ limit = 30 }: { limit?: number } = {}) {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
+  const instanceId = useId()
 
   const fetchOrders = useCallback(async (): Promise<Order[]> => {
     const { data, error } = await supabase
@@ -32,7 +33,7 @@ export function useOrders({ limit = 30 }: { limit?: number } = {}) {
     if (!restaurantId) return
 
     const channel = supabase
-      .channel(`orders-list-${restaurantId}-${limit}`)
+      .channel(`orders-list-${restaurantId}-${limit}-${instanceId}`)
       .on(
         "postgres_changes",
         {
@@ -52,7 +53,7 @@ export function useOrders({ limit = 30 }: { limit?: number } = {}) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [restaurantId, limit, refresh])
+  }, [restaurantId, limit, refresh, instanceId])
 
   if (error) {
     logger.error("Error cargando pedidos", error)

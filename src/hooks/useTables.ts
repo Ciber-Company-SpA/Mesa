@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useId } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -17,6 +17,7 @@ type TablesResult = {
 
 export function useTables({ page = 1, pageSize = 12 }: UseTablesOptions = {}) {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
+  const instanceId = useId()
 
   const fetchTables = useCallback(async (): Promise<TablesResult> => {
     const from = (page - 1) * pageSize
@@ -63,7 +64,7 @@ export function useTables({ page = 1, pageSize = 12 }: UseTablesOptions = {}) {
     if (!restaurantId) return
 
     const channel = supabase
-      .channel(`tables-list-${restaurantId}-p${page}-s${pageSize}`)
+      .channel(`tables-list-${restaurantId}-p${page}-s${pageSize}-${instanceId}`)
       .on(
         "postgres_changes",
         {
@@ -83,7 +84,7 @@ export function useTables({ page = 1, pageSize = 12 }: UseTablesOptions = {}) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [restaurantId, page, pageSize, refresh])
+  }, [restaurantId, page, pageSize, refresh, instanceId])
 
   return {
     tables: data?.items ?? [],

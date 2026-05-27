@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useId } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
@@ -17,6 +17,7 @@ type CategoriesResult = {
 
 export function useCategories({ page = 1, pageSize = 12 }: UseCategoriesOptions = {}) {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
+  const instanceId = useId()
 
   const fetchCategories = useCallback(async (): Promise<CategoriesResult> => {
     const from = (page - 1) * pageSize
@@ -55,7 +56,7 @@ export function useCategories({ page = 1, pageSize = 12 }: UseCategoriesOptions 
     if (!restaurantId) return
 
     const channel = supabase
-      .channel(`categories-list-${restaurantId}-p${page}-s${pageSize}`)
+      .channel(`categories-list-${restaurantId}-p${page}-s${pageSize}-${instanceId}`)
       .on(
         "postgres_changes",
         {
@@ -75,7 +76,7 @@ export function useCategories({ page = 1, pageSize = 12 }: UseCategoriesOptions 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [restaurantId, page, pageSize, refresh])
+  }, [restaurantId, page, pageSize, refresh, instanceId])
 
   return {
     categories: data?.items ?? [],
