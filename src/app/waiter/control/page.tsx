@@ -3,6 +3,7 @@
 import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
+import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
@@ -275,6 +276,8 @@ function WaiterControlSystem() {
       </header>
 
       <div className="mx-auto max-w-7xl px-6 mt-8">
+        <DeepLinkSetupNotice />
+
         {ordersError && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {ordersError}
