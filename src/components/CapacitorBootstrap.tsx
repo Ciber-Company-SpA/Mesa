@@ -26,6 +26,45 @@ export function CapacitorBootstrap() {
           import("@capacitor/browser"),
         ])
 
+        async function openExternal(url: string) {
+          try {
+            await Browser.open({ url })
+          } catch (err) {
+            logger.warn("No se pudo abrir el navegador externo", { error: String(err) })
+            // Fallback duro: que el WebView lo intente.
+            window.location.assign(url)
+          }
+        }
+
+        async function belongsToCurrentRestaurant(qrCode: string, authUserId: string) {
+          try {
+            const [profileRes, qrRes] = await Promise.all([
+              supabase
+                .from("users")
+                .select("restaurant_id")
+                .eq("auth_user_id", authUserId)
+                .maybeSingle(),
+              supabase
+                .from("table_qr_codes")
+                .select("id")
+                .eq("qr_code", qrCode)
+                .maybeSingle(),
+            ])
+            const userRestaurantId = profileRes.data?.restaurant_id
+            const qrId = qrRes.data?.id
+            if (!userRestaurantId || !qrId) return false
+
+            const { data: table } = await supabase
+              .from("tables")
+              .select("restaurant_id")
+              .eq("qr_code_id", qrId)
+              .maybeSingle()
+            return table?.restaurant_id === userRestaurantId
+          } catch {
+            return false
+          }
+        }
+
         async function handleUrl(url: string) {
           let parsed: URL
           try {
@@ -36,27 +75,30 @@ export function CapacitorBootstrap() {
 
           // Solo nos interesan deep links del flujo de QR (/r/<code>).
           if (!parsed.pathname.startsWith("/r/")) return
+          const qrCode = parsed.pathname.split("/").filter(Boolean)[1] ?? ""
 
           const { data: { user } } = await supabase.auth.getUser()
 
-          if (user) {
-            // Con sesión: el WebView sigue el redirect normal del route handler,
-            // que reclama la mesa y manda a /waiter/control con tableId/tableNumber.
-            window.location.assign(url)
-          } else {
-            // Sin sesión: abrimos en Custom Tabs (comparte cookies con Chrome).
-            // El server /r/<code> usa las cookies del navegador del sistema para
-            // decidir: sesión activa → /waiter/control, sin sesión → /[qrCode]/menu.
-            // No cerramos la app porque Custom Tab tiene service binding con
-            // nuestra activity; si la matamos, Chrome se abre vacío.
-            try {
-              await Browser.open({ url })
-            } catch (err) {
-              logger.warn("No se pudo abrir el navegador externo", { error: String(err) })
-              // Fallback duro: que el WebView lo intente.
-              window.location.assign(url)
-            }
+          // Sin sesión → al navegador del sistema (Custom Tab usa cookies de
+          // Chrome y el server decide menú o /waiter/control).
+          if (!user) {
+            await openExternal(url)
+            return
           }
+
+          // Con sesión pero la mesa no pertenece al restaurante del mesero
+          // (ej. mesero de R1 que escanea QR de R2): mismo flujo de "sin sesión".
+          // Así evitamos que el WebView muestre contenido cruzado y dejamos que
+          // el navegador trate al usuario como cliente del otro restaurante.
+          const ownsRestaurant = await belongsToCurrentRestaurant(qrCode, user.id)
+          if (!ownsRestaurant) {
+            await openExternal(url)
+            return
+          }
+
+          // Misma sesión + mismo restaurante: dejamos al server route reclamar
+          // la mesa y mandar a /waiter/control con tableId/tableNumber.
+          window.location.assign(url)
         }
 
         // Cold start: si la app se abrió por un deep link, esta llamada devuelve

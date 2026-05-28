@@ -31,7 +31,7 @@ export async function GET(
 
   const { data: tableRow } = await supabase
     .from("tables")
-    .select("id, table_number, current_waiter_id")
+    .select("id, table_number, current_waiter_id, restaurant_id")
     .eq("qr_code_id", qrRow.id)
     .maybeSingle()
 
@@ -43,11 +43,16 @@ export async function GET(
   if (user) {
     const { data: profile } = await supabase
       .from("users")
-      .select("id, role_id")
+      .select("id, role_id, restaurant_id")
       .eq("auth_user_id", user.id)
       .maybeSingle()
 
-    if (profile?.role_id === 1 && profile.id) {
+    // Mesero solo puede atender mesas de SU restaurante. Si escanea un QR de
+    // otro restaurante, cae al fallback de menú (igual que sin sesión).
+    const sameRestaurant =
+      profile?.restaurant_id != null && profile.restaurant_id === tableRow.restaurant_id
+
+    if (profile?.role_id === 1 && profile.id && sameRestaurant) {
       // Si la mesa está libre, este mesero la reclama. Si ya la atiende él
       // mismo, sigue de largo. Si la atiende otro, lo mandamos a la pantalla
       // de "mesa ocupada".

@@ -21,7 +21,10 @@ const ASSET_LINKS = [
       namespace: "android_app",
       package_name: "com.mesa.meseros",
       sha256_cert_fingerprints: [
+        // debug keystore (~/.android/debug.keystore) — solo desarrollo en esta PC.
         "3D:DE:EC:BB:28:D8:D0:26:86:0F:39:D3:69:03:EF:DD:4E:43:2D:D1:85:69:90:16:A3:CA:E3:15:0D:6B:12:04",
+        // release keystore (keystore/mesa-release) — APKs distribuidas.
+        "C0:12:0A:82:08:C1:1F:0F:11:09:DB:41:AD:58:3F:2C:01:63:29:53:14:77:91:BC:DB:4A:B3:F1:04:2C:4D:89",
       ],
     },
   },

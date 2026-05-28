@@ -56,6 +56,10 @@ next-env.d.ts
 *.keystore
 keystore.properties
 signing.properties
+/keystore/
+# APKs/AAB generados por Android Studio fuera de android/app/build/
+*.apk
+*.aab
 
 # Capacitor / Android (regenerable con npx cap add android)
 /android
