@@ -143,6 +143,18 @@ function WaiterControlSystem() {
     router.replace("/waiter/login")
   }, [router])
 
+  const handleTableClick = useCallback(
+    (tableId: number, tableNumber: string | number | null) => {
+      if (focusTableId === tableId) {
+        router.replace("/waiter/control")
+      } else {
+        const numParam = tableNumber != null ? `&tableNumber=${tableNumber}` : ""
+        router.replace(`/waiter/control?tableId=${tableId}${numParam}`)
+      }
+    },
+    [focusTableId, router]
+  )
+
   useEffect(() => {
     if (profileLoading) return
     if (!loggedInStaff) {
@@ -204,9 +216,10 @@ function WaiterControlSystem() {
       ownOrders.filter((o) => {
         // Las Pagadas no se listan; solo cuentan para el promedio historico.
         if (o.statusId === 4) return false
+        if (focusTableId != null && o.tableId !== focusTableId) return false
         return activeTab === "all" || o.statusId === activeTab
       }),
-    [ownOrders, activeTab]
+    [ownOrders, activeTab, focusTableId]
   )
 
   const liveOrdersCount = ownOrders.filter((o) => o.statusId !== 4).length
@@ -289,84 +302,123 @@ function WaiterControlSystem() {
         )}
 
         {focusTableId != null && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-orange-200/70 bg-orange-50/80 px-4 py-3">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold">
-              {focusTableNumber || `#${focusTableId}`}
-            </span>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-orange-700">
-                Mesa escaneada
-              </p>
-              <p className="text-sm font-semibold text-stone-800">
-                Mostrando solo pedidos de{" "}
-                {focusTableNumber ? `Mesa ${focusTableNumber}` : `Mesa #${focusTableId}`}
-              </p>
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-orange-200/70 bg-orange-50/80 px-4 py-3 animate-card-entrance shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-sm font-bold shadow-md shadow-orange-500/20">
+                {focusTableNumber || `#${focusTableId}`}
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-orange-700">
+                  Filtro activo
+                </p>
+                <p className="text-sm font-semibold text-stone-800">
+                  Mostrando solo pedidos de{" "}
+                  {focusTableNumber ? `Mesa ${focusTableNumber}` : `Mesa #${focusTableId}`}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={() => router.replace("/waiter/control")}
+              className="rounded-full bg-white hover:bg-stone-50 text-stone-700 hover:text-stone-900 px-3.5 py-1.5 text-xs font-bold shadow-sm transition border border-stone-200 hover:border-stone-300 cursor-pointer active:scale-95 shrink-0"
+            >
+              Ver todas las mesas
+            </button>
           </div>
         )}
 
         <section className="mb-8 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-sm font-bold tracking-tight text-stone-900">Mesas del restaurante</h2>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-100 pb-3">
+            <div>
+              <h2 className="text-sm font-bold tracking-tight text-stone-900">Mesas del restaurante</h2>
+              <p className="text-[11px] text-stone-500">Monitoreo en vivo. Haz clic en una mesa para ver solo sus pedidos.</p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
               {assignedTables.length} tuya{assignedTables.length === 1 ? "" : "s"} · {availableTables.length} libre{availableTables.length === 1 ? "" : "s"} · {occupiedByOthers.length} ocupada{occupiedByOthers.length === 1 ? "" : "s"}
             </span>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
-                Disponibles ({availableTables.length})
-              </p>
-              {availableTables.length === 0 ? (
-                <p className="text-xs text-stone-400 italic">No hay mesas libres ahora.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {availableTables.map((t) => (
-                    <span
-                      key={t.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/70 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Mesa {t.tableNumber ?? `#${t.id}`}
-                    </span>
-                  ))}
-                </div>
-              )}
+          {/* Leyenda de Colores Explicativa */}
+          <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs bg-stone-50/50 rounded-xl p-3 border border-stone-100">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981] animate-pulse" />
+              <span className="font-bold text-stone-700">Verde:</span>
+              <span className="text-stone-500">Disponible</span>
             </div>
-
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-500">
-                No disponibles ({assignedTables.length + occupiedByOthers.length})
-              </p>
-              {assignedTables.length + occupiedByOthers.length === 0 ? (
-                <p className="text-xs text-stone-400 italic">Todas las mesas están libres.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {assignedTables.map((t) => (
-                    <span
-                      key={t.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-orange-200/70 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-800"
-                      title="Atendida por ti"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                      Mesa {t.tableNumber ?? `#${t.id}`} · tú
-                    </span>
-                  ))}
-                  {occupiedByOthers.map((t) => (
-                    <span
-                      key={t.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-600"
-                      title="Atendida por otro mesero"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-                      Mesa {t.tableNumber ?? `#${t.id}`}
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b] animate-pulse" style={{ animationDuration: "1.8s" }} />
+              <span className="font-bold text-stone-700">Amarillo:</span>
+              <span className="text-stone-500">Tuya (Atendida por ti)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]" />
+              <span className="font-bold text-stone-700">Rojo:</span>
+              <span className="text-stone-500">No disponible (Atendida por otro)</span>
             </div>
           </div>
+
+          {/* Listado Unificado y Animado de Mesas */}
+          {allTables.length === 0 ? (
+            <p className="text-xs text-stone-400 italic py-2">No hay mesas registradas en este restaurante.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2.5">
+              {allTables.map((t) => {
+                const isMine = staffId != null && t.currentWaiterId === staffId
+                const isAvailable = t.currentWaiterId == null
+                const isFocused = focusTableId === t.id
+
+                if (isAvailable) {
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleTableClick(t.id, t.tableNumber)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
+                        isFocused
+                          ? "border-emerald-500 bg-emerald-100/80 text-emerald-900 ring-2 ring-offset-2 ring-emerald-500/70"
+                          : "border-emerald-200/80 bg-emerald-50/70 hover:bg-emerald-50 text-emerald-800 hover:border-emerald-300"
+                      }`}
+                      title="Mesa disponible - Haz clic para filtrar"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_4px_#10b981]" />
+                      Mesa {t.tableNumber ?? `#${t.id}`}
+                    </button>
+                  )
+                } else if (isMine) {
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleTableClick(t.id, t.tableNumber)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
+                        isFocused
+                          ? "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-offset-2 ring-amber-500/70"
+                          : "border-amber-200/80 bg-amber-50/70 hover:bg-amber-50 text-amber-800 hover:border-amber-300"
+                      }`}
+                      title="Mesa atendida por ti - Haz clic para filtrar"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] animate-ping absolute" style={{ width: "6px", height: "6px" }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] relative" />
+                      Mesa {t.tableNumber ?? `#${t.id}`} · tú
+                    </button>
+                  )
+                } else {
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleTableClick(t.id, t.tableNumber)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
+                        isFocused
+                          ? "border-red-500 bg-red-100 text-red-900 ring-2 ring-offset-2 ring-red-500/70"
+                          : "border-red-200/80 bg-red-50/70 hover:bg-red-50 text-red-800 hover:border-red-300"
+                      }`}
+                      title="Mesa ocupada por otro mesero - Haz clic para filtrar"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_3px_#ef4444]" />
+                      Mesa {t.tableNumber ?? `#${t.id}`}
+                    </button>
+                  )
+                }
+              })}
+            </div>
+          )}
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3 mb-8">
