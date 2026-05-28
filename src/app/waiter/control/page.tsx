@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
 import { ScanQrButton } from "@/components/ScanQrButton"
+import { PayTableSection } from "@/components/waiter/PayTableSection"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
@@ -93,8 +94,16 @@ function WaiterControlSystem() {
 
   const restaurantId = loggedInStaff?.restaurantId ?? null
   const staffId = loggedInStaff?.id ?? null
-  const { orders, loading: ordersLoading, error: ordersError, advance, markPaid, advancingId } =
-    useWaiterOrders(restaurantId)
+  const {
+    orders,
+    loading: ordersLoading,
+    error: ordersError,
+    advance,
+    markPaid,
+    markTablePaid,
+    payingTableId,
+    advancingId,
+  } = useWaiterOrders(restaurantId)
   const { tables: allTables } = useRestaurantTables(restaurantId)
 
   // Derivamos del listado global: mías, libres y ocupadas por otros.
@@ -444,6 +453,15 @@ function WaiterControlSystem() {
             <p className="text-xs text-stone-500 mt-2">Lleva estos a la mesa</p>
           </div>
         </section>
+
+        <PayTableSection
+          orders={ownOrders}
+          payingTableId={payingTableId}
+          onPayTable={markTablePaid}
+          onSuccess={(label, count) =>
+            triggerToast(`${label} cobrada · ${count} pedido${count === 1 ? "" : "s"} 💸`)
+          }
+        />
 
         <section>
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">

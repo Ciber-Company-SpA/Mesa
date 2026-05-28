@@ -7,6 +7,7 @@ import {
   listActiveOrdersAction,
   advanceOrderStatusAction,
   markOrderAsPaidAction,
+  markTableOrdersAsPaidAction,
 } from "@/app/actions/order-actions"
 import type { WaiterOrder } from "@/services/order-service"
 
@@ -186,5 +187,46 @@ export function useWaiterOrders(restaurantId: number | null) {
     [advancingId]
   )
 
-  return { orders, loading, error, advance, markPaid, advancingId, reload }
+  const [payingTableId, setPayingTableId] = useState<number | null>(null)
+  const markTablePaid = useCallback(
+    async (tableId: number): Promise<{ ok: boolean; paidCount: number }> => {
+      if (payingTableId != null) return { ok: false, paidCount: 0 }
+      try {
+        setPayingTableId(tableId)
+        setError("")
+        const result = await markTableOrdersAsPaidAction(tableId)
+        if (!result.ok) {
+          setError(result.error)
+          return { ok: false, paidCount: 0 }
+        }
+        const paidSet = new Set(result.data.paidIds)
+        setOrders((prev) =>
+          prev.map((o) => (paidSet.has(o.id) ? { ...o, statusId: 4 } : o))
+        )
+        return { ok: true, paidCount: result.data.paidIds.length }
+      } catch (err) {
+        handleMutationError(err, {
+          logTag: "Error pagando órdenes de mesa",
+          fallback: "Error al pagar la mesa",
+          setError,
+        })
+        return { ok: false, paidCount: 0 }
+      } finally {
+        setPayingTableId(null)
+      }
+    },
+    [payingTableId]
+  )
+
+  return {
+    orders,
+    loading,
+    error,
+    advance,
+    markPaid,
+    markTablePaid,
+    payingTableId,
+    advancingId,
+    reload,
+  }
 }

@@ -177,6 +177,51 @@ export async function markOrderAsPaid(
   return ok({ id: orderId, statusId: ORDER_STATUS_PAGADO, tableReleased })
 }
 
+// Marca como pagados TODOS los pedidos activos (Nuevo/Preparando/Listo) de una
+// mesa en una sola operación. Libera la mesa (current_waiter_id = null) si
+// queda sin pedidos activos, igual que markOrderAsPaid.
+//
+// La advertencia "hay pedidos no listos" se valida en el cliente; este service
+// confía en que el caller mostró confirmación antes.
+export async function markTableOrdersAsPaid(
+  tableId: number
+): Promise<Result<{ tableId: number; paidIds: number[]; tableReleased: boolean }>> {
+  if (!tableId || tableId <= 0) return fail("Mesa inválida")
+
+  const supabase = await createSupabaseServerClient()
+
+  const { data: updated, error: updateError } = await supabase
+    .from("orders")
+    .update({ status_id: ORDER_STATUS_PAGADO })
+    .eq("table_id", tableId)
+    .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO])
+    .select("id")
+
+  if (updateError) return fail("Error al marcar las órdenes como pagadas")
+
+  const paidIds = (updated ?? []).map((row) => row.id)
+
+  // Auto-release: como ya pagamos todo lo activo, normalmente la mesa queda
+  // libre. Igual contamos por si quedó algo en otro estado raro.
+  let tableReleased = false
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("table_id", tableId)
+    .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO])
+
+  if ((count ?? 0) === 0) {
+    const { error: releaseError } = await supabase
+      .from("tables")
+      .update({ current_waiter_id: null })
+      .eq("id", tableId)
+
+    if (!releaseError) tableReleased = true
+  }
+
+  return ok({ tableId, paidIds, tableReleased })
+}
+
 export type CreatedOrder = {
   id: number
   statusId: number
