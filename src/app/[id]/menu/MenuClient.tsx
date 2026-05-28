@@ -76,121 +76,136 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           </span>
         </header>
 
-        <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory(null)}
-            className={`shrink-0 rounded-full px-5 py-3 text-sm font-black shadow-lg transition ${
-              selectedCategory === null
-                ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
-                : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
-            }`}
-          >
-            Todo
-          </button>
-          {categories.map((cat) => (
+        <div className="sticky top-0 z-30 -mx-4 mt-6 bg-stone-950/80 px-4 py-3 backdrop-blur-md border-b border-white/5">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
-              key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`shrink-0 rounded-full px-5 py-3 text-sm font-black shadow-lg transition ${
-                selectedCategory === cat.id
+              onClick={() => setSelectedCategory(null)}
+              className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
+                selectedCategory === null
                   ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
                   : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
               }`}
             >
-              {cat.category_name}
+              Todo
             </button>
-          ))}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
+                  selectedCategory === cat.id
+                    ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
+                    : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
+                }`}
+              >
+                {cat.category_name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {filteredProducts.length > 0 ? (
-          <section className="mt-7">
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-orange-200/80">Menú principal</p>
-                <h2 className="text-2xl font-black tracking-tight text-white">Menú completo</h2>
-              </div>
-              <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-stone-300 ring-1 ring-white/10">
-                {filteredProducts.length} productos
-              </p>
-            </div>
+          <section className="mt-8 space-y-10">
+            {categories.map((cat) => {
+              const categoryProducts = filteredProducts.filter(
+                (item) => item.category_id === cat.id
+              )
+              if (categoryProducts.length === 0) return null
 
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredProducts.map((item) => {
-                const isAgotado = item.status_id === 2
-
-                return isAgotado ? (
-                  <div
-                    key={item.id}
-                    className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] bg-white/10 p-3 opacity-60 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur"
-                  >
-                    <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
-                      Agotado
+              return (
+                <div key={cat.id} className="animate-card-entrance">
+                  <div className="mb-5 flex items-center justify-between border-b border-white/5 pb-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="h-5 w-1 rounded-full bg-gradient-to-b from-orange-400 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
+                      <h2 className="text-xl font-black tracking-tight text-white uppercase sm:text-2xl">
+                        {cat.category_name}
+                      </h2>
+                    </div>
+                    <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-400 ring-1 ring-orange-500/20 backdrop-blur-sm">
+                      {categoryProducts.length} {categoryProducts.length === 1 ? 'producto' : 'productos'}
                     </span>
-                    <ProductImage
-                      src={item.product_image}
-                      alt={item.product_name}
-                      className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
-                      imageClassName="p-3 drop-shadow-xl"
-                    />
-                    <div className="min-w-0 flex-1 py-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-orange-200/80">
-                            {item.categories?.category_name}
-                          </p>
-                          <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
-                            {item.product_name}
-                          </h3>
-                        </div>
-                        <p className="shrink-0 text-sm font-black text-orange-200">
-                          {formatPrice(item.product_price)}
-                        </p>
-                      </div>
-                      {item.product_description && (
-                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
-                          {item.product_description}
-                        </p>
-                      )}
-                    </div>
                   </div>
-                ) : (
-                  <Link
-                    key={item.id}
-                    href={`/${qrCode}/menu/${encodeId(item.id)}`}
-                    className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
-                  >
-                    <ProductImage
-                      src={item.product_image}
-                      alt={item.product_name}
-                      className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
-                      imageClassName="p-3 drop-shadow-xl"
-                    />
-                    <div className="min-w-0 flex-1 py-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-orange-200/80">
-                            {item.categories?.category_name}
-                          </p>
-                          <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
-                            {item.product_name}
-                          </h3>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {categoryProducts.map((item) => {
+                      const isAgotado = item.status_id === 2
+
+                      return isAgotado ? (
+                        <div
+                          key={item.id}
+                          className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] bg-white/10 p-3 opacity-60 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur"
+                        >
+                          <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
+                            Agotado
+                          </span>
+                          <ProductImage
+                            src={item.product_image}
+                            alt={item.product_name}
+                            className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                            imageClassName="p-3 drop-shadow-xl"
+                          />
+                          <div className="min-w-0 flex-1 py-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold text-orange-200/80">
+                                  {item.categories?.category_name}
+                                </p>
+                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                                  {item.product_name}
+                                </h3>
+                              </div>
+                              <p className="shrink-0 text-sm font-black text-orange-200">
+                                {formatPrice(item.product_price)}
+                              </p>
+                            </div>
+                            {item.product_description && (
+                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                                {item.product_description}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <p className="shrink-0 text-sm font-black text-orange-200">
-                          {formatPrice(item.product_price)}
-                        </p>
-                      </div>
-                      {item.product_description && (
-                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
-                          {item.product_description}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
+                      ) : (
+                        <Link
+                          key={item.id}
+                          href={`/${qrCode}/menu/${encodeId(item.id)}`}
+                          className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
+                        >
+                          <ProductImage
+                            src={item.product_image}
+                            alt={item.product_name}
+                            className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                            imageClassName="p-3 drop-shadow-xl"
+                          />
+                          <div className="min-w-0 flex-1 py-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold text-orange-200/80">
+                                  {item.categories?.category_name}
+                                </p>
+                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                                  {item.product_name}
+                                </h3>
+                              </div>
+                              <p className="shrink-0 text-sm font-black text-orange-200">
+                                {formatPrice(item.product_price)}
+                              </p>
+                            </div>
+                            {item.product_description && (
+                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                                {item.product_description}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
           </section>
         ) : (
           <div className="mt-8 rounded-[2rem] bg-white/10 px-6 py-12 text-center shadow-2xl shadow-black/30 ring-1 ring-white/10 backdrop-blur">
