@@ -49,10 +49,49 @@ if (manifest.includes(MARKER)) {
     process.exit(1)
   }
 
-  const patched = manifest.replace(launcherFilterEnd, `$1${INTENT_FILTER}`)
-  writeFileSync(MANIFEST, patched, "utf8")
+  manifest = manifest.replace(launcherFilterEnd, `$1${INTENT_FILTER}`)
+  writeFileSync(MANIFEST, manifest, "utf8")
   console.log("[patch-android-manifest] intent-filter insertado correctamente.")
 }
+
+// Permisos / meta-data necesarios para el scanner QR (Google ML Kit) y otros.
+const ENSURE_LINES = [
+  {
+    marker: "android.permission.CAMERA",
+    line: '    <uses-permission android:name="android.permission.CAMERA" />',
+    after: '<uses-permission android:name="android.permission.INTERNET" />',
+  },
+  {
+    marker: "android.hardware.camera",
+    line: '    <uses-feature android:name="android.hardware.camera" android:required="false" />',
+    after: '<uses-permission android:name="android.permission.CAMERA" />',
+  },
+  {
+    marker: "com.google.mlkit.vision.DEPENDENCIES",
+    line:
+      '        <meta-data\n' +
+      '            android:name="com.google.mlkit.vision.DEPENDENCIES"\n' +
+      '            android:value="barcode_ui" />',
+    before: "</application>",
+  },
+]
+
+for (const rule of ENSURE_LINES) {
+  if (manifest.includes(rule.marker)) {
+    continue
+  }
+  if (rule.after) {
+    const idx = manifest.indexOf(rule.after)
+    if (idx === -1) continue
+    const insertAt = manifest.indexOf("\n", idx) + 1
+    manifest = manifest.slice(0, insertAt) + rule.line + "\n" + manifest.slice(insertAt)
+  } else if (rule.before) {
+    manifest = manifest.replace(rule.before, `${rule.line}\n    ${rule.before}`)
+  }
+  console.log(`[patch-android-manifest] agregado: ${rule.marker}`)
+}
+
+writeFileSync(MANIFEST, manifest, "utf8")
 
 // ============================================================================
 // 2. Copia archivos Java del source-of-truth (native/android/java/*.java) a

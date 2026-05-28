@@ -4,6 +4,7 @@ import React, { Suspense, useState, useEffect, useCallback, useMemo } from "reac
 import { useRouter, useSearchParams } from "next/navigation"
 import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
+import { ScanQrButton } from "@/components/ScanQrButton"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
@@ -253,6 +254,7 @@ function WaiterControlSystem() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <ScanQrButton onError={triggerToast} />
             <div className="flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 shadow-sm text-xs font-semibold text-stone-700 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
               <div className={`h-5 w-5 rounded-full bg-gradient-to-tr ${loggedInStaff.avatar_color} flex items-center justify-center text-white text-[8px] font-bold`}>
