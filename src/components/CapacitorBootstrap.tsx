@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
+import { checkQrBelongsToUserRestaurant } from "@/lib/qr-table-check"
 
 /**
  * Maneja deep links de Android App Links cuando la app nativa (Capacitor) recibe
@@ -36,35 +37,6 @@ export function CapacitorBootstrap() {
           }
         }
 
-        async function belongsToCurrentRestaurant(qrCode: string, authUserId: string) {
-          try {
-            const [profileRes, qrRes] = await Promise.all([
-              supabase
-                .from("users")
-                .select("restaurant_id")
-                .eq("auth_user_id", authUserId)
-                .maybeSingle(),
-              supabase
-                .from("table_qr_codes")
-                .select("id")
-                .eq("qr_code", qrCode)
-                .maybeSingle(),
-            ])
-            const userRestaurantId = profileRes.data?.restaurant_id
-            const qrId = qrRes.data?.id
-            if (!userRestaurantId || !qrId) return false
-
-            const { data: table } = await supabase
-              .from("tables")
-              .select("restaurant_id")
-              .eq("qr_code_id", qrId)
-              .maybeSingle()
-            return table?.restaurant_id === userRestaurantId
-          } catch {
-            return false
-          }
-        }
-
         async function handleUrl(url: string) {
           let parsed: URL
           try {
@@ -90,8 +62,8 @@ export function CapacitorBootstrap() {
           // (ej. mesero de R1 que escanea QR de R2): mismo flujo de "sin sesión".
           // Así evitamos que el WebView muestre contenido cruzado y dejamos que
           // el navegador trate al usuario como cliente del otro restaurante.
-          const ownsRestaurant = await belongsToCurrentRestaurant(qrCode, user.id)
-          if (!ownsRestaurant) {
+          const check = await checkQrBelongsToUserRestaurant(qrCode, user.id)
+          if (check.kind !== "ok") {
             await openExternal(url)
             return
           }

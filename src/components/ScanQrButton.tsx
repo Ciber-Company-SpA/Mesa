@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { logger } from "@/lib/logger"
+import { supabase } from "@/lib/supabase"
+import { checkQrBelongsToUserRestaurant } from "@/lib/qr-table-check"
 
 type Props = {
   /** Callback opcional para errores de UX (ej. mostrar toast). */
@@ -55,6 +57,29 @@ export function ScanQrButton({ onError }: Props) {
       const qrCode = extractQrCode(raw)
       if (!qrCode) {
         onError?.("El QR escaneado no es una mesa válida.")
+        return
+      }
+
+      // Antes de navegar verificamos que la mesa pertenezca a este restaurante.
+      // Si no, abortamos con un toast en vez de mandar al mesero al menú de
+      // otro restaurante.
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        onError?.("Tu sesión expiró. Volvé a iniciar sesión.")
+        return
+      }
+
+      const check = await checkQrBelongsToUserRestaurant(qrCode, user.id)
+      if (check.kind === "foreign-restaurant") {
+        onError?.("Esa mesa pertenece a otro restaurante.")
+        return
+      }
+      if (check.kind === "unknown-qr") {
+        onError?.("El QR no corresponde a una mesa registrada.")
+        return
+      }
+      if (check.kind === "error") {
+        onError?.("No se pudo verificar la mesa. Reintentá.")
         return
       }
 
