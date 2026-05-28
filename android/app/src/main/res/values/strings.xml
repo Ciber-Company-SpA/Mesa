@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Meseros-App</string>
+    <string name="title_activity_main">Meseros-App</string>
+    <string name="package_name">com.mesa.meseros</string>
+    <string name="custom_url_scheme">com.mesa.meseros</string>
+</resources>

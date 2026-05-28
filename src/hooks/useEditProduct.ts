@@ -3,6 +3,7 @@ import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { processImage } from "@/lib/image-processing"
+import { readRemoveBgPreference, writeRemoveBgPreference } from "@/lib/preferences/remove-bg"
 import {
   updateProductAction,
   getProductForEditAction,
@@ -26,7 +27,7 @@ function createLocalOption(values?: Partial<ProductOptionForm>): ProductOptionFo
     imageFile: null,
     processedFile: null,
     processing: false,
-    removeBg: false,
+    removeBg: readRemoveBgPreference(),
     imageUrl: null,
     imagePublicId: null,
     ...values,
@@ -191,6 +192,7 @@ export function useEditProduct(productId: number | null) {
   }
 
   function setOptionRemoveBg(localId: string, value: boolean) {
+    writeRemoveBgPreference(value)
     updateOption(localId, { removeBg: value })
     const current = options.find((o) => o.localId === localId)
     if (!current?.imageFile) return

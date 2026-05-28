@@ -232,7 +232,7 @@ function WaiterControlSystem() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF9F5] font-sans text-stone-900 selection:bg-orange-100 selection:text-orange-900 pb-20">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#FAF9F5] font-sans text-stone-900 selection:bg-orange-100 selection:text-orange-900 pb-20">
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-card-entrance rounded-2xl border border-stone-200/80 bg-white/95 px-5 py-4 shadow-2xl shadow-stone-900/10 backdrop-blur-xl flex items-center gap-3">
           <div className="h-2 w-2 rounded-full bg-orange-500 animate-ping" />

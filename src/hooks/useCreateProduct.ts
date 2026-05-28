@@ -5,6 +5,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createProductAction } from "@/app/actions/product-actions"
 import { processImage } from "@/lib/image-processing"
+import { readRemoveBgPreference, writeRemoveBgPreference } from "@/lib/preferences/remove-bg"
 import {
   CreateProductOptionSchema,
   CreateProductSchema,
@@ -24,7 +25,7 @@ function createLocalOption(name = ""): ProductOptionForm {
     imageFile: null,
     processedFile: null,
     processing: false,
-    removeBg: false,
+    removeBg: readRemoveBgPreference(),
     imageUrl: null,
     imagePublicId: null,
   }
@@ -113,6 +114,7 @@ export function useCreateProduct() {
   }
 
   function setOptionRemoveBg(localId: string, value: boolean) {
+    writeRemoveBgPreference(value)
     updateOption(localId, { removeBg: value })
     const current = options.find((o) => o.localId === localId)
     if (!current?.imageFile) return
