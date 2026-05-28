@@ -330,7 +330,7 @@ function WaiterControlSystem() {
           <div className="mb-4 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-100 pb-3">
             <div>
               <h2 className="text-sm font-bold tracking-tight text-stone-900">Mesas del restaurante</h2>
-              <p className="text-[11px] text-stone-500">Monitoreo en vivo. Haz clic en una mesa para ver solo sus pedidos.</p>
+              <p className="text-[11px] text-stone-500">Monitoreo en vivo. Haz clic en una de tus mesas para filtrar sus pedidos.</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
               {assignedTables.length} tuya{assignedTables.length === 1 ? "" : "s"} · {availableTables.length} libre{availableTables.length === 1 ? "" : "s"} · {occupiedByOthers.length} ocupada{occupiedByOthers.length === 1 ? "" : "s"}
@@ -341,18 +341,15 @@ function WaiterControlSystem() {
           <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs bg-stone-50/50 rounded-xl p-3 border border-stone-100">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981] animate-pulse" />
-              <span className="font-bold text-stone-700">Verde:</span>
-              <span className="text-stone-500">Disponible</span>
+              <span className="font-semibold text-stone-700">Mesa disponible</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b] animate-pulse" style={{ animationDuration: "1.8s" }} />
-              <span className="font-bold text-stone-700">Amarillo:</span>
-              <span className="text-stone-500">Tuya (Atendida por ti)</span>
+              <span className="font-semibold text-stone-700">Atendida por ti</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]" />
-              <span className="font-bold text-stone-700">Rojo:</span>
-              <span className="text-stone-500">No disponible (Atendida por otro)</span>
+              <span className="font-semibold text-stone-700">Atendida por otro</span>
             </div>
           </div>
 
@@ -396,24 +393,19 @@ function WaiterControlSystem() {
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] animate-ping absolute" style={{ width: "6px", height: "6px" }} />
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] relative" />
-                      Mesa {t.tableNumber ?? `#${t.id}`} · tú
+                      Mesa {t.tableNumber ?? `#${t.id}`}
                     </button>
                   )
                 } else {
                   return (
-                    <button
+                    <span
                       key={t.id}
-                      onClick={() => handleTableClick(t.id, t.tableNumber)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
-                        isFocused
-                          ? "border-red-500 bg-red-100 text-red-900 ring-2 ring-offset-2 ring-red-500/70"
-                          : "border-red-200/80 bg-red-50/70 hover:bg-red-50 text-red-800 hover:border-red-300"
-                      }`}
-                      title="Mesa ocupada por otro mesero - Haz clic para filtrar"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-red-200/80 bg-red-50/70 px-3 py-1.5 text-[11px] font-bold text-red-800 shadow-sm cursor-default opacity-80"
+                      title="Mesa atendida por otro mesero"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_3px_#ef4444]" />
                       Mesa {t.tableNumber ?? `#${t.id}`}
-                    </button>
+                    </span>
                   )
                 }
               })}
