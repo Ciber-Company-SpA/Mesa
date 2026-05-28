@@ -129,7 +129,6 @@ function WaiterControlSystem() {
   )
 
   const [selectedOrder, setSelectedOrder] = useState<WaiterOrder | null>(null)
-  const [activeTab, setActiveTab] = useState<"all" | 1 | 2 | 3>("all")
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Tick para refrescar los "minutos transcurridos" cada 30s.
@@ -223,22 +222,15 @@ function WaiterControlSystem() {
   const filteredOrders = useMemo(
     () =>
       ownOrders.filter((o) => {
-        // Las Pagadas no se listan; solo cuentan para el promedio historico.
+        // Las Pagadas no se listan.
         if (o.statusId === 4) return false
         if (focusTableId != null && o.tableId !== focusTableId) return false
-        return activeTab === "all" || o.statusId === activeTab
+        return true
       }),
-    [ownOrders, activeTab, focusTableId]
+    [ownOrders, focusTableId]
   )
 
   const liveOrdersCount = ownOrders.filter((o) => o.statusId !== 4).length
-  const avgWaitTime = useMemo(() => {
-    // Promedio sobre TODAS las órdenes (incluye Listo con ready_at congelado y
-    // Pagado con su tiempo final). Así no cae a 0 cuando se marcan Listo/Pagado.
-    if (!ownOrders.length) return 0
-    const total = ownOrders.reduce((acc, o) => acc + elapsedMinutes(o, nowMs), 0)
-    return Math.round(total / ownOrders.length)
-  }, [ownOrders, nowMs])
 
   if (profileLoading) {
     return (
@@ -422,7 +414,7 @@ function WaiterControlSystem() {
           )}
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-3 mb-8">
+        <section className="grid gap-4 sm:grid-cols-2 mb-8">
           <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Pedidos activos</p>
             <div className="flex items-baseline justify-between mt-2">
@@ -430,16 +422,6 @@ function WaiterControlSystem() {
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-orange-700">En curso</span>
             </div>
             <p className="text-xs text-stone-500 mt-2">Nuevos, en preparación o listos</p>
-          </div>
-
-          <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Tiempo promedio</p>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-3xl font-extrabold tracking-tight text-stone-950">
-                {avgWaitTime} <span className="text-lg font-medium">min</span>
-              </span>
-            </div>
-            <p className="text-xs text-stone-500 mt-2">Desde que entró la orden</p>
           </div>
 
           <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm">
@@ -468,27 +450,6 @@ function WaiterControlSystem() {
             <div>
               <span className="text-xs font-bold tracking-widest text-stone-400 uppercase">Monitoreo</span>
               <h2 className="text-lg font-bold tracking-tight text-stone-950 mt-0.5">Tablero de pedidos</h2>
-            </div>
-
-            <div className="flex items-center gap-1 rounded-xl bg-stone-100 p-1 border border-stone-200/50">
-              {([
-                ["all", "Todos"],
-                [STATUS_NUEVO, "Nuevos"],
-                [STATUS_PREPARANDO, "Preparando"],
-                [STATUS_LISTO, "Listos"],
-              ] as const).map(([tab, label]) => (
-                <button
-                  key={String(tab)}
-                  onClick={() => setActiveTab(tab as "all" | 1 | 2 | 3)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    activeTab === tab
-                      ? "bg-white text-stone-900 shadow-sm"
-                      : "text-stone-500 hover:text-stone-800"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
 

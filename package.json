@@ -27,7 +27,6 @@
     "browser-image-compression": "^2.0.2",
     "capacitor-native-settings": "^8.1.0",
     "cloudinary": "^2.10.0",
-    "dotenv": "^17.4.2",
     "hashids": "^2.3.0",
     "next": "16.2.6",
     "qrcode.react": "^4.2.0",
@@ -72,12 +71,6 @@
       "!node_modules/zod/**",
       "!node_modules/hashids/**",
       "!node_modules/qrcode.react/**"
-    ],
-    "extraResources": [
-      {
-        "from": ".env.local",
-        "to": ".env.local"
-      }
     ],
     "win": {
       "target": "nsis",

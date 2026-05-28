@@ -1,26 +1,12 @@
-﻿const path = require('path')
-const { app, BrowserWindow, shell, Menu } = require('electron')
+﻿const { app, BrowserWindow, shell, Menu } = require('electron')
 
-const envPath = app.isPackaged
-  ? path.join(process.resourcesPath, '.env.local')
-  : path.join(__dirname, '..', '.env.local')
+const BASE_URL = 'https://mesa-production-f46d.up.railway.app'
+const APP_URL = `${BASE_URL}/admin`
+const isDev = !app.isPackaged
 
-try {
-  require('dotenv').config({ path: envPath })
-} catch (err) {
-  console.warn('[electron] No se pudo cargar .env.local:', err && err.message)
-}
-
-// Quita la barra de menu antes de crear cualquier ventana
 Menu.setApplicationMenu(null)
 
 let mainWindow
-
-const BASE_URL = process.env.ELECTRON_APP_URL
-  || process.env.NEXT_PUBLIC_APP_URL
-  || 'http://localhost:3000'
-const APP_URL = `${BASE_URL}/admin`
-const isDev = !app.isPackaged
 
 function createWindow() {
   mainWindow = new BrowserWindow({
