@@ -45,13 +45,25 @@ export function DeepLinkSetupNotice() {
   }
 
   async function handleOpenSettings() {
+    // 1) Intentar la intent específica de Android 12+ que cae directo en el
+    //    toggle de "Abrir por defecto". Esto evita que el usuario tenga que
+    //    bucear por la jerarquía de ajustes en HyperOS / MIUI.
+    try {
+      const { AppLinksSettings } = await import("@/lib/plugins/app-links-settings")
+      const result = await AppLinksSettings.openAppOpenByDefaultSettings()
+      if (result.opened) return
+    } catch {
+      // Plugin nativo no disponible (entorno web o APK sin el plugin compilado).
+    }
+
+    // 2) Fallback genérico: abrir la pantalla "Info de la app" mediante el
+    //    plugin de Capacitor. El usuario tiene que tocar "Abrir por defecto"
+    //    manualmente desde ahí.
     try {
       const { NativeSettings, AndroidSettings } = await import("capacitor-native-settings")
-      // Abre la pantalla de info de la app. Desde ahí el usuario entra a
-      // "Abrir de forma predeterminada" en un toque.
       await NativeSettings.openAndroid({ option: AndroidSettings.ApplicationDetails })
     } catch {
-      // Plugin no disponible (entorno web): no-op.
+      // Sin plugins disponibles: no-op.
     }
   }
 
