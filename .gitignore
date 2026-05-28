@@ -50,3 +50,15 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Android signing (safety net — Capacitor's android/.gitignore covers builds/APKs)
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Capacitor / Android (regenerable con npx cap add android)
+/android
+
+# Recursos de Capacitor (regenerables con npx @capacitor/assets generate)
+/resources
