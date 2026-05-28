@@ -44,18 +44,13 @@ export function CapacitorBootstrap() {
             // que reclama la mesa y manda a /waiter/control con tableId/tableNumber.
             window.location.assign(url)
           } else {
-            // Sin sesión: abrimos en Custom Tabs (comparte cookies con Chrome) y
-            // cerramos la app para que el flujo siga exclusivamente en el browser.
-            // El server route /r/<code> hace la corroboración con la cookie del
-            // navegador del sistema: si hay sesión de mesero → /waiter/control,
-            // si no → /[qrCode]/menu.
+            // Sin sesión: abrimos en Custom Tabs (comparte cookies con Chrome).
+            // El server /r/<code> usa las cookies del navegador del sistema para
+            // decidir: sesión activa → /waiter/control, sin sesión → /[qrCode]/menu.
+            // No cerramos la app porque Custom Tab tiene service binding con
+            // nuestra activity; si la matamos, Chrome se abre vacío.
             try {
               await Browser.open({ url })
-              // Delay corto para asegurar que el Custom Tab esté en foreground
-              // antes de salir de la app.
-              setTimeout(() => {
-                App.exitApp().catch(() => undefined)
-              }, 400)
             } catch (err) {
               logger.warn("No se pudo abrir el navegador externo", { error: String(err) })
               // Fallback duro: que el WebView lo intente.
