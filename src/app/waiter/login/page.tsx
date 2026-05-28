@@ -7,9 +7,23 @@ import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
 import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
+import { clearUserScopedCache } from "@/lib/session-cache"
 import { InstallPwaButton } from "@/components/InstallPwaButton"
 
 type View = "login" | "change-password"
+
+async function fetchProfileRoleIdWithRetry(authUserId: string): Promise<number | null> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("role_id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle()
+    if (!error && data?.role_id != null) return data.role_id
+    await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))
+  }
+  return null
+}
 
 export default function WaiterLoginPage() {
   const router = useRouter()
@@ -89,15 +103,21 @@ export default function WaiterLoginPage() {
         return
       }
 
-      // Rechazar credenciales de admin/manager en este portal.
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role_id")
-        .eq("auth_user_id", user.id)
-        .single()
-      const role = roleIdToRole(profile?.role_id ?? 1)
+      // Limpia cache de la sesión anterior antes de leer el perfil nuevo.
+      clearUserScopedCache()
+
+      // Rechazar credenciales de admin/manager en este portal. Reintentamos la
+      // lectura del perfil porque hay race conocida entre signInWithPassword
+      // y la propagación del JWT a PostgREST.
+      const profileRoleId = await fetchProfileRoleIdWithRetry(user.id)
+      if (profileRoleId == null) {
+        setError("No se pudo verificar tu cuenta. Reintentá en unos segundos.")
+        return
+      }
+      const role = roleIdToRole(profileRoleId)
       if (isAdminRole(role)) {
         await supabase.auth.signOut()
+        clearUserScopedCache()
         setError("Esta cuenta es de administrador. Ingresa en el portal de admin.")
         return
       }

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { clearUserScopedCache } from "@/lib/session-cache"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
@@ -29,6 +30,7 @@ export function AdminHeader() {
 
   async function handleSignOut() {
     await supabase.auth.signOut()
+    clearUserScopedCache()
     router.replace("/login")
   }
 

@@ -138,6 +138,8 @@ function WaiterControlSystem() {
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
+    const { clearUserScopedCache } = await import("@/lib/session-cache")
+    clearUserScopedCache()
     router.replace("/waiter/login")
   }, [router])
 

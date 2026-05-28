@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
 import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
+import { clearUserScopedCache } from "@/lib/session-cache"
 
 export function useLogin() {
   const router = useRouter()
@@ -28,15 +29,25 @@ export function useLogin() {
         return
       }
 
-      // Rechazar credenciales de mesero/cocina/caja en este portal.
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role_id")
-        .eq("auth_user_id", data.user.id)
-        .single()
-      const role = roleIdToRole(profile?.role_id ?? 1)
+      // Limpiamos cualquier cache de la sesión anterior ANTES de leer el perfil
+      // así no quedan rastros de otro restaurante en memoria/localStorage.
+      clearUserScopedCache()
+
+      // Race conocida en supabase-js: la query siguiente a veces dispara antes
+      // de que PostgREST registre el JWT nuevo. Si fetchProfile devuelve null
+      // por culpa de eso, reintentamos hasta 3 veces con backoff corto antes
+      // de rendirnos. Nunca hacemos signOut automático: si el perfil no se
+      // puede leer, mostramos error y dejamos al usuario decidir.
+      const profileRoleId = await fetchProfileRoleIdWithRetry(data.user.id)
+      if (profileRoleId == null) {
+        setError("No se pudo verificar tu cuenta. Reintentá en unos segundos.")
+        return
+      }
+
+      const role = roleIdToRole(profileRoleId)
       if (!isAdminRole(role)) {
         await supabase.auth.signOut()
+        clearUserScopedCache()
         setError("Esta cuenta no es de administrador. Ingresa en el portal de mesero.")
         return
       }
@@ -55,4 +66,20 @@ export function useLogin() {
   }
 
   return { email, setEmail, password, setPassword, loading, error, login }
+}
+
+async function fetchProfileRoleIdWithRetry(authUserId: string): Promise<number | null> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("role_id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle()
+
+    if (!error && data?.role_id != null) return data.role_id
+
+    // Espera corta para dar tiempo a que PostgREST vea el JWT nuevo.
+    await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))
+  }
+  return null
 }
