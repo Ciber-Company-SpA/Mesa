@@ -10,10 +10,14 @@
     "lint": "eslint",
     "electron": "electron .",
     "electron:dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\"",
-    "electron:build": "electron-builder"
+    "electron:build": "electron-builder",
+    "cap:patch": "node scripts/patch-android-manifest.mjs",
+    "cap:sync": "cap sync android && npm run cap:patch"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@sentry/nextjs": "^10.53.1",
