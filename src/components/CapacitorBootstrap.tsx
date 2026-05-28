@@ -58,9 +58,23 @@ export function CapacitorBootstrap() {
 
         // Cold start: si la app se abrió por un deep link, esta llamada devuelve
         // la URL inicial. En arranques normales devuelve `{ url: undefined }`.
-        const launch = await App.getLaunchUrl()
-        if (!cancelled && launch?.url) {
-          await handleUrl(launch.url)
+        // OJO: `getLaunchUrl()` persiste el mismo valor durante todo el ciclo de
+        // vida del proceso. Sin un flag en sessionStorage caemos en loop porque
+        // cada recarga del WebView vuelve a procesar la URL inicial.
+        const LAUNCH_FLAG = "capacitor-launch-url-handled"
+        const alreadyHandled =
+          typeof sessionStorage !== "undefined" && sessionStorage.getItem(LAUNCH_FLAG) === "1"
+
+        if (!alreadyHandled) {
+          const launch = await App.getLaunchUrl()
+          if (!cancelled && launch?.url) {
+            try {
+              sessionStorage.setItem(LAUNCH_FLAG, "1")
+            } catch {
+              // sessionStorage bloqueado: igual seguimos, sólo arriesgamos un re-loop.
+            }
+            await handleUrl(launch.url)
+          }
         }
 
         // Warm start: la app ya estaba abierta y recibe otro deep link.
