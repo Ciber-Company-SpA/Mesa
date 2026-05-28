@@ -1,7 +1,6 @@
 "use client"
 
 import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
@@ -246,13 +245,6 @@ function WaiterControlSystem() {
       <header className="mx-auto max-w-7xl px-6 py-6 border-b border-stone-200/60 bg-white/70 backdrop-blur-md sticky top-0 z-30">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="group flex h-9 items-center gap-2 rounded-full border border-stone-200 px-3 text-xs font-semibold text-stone-600 transition hover:border-stone-400 hover:bg-white">
-              <svg className="h-4 w-4 transition group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Volver a MESA
-            </Link>
-            <div className="h-4 w-[1px] bg-stone-300" />
             <div>
               <span className="text-[10px] font-bold tracking-widest text-orange-600 uppercase">Sistema de Control Operativo</span>
               <h1 className="text-xl font-bold tracking-tight text-stone-950">Pedidos en vivo</h1>
