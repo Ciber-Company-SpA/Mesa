@@ -6,7 +6,6 @@ import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
-import { paletteForBackground, relativeLuminance } from "@/lib/contrast"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
@@ -58,53 +57,35 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
 
-  const headerType = restaurant?.menu_header_type ?? "solid"
-  const headerColor1 = restaurant?.menu_header_color_1 ?? "#0c0a09"
-  const headerColor2 = restaurant?.menu_header_color_2 ?? headerColor1
-  const headerBackground = headerType === "gradient"
-    ? `linear-gradient(180deg, ${headerColor1} 0%, ${headerColor2} 100%)`
-    : headerColor1
-
-  const avgLum = headerType === "gradient"
-    ? (relativeLuminance(headerColor1) + relativeLuminance(headerColor2)) / 2
-    : relativeLuminance(headerColor1)
-  const palette = paletteForBackground(avgLum > 0.4 ? "#ffffff" : "#000000")
-
   return (
-    <main
-      className="min-h-screen overflow-hidden pb-28"
-      style={{ background: headerBackground, color: palette.primary }}
-    >
+    <main className="min-h-screen overflow-hidden bg-stone-950 pb-28 text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
 
       <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
         <TableOrdersHeader tableId={tableId ?? null} />
 
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold" style={{ color: palette.secondary }}>Mesa {tableNumber}</p>
-            <h1 className="mt-1 truncate text-3xl font-black tracking-tight" style={{ color: palette.primary }}>
+            <p className="text-sm font-semibold text-orange-200/80">Mesa {tableNumber}</p>
+            <h1 className="mt-1 truncate text-3xl font-black tracking-tight text-white">
               {restaurant?.restaurant_name}
             </h1>
           </div>
-          <span
-            className="shrink-0 rounded-full px-4 py-2 text-xs font-bold ring-1 backdrop-blur"
-            style={{ background: palette.pillBackground, color: palette.accent, borderColor: palette.pillRing }}
-          >
+          <span className="shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-orange-100 ring-1 ring-white/10 backdrop-blur">
             Abierto
           </span>
         </header>
 
-        <div className="sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 backdrop-blur-md">
+        <div className="sticky top-0 z-30 -mx-4 mt-6 bg-stone-950/80 px-4 py-3 backdrop-blur-md border-b border-white/5">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               type="button"
               onClick={() => setSelectedCategory(null)}
-              className="shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition"
-              style={
+              className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
                 selectedCategory === null
-                  ? { background: "#f97316", color: "#0c0a09" }
-                  : { background: palette.pillBackground, color: palette.pillText }
-              }
+                  ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
+                  : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
+              }`}
             >
               Todo
             </button>
@@ -113,12 +94,11 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className="shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition"
-                style={
+                className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
                   selectedCategory === cat.id
-                    ? { background: "#f97316", color: "#0c0a09" }
-                    : { background: palette.pillBackground, color: palette.pillText }
-                }
+                    ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
+                    : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
+                }`}
               >
                 {cat.category_name}
               </button>
@@ -139,7 +119,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                   <div className="mb-5 flex items-center justify-between border-b border-white/5 pb-2">
                     <div className="flex items-center gap-2.5">
                       <span className="h-5 w-1 rounded-full bg-gradient-to-b from-orange-400 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-                      <h2 className="text-xl font-black tracking-tight uppercase sm:text-2xl" style={{ color: palette.primary }}>
+                      <h2 className="text-xl font-black tracking-tight text-white uppercase sm:text-2xl">
                         {cat.category_name}
                       </h2>
                     </div>
@@ -155,8 +135,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                       return isAgotado ? (
                         <div
                           key={item.id}
-                          className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] p-3 opacity-60 shadow-xl shadow-black/20 ring-1 backdrop-blur"
-                          style={{ background: palette.cardBackground, boxShadow: `0 0 0 1px ${palette.cardRing}` }}
+                          className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] bg-white/10 p-3 opacity-60 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur"
                         >
                           <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
                             Agotado
@@ -170,19 +149,19 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                           <div className="min-w-0 flex-1 py-1">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-bold" style={{ color: palette.secondary }}>
+                                <p className="truncate text-xs font-bold text-orange-200/80">
                                   {item.categories?.category_name}
                                 </p>
-                                <h3 className="mt-1 line-clamp-2 font-black leading-tight" style={{ color: palette.primary }}>
+                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
                                   {item.product_name}
                                 </h3>
                               </div>
-                              <p className="shrink-0 text-sm font-black" style={{ color: palette.accent }}>
+                              <p className="shrink-0 text-sm font-black text-orange-200">
                                 {formatPrice(item.product_price)}
                               </p>
                             </div>
                             {item.product_description && (
-                              <p className="mt-2 line-clamp-2 text-xs leading-5" style={{ color: palette.pillText }}>
+                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
                                 {item.product_description}
                               </p>
                             )}
@@ -192,8 +171,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                         <Link
                           key={item.id}
                           href={`/${qrCode}/menu/${encodeId(item.id)}`}
-                          className="flex cursor-pointer gap-4 rounded-[1.75rem] p-3 shadow-xl shadow-black/20 ring-1 backdrop-blur transition hover:-translate-y-0.5"
-                          style={{ background: palette.cardBackground, boxShadow: `0 0 0 1px ${palette.cardRing}` }}
+                          className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
                         >
                           <ProductImage
                             src={item.product_image}
@@ -204,19 +182,19 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                           <div className="min-w-0 flex-1 py-1">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-bold" style={{ color: palette.secondary }}>
+                                <p className="truncate text-xs font-bold text-orange-200/80">
                                   {item.categories?.category_name}
                                 </p>
-                                <h3 className="mt-1 line-clamp-2 font-black leading-tight" style={{ color: palette.primary }}>
+                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
                                   {item.product_name}
                                 </h3>
                               </div>
-                              <p className="shrink-0 text-sm font-black" style={{ color: palette.accent }}>
+                              <p className="shrink-0 text-sm font-black text-orange-200">
                                 {formatPrice(item.product_price)}
                               </p>
                             </div>
                             {item.product_description && (
-                              <p className="mt-2 line-clamp-2 text-xs leading-5" style={{ color: palette.pillText }}>
+                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
                                 {item.product_description}
                               </p>
                             )}
@@ -230,11 +208,8 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             })}
           </section>
         ) : (
-          <div
-            className="mt-8 rounded-[2rem] px-6 py-12 text-center shadow-2xl shadow-black/30 ring-1 backdrop-blur"
-            style={{ background: palette.cardBackground, boxShadow: `0 0 0 1px ${palette.cardRing}` }}
-          >
-            <h2 className="mt-5 text-2xl font-black tracking-tight" style={{ color: palette.primary }}>Aún no hay productos disponibles</h2>
+          <div className="mt-8 rounded-[2rem] bg-white/10 px-6 py-12 text-center shadow-2xl shadow-black/30 ring-1 ring-white/10 backdrop-blur">
+            <h2 className="mt-5 text-2xl font-black tracking-tight">Aún no hay productos disponibles</h2>
           </div>
         )}
       </section>

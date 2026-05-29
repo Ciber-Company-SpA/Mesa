@@ -39,7 +39,7 @@ export function useMenuData(qrCode: string) {
     const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id, restaurant_name, restaurant_logo, menu_header_type, menu_header_color_1, menu_header_color_2")
+        .select("id, restaurant_name, restaurant_logo")
         .eq("id", restaurant_id)
         .single(),
       supabase
