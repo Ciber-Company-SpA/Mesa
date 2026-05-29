@@ -57,9 +57,18 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
 
+  const headerType = restaurant?.menu_header_type ?? "solid"
+  const headerColor1 = restaurant?.menu_header_color_1 ?? "#0c0a09"
+  const headerColor2 = restaurant?.menu_header_color_2 ?? headerColor1
+  const headerBackground = headerType === "gradient"
+    ? `linear-gradient(180deg, ${headerColor1} 0%, ${headerColor2} 100%)`
+    : headerColor1
+
   return (
-    <main className="min-h-screen overflow-hidden bg-stone-950 pb-28 text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
+    <main
+      className="min-h-screen overflow-hidden pb-28 text-white"
+      style={{ background: headerBackground }}
+    >
 
       <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
         <TableOrdersHeader tableId={tableId ?? null} />
