@@ -37,6 +37,45 @@ export async function updateMenuTemplate(
   return ok(null)
 }
 
+const UpdateOrderHandlingSchema = z.object({
+  mode: z.enum(["waiter", "printer"]),
+  bluetoothName: z
+    .string()
+    .trim()
+    .max(80, "Máximo 80 caracteres")
+    .optional()
+    .nullable(),
+})
+
+export type UpdateOrderHandlingInput = z.infer<typeof UpdateOrderHandlingSchema>
+
+export async function updateOrderHandling(
+  input: UpdateOrderHandlingInput
+): Promise<Result<null>> {
+  const parsed = UpdateOrderHandlingSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+  const { mode, bluetoothName } = parsed.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      order_handling_mode: mode,
+      printer_bluetooth_name: mode === "printer" ? (bluetoothName?.trim() || null) : null,
+    })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  return ok(null)
+}
+
 const UpdateRestaurantNameSchema = z.object({
   name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
 })
