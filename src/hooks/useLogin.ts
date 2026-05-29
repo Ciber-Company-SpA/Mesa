@@ -38,13 +38,13 @@ export function useLogin() {
       // por culpa de eso, reintentamos hasta 3 veces con backoff corto antes
       // de rendirnos. Nunca hacemos signOut automático: si el perfil no se
       // puede leer, mostramos error y dejamos al usuario decidir.
-      const profile = await fetchProfileWithRetry(data.user.id)
-      if (profile == null) {
+      const profileRoleId = await fetchProfileRoleIdWithRetry(data.user.id)
+      if (profileRoleId == null) {
         setError("No se pudo verificar tu cuenta. Reintentá en unos segundos.")
         return
       }
 
-      const role = roleIdToRole(profile.roleId)
+      const role = roleIdToRole(profileRoleId)
       if (!isAdminRole(role)) {
         await supabase.auth.signOut()
         clearUserScopedCache()
@@ -52,7 +52,7 @@ export function useLogin() {
         return
       }
 
-      router.push(profile.setupCompleted ? "/admin" : "/setup")
+      router.push("/admin")
     } catch (err: unknown) {
       logger.error("Error en login", err)
       setError(
@@ -68,19 +68,15 @@ export function useLogin() {
   return { email, setEmail, password, setPassword, loading, error, login }
 }
 
-type LoginProfile = { roleId: number; setupCompleted: boolean }
-
-async function fetchProfileWithRetry(authUserId: string): Promise<LoginProfile | null> {
+async function fetchProfileRoleIdWithRetry(authUserId: string): Promise<number | null> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await supabase
       .from("users")
-      .select("role_id, setup_completed")
+      .select("role_id")
       .eq("auth_user_id", authUserId)
       .maybeSingle()
 
-    if (!error && data?.role_id != null) {
-      return { roleId: data.role_id, setupCompleted: data.setup_completed ?? true }
-    }
+    if (!error && data?.role_id != null) return data.role_id
 
     // Espera corta para dar tiempo a que PostgREST vea el JWT nuevo.
     await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)))

@@ -27,8 +27,7 @@ export function useRegisterRestaurant() {
         options: {
           data: {
             admin_name: adminName,
-            restaurant_name: restaurantName,
-            role_id: 2,
+            restaurant_name: restaurantName
           }
         }
       })
