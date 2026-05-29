@@ -22,15 +22,12 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
   const { run: createOrderWithRetry, isPending } = useOfflineRetry(async () => {
     const orderItems: CreateOrderItemInput[] = items.map((item) => ({
       productId: item.productId,
-      productName: item.name,
-      productPrice: item.price,
       productQuantity: item.quantity,
       notes: item.notes ?? null,
     }))
 
     const result = await createOrderAction({
       tableId,
-      restaurantId,
       items: orderItems,
     })
 

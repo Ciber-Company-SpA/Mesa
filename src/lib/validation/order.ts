@@ -2,21 +2,19 @@ import { z } from "zod"
 
 // ============ CREATE ORDER ============
 
-// Schema para un item del pedido (lo que va dentro del array)
+// El cliente SOLO envía qué producto y cuántos. El servidor lee
+// nombre y precio reales desde la DB para evitar manipulación.
 export const CreateOrderItemSchema = z.object({
   productId: z.number().int().positive(),
-  productName: z.string().trim().min(1, "El nombre del producto es obligatorio"),
-  productPrice: z.number().nonnegative("El precio debe ser mayor o igual a 0"),
   productQuantity: z.number().int().positive("La cantidad debe ser mayor a 0"),
   notes: z.string().trim().nullable().optional(),
 })
 
 export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>
 
-// Schema para crear el pedido completo
+// El servidor deriva restaurantId del tableId. No confiamos en el cliente.
 export const CreateOrderSchema = z.object({
   tableId: z.number().int().positive(),
-  restaurantId: z.number().int().positive(),
   items: z.array(CreateOrderItemSchema).min(1, "Debe haber al menos un item en el pedido"),
 })
 

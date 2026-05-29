@@ -239,15 +239,66 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
   }
 
-  const { tableId, restaurantId, items } = validation.data
+  const { tableId, items } = validation.data
 
-  const total = items.reduce(
+  const supabase = await createSupabaseServerClient()
+
+  // 1. Resolver el restaurante real desde la mesa (no confiamos en el cliente)
+  const { data: table, error: tableError } = await supabase
+    .from("tables")
+    .select("id, restaurant_id")
+    .eq("id", tableId)
+    .maybeSingle()
+
+  if (tableError || !table || !table.restaurant_id) {
+    return fail("Mesa no encontrada")
+  }
+
+  const restaurantId = table.restaurant_id
+
+  // 2. Cargar productos reales desde DB, filtrados por restaurante
+  const productIds = items.map((i) => i.productId)
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .select("id, product_name, product_price, restaurant_id, status_id")
+    .in("id", productIds)
+    .eq("restaurant_id", restaurantId)
+
+  if (productsError) {
+    return fail("Error al verificar los productos")
+  }
+
+  // 3. Validar que TODOS los productos existen y son del mismo restaurante
+  if (!products || products.length !== productIds.length) {
+    return fail("Uno o más productos no pertenecen a este restaurante")
+  }
+
+  // 4. Validar que todos están activos
+  const inactiveProduct = products.find((p) => p.status_id !== 1)
+  if (inactiveProduct) {
+    return fail(`El producto "${inactiveProduct.product_name}" no está disponible`)
+  }
+
+  // 5. Construir items con datos REALES de la DB
+  const productMap = new Map(products.map((p) => [p.id, p]))
+  const serverItems = items.map((clientItem) => {
+    const product = productMap.get(clientItem.productId)!
+    return {
+      productId: product.id,
+      productName: product.product_name ?? "",
+      productPrice: Number(product.product_price ?? 0),
+      productQuantity: clientItem.productQuantity,
+      notes: clientItem.notes ?? null,
+    }
+  })
+
+  // 6. Calcular total con precios reales
+  const total = serverItems.reduce(
     (sum, item) => sum + item.productPrice * item.productQuantity,
     0
   )
 
-  const supabase = await createSupabaseServerClient()
-
+  // 7. Crear la orden con datos del servidor
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -264,16 +315,17 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail("Error al crear el pedido")
   }
 
+  // 8. Insertar items con datos REALES
   const { error: itemsError } = await supabase
     .from("order_items")
     .insert(
-      items.map((item) => ({
+      serverItems.map((item) => ({
         order_id: orderData.id,
         product_id: item.productId,
         product_name: item.productName,
         product_price: item.productPrice,
         product_quantity: item.productQuantity,
-        notes: item.notes ?? null,
+        notes: item.notes,
       }))
     )
 
