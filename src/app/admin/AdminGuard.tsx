@@ -20,7 +20,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       }
       const { data: profile } = await supabase
         .from("users")
-        .select("role_id")
+        .select("role_id, setup_completed")
         .eq("auth_user_id", user.id)
         .single()
       const role = roleIdToRole(profile?.role_id ?? 1)
@@ -29,6 +29,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         // Lo mandamos al login de admin sin cerrar su sesión; solo si
         // efectivamente se loguea como admin se reemplaza la sesión.
         router.replace("/login")
+        return
+      }
+      if (profile && profile.setup_completed === false) {
+        router.replace("/setup")
       }
     }
     checkRole()
