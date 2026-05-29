@@ -19,7 +19,7 @@ export function useRestaurant() {
     return data
   }, [restaurantId])
 
-  const { data, isLoading, isPendingRetry, error } = useCache<Restaurant>(
+  const { data, isLoading, isPendingRetry, error, refresh } = useCache<Restaurant>(
     `restaurant-${restaurantId ?? "pending"}`,
     fetchRestaurant,
     { enabled: Boolean(restaurantId) }
@@ -28,6 +28,7 @@ export function useRestaurant() {
   return {
     restaurant: data,
     loading: loadingId || isLoading || isPendingRetry,
-    error: error ? "No se pudo obtener el restaurante" : ""
+    error: error ? "No se pudo obtener el restaurante" : "",
+    refresh,
   }
 }

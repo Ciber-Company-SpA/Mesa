@@ -104,7 +104,7 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
 }
 
 export default function AdminSettingsPage() {
-  const { restaurant, loading } = useRestaurant()
+  const { restaurant, loading, refresh } = useRestaurant()
   const { categories } = useCategories({ page: 1, pageSize: 4 })
   const { products } = useProducts({ page: 1, pageSize: 8 })
 
@@ -125,6 +125,7 @@ export default function AdminSettingsPage() {
         return
       }
       if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+      refresh()
       setSelectedOverride(null)
       setFeedback({ kind: "ok", message: "Cambios guardados" })
     } finally {
