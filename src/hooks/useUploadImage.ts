@@ -1,4 +1,3 @@
-// hooks/useUploadImage.ts
 import { useState } from "react"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
@@ -10,8 +9,30 @@ type UploadResult = {
 } | null
 
 type UploadOptions = ProcessImageOptions & {
-  /** Si la imagen ya viene procesada (compresión / quitar fondo), saltar el preprocesado. */
   alreadyProcessed?: boolean
+}
+
+type SignatureResponse = {
+  signature: string
+  timestamp: number
+  apiKey: string
+  cloudName: string
+  folder: string
+}
+
+async function fetchSignature(folder: string): Promise<SignatureResponse> {
+  const response = await fetch("/api/cloudinary-signature", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder }),
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}))
+    throw new Error(errorBody.error ?? "No se pudo obtener la firma de subida")
+  }
+
+  return response.json()
 }
 
 export function useUploadImage() {
@@ -20,7 +41,7 @@ export function useUploadImage() {
 
   async function uploadImage(
     file: File,
-    preset: string,
+    folder: string,
     options: UploadOptions = {}
   ): Promise<UploadResult> {
     try {
@@ -31,12 +52,19 @@ export function useUploadImage() {
         ? file
         : await processImage(file, { removeBg: options.removeBg })
 
+      // 1. Pedir firma al servidor (verifica sesión + rol admin + rate limit)
+      const sig = await fetchSignature(folder)
+
+      // 2. Subir a Cloudinary con la firma
       const formData = new FormData()
       formData.append("file", finalFile)
-      formData.append("upload_preset", preset)
+      formData.append("api_key", sig.apiKey)
+      formData.append("timestamp", String(sig.timestamp))
+      formData.append("signature", sig.signature)
+      formData.append("folder", sig.folder)
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
         { method: "POST", body: formData }
       )
 
