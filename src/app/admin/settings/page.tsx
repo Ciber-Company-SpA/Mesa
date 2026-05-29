@@ -5,7 +5,7 @@ import { useRestaurant } from "@/hooks/useRestaurant"
 import { useCategories } from "@/hooks/useCategories"
 import { useProducts } from "@/hooks/useProducts"
 import { invalidateCache } from "@/hooks/useCache"
-import { updateMenuTemplate } from "@/services/restaurant-service"
+import { updateMenuTemplate, updateRestaurantName } from "@/services/restaurant-service"
 import { MENU_TEMPLATES, getTemplateDesign } from "@/lib/menu/templates"
 import type { MenuTemplate } from "@/types/restaurant"
 import type { Category } from "@/types/category"
@@ -116,6 +116,84 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
   )
 }
 
+type RestaurantNameSectionProps = {
+  currentName: string | undefined
+  onSaved: () => void
+}
+
+function RestaurantNameSection({ currentName, onSaved }: RestaurantNameSectionProps) {
+  const [override, setOverride] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  const name = override ?? currentName ?? ""
+  const isDirty = override !== null && override.trim() !== (currentName ?? "").trim()
+
+  async function handleSave() {
+    if (saving || !isDirty) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const result = await updateRestaurantName({ name: name.trim() })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      onSaved()
+      setOverride(null)
+      setFeedback({ kind: "ok", message: "Cambios guardados" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Nombre del restaurante</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Es el nombre que aparece en el menú público y en el panel.
+      </p>
+
+      <div className="mt-5 max-w-md">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setOverride(e.target.value)}
+          maxLength={60}
+          placeholder="Mi Restaurante"
+          className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+        />
+      </div>
+
+      {feedback && (
+        <p
+          className={`mt-4 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+        {!isDirty && !saving && (
+          <span className="text-xs font-medium text-stone-400">Sin cambios.</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export default function AdminSettingsPage() {
   const { restaurant, loading, refresh } = useRestaurant()
   const { categories } = useCategories({ page: 1, pageSize: 4 })
@@ -158,9 +236,17 @@ export default function AdminSettingsPage() {
       <section>
         <h2 className="text-2xl font-extrabold tracking-tight text-stone-900">Ajustes</h2>
         <p className="mt-1 text-sm text-stone-500">
-          Elegí el template del menú que ven tus clientes al escanear el QR.
+          Personalizá el nombre del restaurante y el template del menú.
         </p>
       </section>
+
+      <RestaurantNameSection
+        currentName={restaurant?.restaurant_name}
+        onSaved={() => {
+          if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+          refresh()
+        }}
+      />
 
       <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

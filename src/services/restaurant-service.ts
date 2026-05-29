@@ -36,3 +36,34 @@ export async function updateMenuTemplate(
   revalidatePath("/[id]/menu", "page")
   return ok(null)
 }
+
+const UpdateRestaurantNameSchema = z.object({
+  name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
+})
+
+export type UpdateRestaurantNameInput = z.infer<typeof UpdateRestaurantNameSchema>
+
+export async function updateRestaurantName(
+  input: UpdateRestaurantNameInput
+): Promise<Result<null>> {
+  const parsed = UpdateRestaurantNameSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ restaurant_name: parsed.data.name })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  revalidateTag("menu", "max")
+  revalidatePath("/[id]/menu", "page")
+  return ok(null)
+}
