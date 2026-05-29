@@ -9,10 +9,45 @@ import {
 } from "@/lib/validation/variant"
 import { ok, fail, type Result } from "@/services/result"
 import { deleteImageBestEffort } from "@/lib/cloudinary/delete-image-server"
+import { requireAdminForRestaurant } from "@/services/auth-guard"
 
 export type CreatedVariant = {
   id: number
 }
+
+/**
+ * Lee restaurant_id desde un producto. Helper interno para validar permisos
+ * cuando la action recibe productId.
+ */
+async function getRestaurantIdForProduct(productId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("products")
+    .select("restaurant_id")
+    .eq("id", productId)
+    .maybeSingle()
+  return data?.restaurant_id ?? null
+}
+
+/**
+ * Lee restaurant_id desde una variante (vía su product_id).
+ * Helper interno para validar permisos cuando la action recibe solo variantId.
+ */
+async function getRestaurantIdForVariant(variantId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("product_variants")
+    .select("products(restaurant_id)")
+    .eq("id", variantId)
+    .maybeSingle()
+
+  const products = data?.products as { restaurant_id: number | null } | { restaurant_id: number | null }[] | null
+  if (!products) return null
+  const product = Array.isArray(products) ? products[0] : products
+  return product?.restaurant_id ?? null
+}
+
+// ============ CREATE (admin) ============
 
 export async function createVariant(input: CreateVariantInput): Promise<Result<CreatedVariant>> {
   const validation = CreateVariantSchema.safeParse(input)
@@ -23,7 +58,12 @@ export async function createVariant(input: CreateVariantInput): Promise<Result<C
 
   const { productId, name, price, imageUrl, imagePublicId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForProduct(productId)
+  if (!restaurantId) return fail("Producto no encontrado")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data, error } = await supabase
     .from("product_variants")
@@ -44,6 +84,8 @@ export async function createVariant(input: CreateVariantInput): Promise<Result<C
   return ok({ id: data.id })
 }
 
+// ============ UPDATE (admin) ============
+
 export async function updateVariant(input: UpdateVariantInput): Promise<Result<{ id: number }>> {
   const validation = UpdateVariantSchema.safeParse(input)
 
@@ -53,7 +95,12 @@ export async function updateVariant(input: UpdateVariantInput): Promise<Result<{
 
   const { variantId, name, price, imageUrl, imagePublicId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForVariant(variantId)
+  if (!restaurantId) return fail("Variante no encontrada")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   // Leer public_id previo para detectar si la imagen fue reemplazada
   const { data: previous } = await supabase
@@ -85,6 +132,8 @@ export async function updateVariant(input: UpdateVariantInput): Promise<Result<{
   return ok({ id: variantId })
 }
 
+// ============ DELETE (admin) ============
+
 export async function deleteVariant(input: DeleteVariantInput): Promise<Result<{ id: number }>> {
   const validation = DeleteVariantSchema.safeParse(input)
 
@@ -94,7 +143,12 @@ export async function deleteVariant(input: DeleteVariantInput): Promise<Result<{
 
   const { variantId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForVariant(variantId)
+  if (!restaurantId) return fail("Variante no encontrada")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   // Leer public_id antes del DELETE (post-delete no existe el row)
   const { data: previous } = await supabase

@@ -9,6 +9,7 @@ import {
 } from "@/lib/validation/table"
 import { ok, fail, type Result } from "@/services/result"
 import { createTableQR, deleteTableQR } from "@/services/qr-service"
+import { requireAdminForRestaurant } from "@/services/auth-guard"
 
 export type CreatedTable = {
   id: number
@@ -20,12 +21,33 @@ export type TableForEdit = {
   qrCodeId: number
 }
 
+/**
+ * Lee restaurant_id de una mesa. Helper interno para validar permisos
+ * cuando la action recibe solo tableId (update/delete/read).
+ */
+async function getRestaurantIdForTable(tableId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("tables")
+    .select("restaurant_id")
+    .eq("id", tableId)
+    .maybeSingle()
+  return data?.restaurant_id ?? null
+}
+
+// ============ READ (admin) ============
+
 export async function getTableForEdit(tableId: number): Promise<Result<TableForEdit>> {
   if (!tableId || tableId <= 0) {
     return fail("Mesa no encontrada")
   }
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForTable(tableId)
+  if (!restaurantId) return fail("Mesa no encontrada")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data, error } = await supabase
     .from("tables")
@@ -43,6 +65,8 @@ export async function getTableForEdit(tableId: number): Promise<Result<TableForE
   })
 }
 
+// ============ CREATE (admin) ============
+
 export async function createTable(input: CreateTableInput): Promise<Result<CreatedTable>> {
   const validation = CreateTableSchema.safeParse(input)
 
@@ -52,13 +76,16 @@ export async function createTable(input: CreateTableInput): Promise<Result<Creat
 
   const { tableNumber, restaurantId } = validation.data
 
+  // Verificar permisos ANTES de crear el QR para evitar dejar QRs huérfanos
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
+
   const qrResult = await createTableQR()
 
   if (!qrResult.ok) {
     return fail(qrResult.error)
   }
-
-  const supabase = await createSupabaseServerClient()
 
   const { data, error } = await supabase
     .from("tables")
@@ -78,6 +105,8 @@ export async function createTable(input: CreateTableInput): Promise<Result<Creat
   return ok({ id: data.id })
 }
 
+// ============ UPDATE (admin) ============
+
 export async function updateTable(input: UpdateTableInput): Promise<Result<{ id: number }>> {
   const validation = UpdateTableSchema.safeParse(input)
 
@@ -87,7 +116,12 @@ export async function updateTable(input: UpdateTableInput): Promise<Result<{ id:
 
   const { tableId, tableNumber } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForTable(tableId)
+  if (!restaurantId) return fail("Mesa no encontrada")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { error } = await supabase
     .from("tables")
@@ -101,6 +135,8 @@ export async function updateTable(input: UpdateTableInput): Promise<Result<{ id:
   return ok({ id: tableId })
 }
 
+// ============ DELETE (admin) ============
+
 export async function deleteTable(input: DeleteTableInput): Promise<Result<{ id: number }>> {
   const validation = DeleteTableSchema.safeParse(input)
 
@@ -110,7 +146,12 @@ export async function deleteTable(input: DeleteTableInput): Promise<Result<{ id:
 
   const { tableId, qrCodeId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForTable(tableId)
+  if (!restaurantId) return fail("Mesa no encontrada")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { error: tableError } = await supabase
     .from("tables")

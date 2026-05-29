@@ -11,6 +11,7 @@ import {
 } from "@/lib/validation/product"
 import { ok, fail, type Result } from "@/services/result"
 import { deleteImagesBestEffort } from "@/lib/cloudinary/delete-image-server"
+import { requireAdminForRestaurant } from "@/services/auth-guard"
 
 export type CreatedProduct = {
   id: number
@@ -33,12 +34,33 @@ export type ProductForEdit = {
   fallbackImagePublicId: string | null
 }
 
+/**
+ * Lee restaurant_id de un producto. Helper interno para validar permisos
+ * cuando la action recibe solo productId (update/delete/status/read).
+ */
+async function getRestaurantIdForProduct(productId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("products")
+    .select("restaurant_id")
+    .eq("id", productId)
+    .maybeSingle()
+  return data?.restaurant_id ?? null
+}
+
+// ============ READ (admin) ============
+
 export async function getProductForEdit(productId: number): Promise<Result<ProductForEdit>> {
   if (!productId || productId <= 0) {
     return fail("Producto no encontrado")
   }
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForProduct(productId)
+  if (!restaurantId) return fail("Producto no encontrado")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const [productRes, variantsRes] = await Promise.all([
     supabase
@@ -75,6 +97,8 @@ export async function getProductForEdit(productId: number): Promise<Result<Produ
   })
 }
 
+// ============ CREATE (admin) ============
+
 export async function createProduct(input: CreateProductInput): Promise<Result<CreatedProduct>> {
   const validation = CreateProductSchema.safeParse(input)
 
@@ -84,7 +108,9 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
 
   const { name, description, categoryId, restaurantId, options } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const coverIndex = Math.floor((options.length - 1) / 2)
   const coverOption = options[coverIndex]
@@ -122,7 +148,6 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
       )
 
     if (variantsError) {
-      // El producto se creó pero las variantes no. Intentamos limpiar.
       await supabase.from("products").delete().eq("id", productData.id)
       return fail("Error al crear las variantes del producto")
     }
@@ -130,6 +155,8 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
 
   return ok({ id: productData.id })
 }
+
+// ============ UPDATE (admin) ============
 
 export async function updateProduct(input: UpdateProductInput): Promise<Result<{ id: number }>> {
   const validation = UpdateProductSchema.safeParse(input)
@@ -140,9 +167,14 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
   const { productId, name, description, categoryId, options, initialVariantIds } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForProduct(productId)
+  if (!restaurantId) return fail("Producto no encontrado")
 
-  // 1. Leer estado previo de imágenes para detectar huérfanas al final
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
+
+  // 1. Leer estado previo de imágenes
   const [previousProductRes, previousVariantsRes] = await Promise.all([
     supabase
       .from("products")
@@ -187,7 +219,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
   }
 
   if (options.length === 1) {
-    // Producto simple: borrar todas las variantes existentes
     for (const [, publicId] of previousVariantImagePublicIds) {
       if (publicId) orphanedImagePublicIds.push(publicId)
     }
@@ -199,7 +230,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
     if (deleteError) return fail("Error al eliminar variantes antiguas")
   } else {
-    // Producto con variantes: insert/update/delete según corresponda
     const currentVariantIds = options
       .map((option) => option.variantId)
       .filter((variantId): variantId is number => Boolean(variantId))
@@ -208,7 +238,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
       (variantId) => !currentVariantIds.includes(variantId)
     )
 
-    // Borrar las variantes que el user eliminó
     if (removedVariantIds.length > 0) {
       for (const variantId of removedVariantIds) {
         const publicId = previousVariantImagePublicIds.get(variantId)
@@ -223,10 +252,8 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
       if (deleteError) return fail("Error al eliminar variantes")
     }
 
-    // Insert/Update de cada opción restante
     for (const option of options) {
       if (option.variantId) {
-        // Variante existente: UPDATE (detectar reemplazo de imagen)
         const previousPublicId = previousVariantImagePublicIds.get(option.variantId) ?? null
         if (previousPublicId && previousPublicId !== option.imagePublicId) {
           orphanedImagePublicIds.push(previousPublicId)
@@ -244,7 +271,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
         if (updateError) return fail("Error al actualizar variante")
       } else {
-        // Variante nueva: INSERT
         const { error: insertError } = await supabase
           .from("product_variants")
           .insert({
@@ -260,13 +286,14 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
     }
   }
 
-  // Best-effort: limpiar imágenes que ya no están referenciadas por ningún row
   if (orphanedImagePublicIds.length > 0) {
     await deleteImagesBestEffort(orphanedImagePublicIds)
   }
 
   return ok({ id: productId })
 }
+
+// ============ DELETE (admin) ============
 
 export async function deleteProduct(input: DeleteProductInput): Promise<Result<{ id: number }>> {
   const validation = DeleteProductSchema.safeParse(input)
@@ -277,9 +304,14 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
 
   const { productId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForProduct(productId)
+  if (!restaurantId) return fail("Producto no encontrado")
 
-  // Recolectar public_ids antes del DELETE (post-delete ya no se pueden leer).
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
+
+  // Recolectar public_ids antes del DELETE
   const [productImageRes, variantImagesRes] = await Promise.all([
     supabase
       .from("products")
@@ -306,11 +338,12 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
     return fail("Error al eliminar el producto")
   }
 
-  // Best-effort: si Cloudinary falla, el row ya está borrado y queda un blob huérfano (preferible a UI rota).
   await deleteImagesBestEffort(publicIds)
 
   return ok({ id: productId })
 }
+
+// ============ UPDATE STATUS (admin) ============
 
 export async function updateProductStatus(input: UpdateProductStatusInput): Promise<Result<{ id: number }>> {
   const validation = UpdateProductStatusSchema.safeParse(input)
@@ -321,7 +354,12 @@ export async function updateProductStatus(input: UpdateProductStatusInput): Prom
 
   const { productId, statusId } = validation.data
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForProduct(productId)
+  if (!restaurantId) return fail("Producto no encontrado")
+
+  const guard = await requireAdminForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { error } = await supabase
     .from("products")

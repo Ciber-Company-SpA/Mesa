@@ -4,6 +4,7 @@ import {
   type CreateOrderInput,
 } from "@/lib/validation/order"
 import { ok, fail, type Result } from "@/services/result"
+import { requireStaffForRestaurant } from "@/services/auth-guard"
 
 export const ORDER_STATUS_NUEVO = 1
 export const ORDER_STATUS_PREPARANDO = 2
@@ -65,14 +66,42 @@ function mapOrderRow(row: OrderRow): WaiterOrder {
   }
 }
 
+/**
+ * Lee restaurant_id de una orden. Helper interno para validar permisos
+ * cuando la action recibe solo orderId.
+ */
+async function getRestaurantIdForOrder(orderId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("orders")
+    .select("restaurant_id")
+    .eq("id", orderId)
+    .maybeSingle()
+  return data?.restaurant_id ?? null
+}
+
+/**
+ * Lee restaurant_id de una mesa. Helper interno para validar permisos
+ * cuando la action recibe solo tableId.
+ */
+async function getRestaurantIdForTable(tableId: number): Promise<number | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("tables")
+    .select("restaurant_id")
+    .eq("id", tableId)
+    .maybeSingle()
+  return data?.restaurant_id ?? null
+}
+
+// ============ LIST (staff) ============
+
 export async function listActiveOrdersForRestaurant(
   restaurantId: number
 ): Promise<Result<WaiterOrder[]>> {
-  if (!restaurantId || restaurantId <= 0) {
-    return fail("Restaurante inválido")
-  }
-
-  const supabase = await createSupabaseServerClient()
+  const guard = await requireStaffForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data, error } = await supabase
     .from("orders")
@@ -88,12 +117,19 @@ export async function listActiveOrdersForRestaurant(
   return ok((data ?? []).map((row) => mapOrderRow(row as unknown as OrderRow)))
 }
 
+// ============ ADVANCE STATUS (staff) ============
+
 export async function advanceOrderStatus(
   orderId: number
 ): Promise<Result<{ id: number; statusId: number }>> {
   if (!orderId || orderId <= 0) return fail("Orden inválida")
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForOrder(orderId)
+  if (!restaurantId) return fail("Orden no encontrada")
+
+  const guard = await requireStaffForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data: current, error: readError } = await supabase
     .from("orders")
@@ -125,6 +161,8 @@ export async function advanceOrderStatus(
   return ok({ id: orderId, statusId: nextStatus })
 }
 
+// ============ MARK PAID (staff) ============
+
 // Marca un pedido como Pagado. Si todos los pedidos activos de la mesa
 // quedan en estado Pagado, libera la mesa (current_waiter_id = null) para
 // que otro mesero pueda reclamarla escaneando el QR.
@@ -133,7 +171,12 @@ export async function markOrderAsPaid(
 ): Promise<Result<{ id: number; statusId: number; tableReleased: boolean }>> {
   if (!orderId || orderId <= 0) return fail("Orden inválida")
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForOrder(orderId)
+  if (!restaurantId) return fail("Orden no encontrada")
+
+  const guard = await requireStaffForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data: current, error: readError } = await supabase
     .from("orders")
@@ -154,8 +197,6 @@ export async function markOrderAsPaid(
 
   if (updateError) return fail("Error al marcar la orden como pagada")
 
-  // Auto-release: si la mesa ya no tiene pedidos activos (Nuevo/Preparando/
-  // Listo), la liberamos para que otro mesero pueda atenderla.
   let tableReleased = false
   if (current.table_id) {
     const { count } = await supabase
@@ -177,18 +218,22 @@ export async function markOrderAsPaid(
   return ok({ id: orderId, statusId: ORDER_STATUS_PAGADO, tableReleased })
 }
 
+// ============ MARK TABLE PAID (staff) ============
+
 // Marca como pagados TODOS los pedidos activos (Nuevo/Preparando/Listo) de una
 // mesa en una sola operación. Libera la mesa (current_waiter_id = null) si
-// queda sin pedidos activos, igual que markOrderAsPaid.
-//
-// La advertencia "hay pedidos no listos" se valida en el cliente; este service
-// confía en que el caller mostró confirmación antes.
+// queda sin pedidos activos.
 export async function markTableOrdersAsPaid(
   tableId: number
 ): Promise<Result<{ tableId: number; paidIds: number[]; tableReleased: boolean }>> {
   if (!tableId || tableId <= 0) return fail("Mesa inválida")
 
-  const supabase = await createSupabaseServerClient()
+  const restaurantId = await getRestaurantIdForTable(tableId)
+  if (!restaurantId) return fail("Mesa no encontrada")
+
+  const guard = await requireStaffForRestaurant(restaurantId)
+  if (!guard.ok) return fail(guard.error)
+  const { supabase } = guard.data
 
   const { data: updated, error: updateError } = await supabase
     .from("orders")
@@ -201,8 +246,6 @@ export async function markTableOrdersAsPaid(
 
   const paidIds = (updated ?? []).map((row) => row.id)
 
-  // Auto-release: como ya pagamos todo lo activo, normalmente la mesa queda
-  // libre. Igual contamos por si quedó algo en otro estado raro.
   let tableReleased = false
   const { count } = await supabase
     .from("orders")
@@ -222,6 +265,8 @@ export async function markTableOrdersAsPaid(
   return ok({ tableId, paidIds, tableReleased })
 }
 
+// ============ CREATE ORDER (PÚBLICO — cliente escanea QR) ============
+
 export type CreatedOrder = {
   id: number
   statusId: number
@@ -233,6 +278,10 @@ export type CreatedOrder = {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Result<CreatedOrder>> {
+  // NOTA: NO requiere auth — esta acción la dispara el CLIENTE del menú
+  // (escaneando un QR). La protección está en validar que la mesa existe
+  // y que los productos pertenecen al mismo restaurante.
+
   const validation = CreateOrderSchema.safeParse(input)
 
   if (!validation.success) {
