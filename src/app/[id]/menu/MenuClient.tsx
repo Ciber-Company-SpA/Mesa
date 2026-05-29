@@ -6,6 +6,7 @@ import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
+import { getTemplateDesign } from "@/lib/menu/templates"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
@@ -56,35 +57,34 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { restaurant, categories, products, tableId, tableNumber } = menu
   const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
+  const design = getTemplateDesign(restaurant?.menu_template)
 
   return (
-    <main className="min-h-screen overflow-hidden bg-stone-950 pb-28 text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
+    <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
+      <div className={`pointer-events-none fixed inset-0 ${design.overlayClass}`} />
 
       <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
         <TableOrdersHeader tableId={tableId ?? null} />
 
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-orange-200/80">Mesa {tableNumber}</p>
-            <h1 className="mt-1 truncate text-3xl font-black tracking-tight text-white">
+            <p className={`text-sm font-semibold ${design.mesaText}`}>Mesa {tableNumber}</p>
+            <h1 className={`mt-1 truncate text-3xl font-black tracking-tight ${design.titleClass}`}>
               {restaurant?.restaurant_name}
             </h1>
           </div>
-          <span className="shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-orange-100 ring-1 ring-white/10 backdrop-blur">
+          <span className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold ${design.abiertoBadge}`}>
             Abierto
           </span>
         </header>
 
-        <div className="sticky top-0 z-30 -mx-4 mt-6 bg-stone-950/80 px-4 py-3 backdrop-blur-md border-b border-white/5">
+        <div className={`sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 ${design.stickyClass}`}>
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               type="button"
               onClick={() => setSelectedCategory(null)}
               className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
-                selectedCategory === null
-                  ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
-                  : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
+                selectedCategory === null ? design.pillActive : design.pillInactive
               }`}
             >
               Todo
@@ -95,9 +95,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
-                  selectedCategory === cat.id
-                    ? "bg-orange-500 text-stone-950 shadow-orange-500/25"
-                    : "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur"
+                  selectedCategory === cat.id ? design.pillActive : design.pillInactive
                 }`}
               >
                 {cat.category_name}
@@ -116,14 +114,14 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
               return (
                 <div key={cat.id} className="animate-card-entrance">
-                  <div className="mb-5 flex items-center justify-between border-b border-white/5 pb-2">
+                  <div className={`mb-5 flex items-center justify-between border-b pb-2 ${design.catDivider}`}>
                     <div className="flex items-center gap-2.5">
-                      <span className="h-5 w-1 rounded-full bg-gradient-to-b from-orange-400 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-                      <h2 className="text-xl font-black tracking-tight text-white uppercase sm:text-2xl">
+                      <span className={`h-5 w-1 rounded-full ${design.catAccentBar}`} />
+                      <h2 className={`text-xl font-black tracking-tight uppercase sm:text-2xl ${design.catTitle}`}>
                         {cat.category_name}
                       </h2>
                     </div>
-                    <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-400 ring-1 ring-orange-500/20 backdrop-blur-sm">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold backdrop-blur-sm ${design.catCount}`}>
                       {categoryProducts.length} {categoryProducts.length === 1 ? 'producto' : 'productos'}
                     </span>
                   </div>
@@ -135,7 +133,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                       return isAgotado ? (
                         <div
                           key={item.id}
-                          className="relative flex cursor-not-allowed gap-4 rounded-[1.75rem] bg-white/10 p-3 opacity-60 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur"
+                          className={`relative flex cursor-not-allowed gap-4 rounded-[1.75rem] p-3 opacity-60 shadow-xl shadow-black/20 ${design.card}`}
                         >
                           <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
                             Agotado
@@ -143,25 +141,25 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                           <ProductImage
                             src={item.product_image}
                             alt={item.product_name}
-                            className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                            className={`aspect-square h-28 shrink-0 rounded-[1.4rem] ${design.cardImageBg}`}
                             imageClassName="p-3 drop-shadow-xl"
                           />
                           <div className="min-w-0 flex-1 py-1">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-bold text-orange-200/80">
+                                <p className={`truncate text-xs font-bold ${design.cardCat}`}>
                                   {item.categories?.category_name}
                                 </p>
-                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                                <h3 className={`mt-1 line-clamp-2 font-black leading-tight ${design.cardName}`}>
                                   {item.product_name}
                                 </h3>
                               </div>
-                              <p className="shrink-0 text-sm font-black text-orange-200">
+                              <p className={`shrink-0 text-sm font-black ${design.cardPrice}`}>
                                 {formatPrice(item.product_price)}
                               </p>
                             </div>
                             {item.product_description && (
-                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                              <p className={`mt-2 line-clamp-2 text-xs leading-5 ${design.cardDesc}`}>
                                 {item.product_description}
                               </p>
                             )}
@@ -171,30 +169,30 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                         <Link
                           key={item.id}
                           href={`/${qrCode}/menu/${encodeId(item.id)}`}
-                          className="flex cursor-pointer gap-4 rounded-[1.75rem] bg-white/10 p-3 shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/[0.13]"
+                          className={`flex cursor-pointer gap-4 rounded-[1.75rem] p-3 shadow-xl shadow-black/20 transition hover:-translate-y-0.5 ${design.card}`}
                         >
                           <ProductImage
                             src={item.product_image}
                             alt={item.product_name}
-                            className="aspect-square h-28 shrink-0 rounded-[1.4rem] bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950"
+                            className={`aspect-square h-28 shrink-0 rounded-[1.4rem] ${design.cardImageBg}`}
                             imageClassName="p-3 drop-shadow-xl"
                           />
                           <div className="min-w-0 flex-1 py-1">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-bold text-orange-200/80">
+                                <p className={`truncate text-xs font-bold ${design.cardCat}`}>
                                   {item.categories?.category_name}
                                 </p>
-                                <h3 className="mt-1 line-clamp-2 font-black leading-tight text-white">
+                                <h3 className={`mt-1 line-clamp-2 font-black leading-tight ${design.cardName}`}>
                                   {item.product_name}
                                 </h3>
                               </div>
-                              <p className="shrink-0 text-sm font-black text-orange-200">
+                              <p className={`shrink-0 text-sm font-black ${design.cardPrice}`}>
                                 {formatPrice(item.product_price)}
                               </p>
                             </div>
                             {item.product_description && (
-                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-300">
+                              <p className={`mt-2 line-clamp-2 text-xs leading-5 ${design.cardDesc}`}>
                                 {item.product_description}
                               </p>
                             )}
@@ -208,8 +206,8 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             })}
           </section>
         ) : (
-          <div className="mt-8 rounded-[2rem] bg-white/10 px-6 py-12 text-center shadow-2xl shadow-black/30 ring-1 ring-white/10 backdrop-blur">
-            <h2 className="mt-5 text-2xl font-black tracking-tight">Aún no hay productos disponibles</h2>
+          <div className={`mt-8 rounded-[2rem] px-6 py-12 text-center shadow-2xl shadow-black/30 ${design.emptyCard}`}>
+            <h2 className={`mt-5 text-2xl font-black tracking-tight ${design.emptyTitle}`}>Aún no hay productos disponibles</h2>
           </div>
         )}
       </section>

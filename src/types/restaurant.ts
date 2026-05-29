@@ -1,4 +1,4 @@
-export type MenuTemplate = "noche"
+export type MenuTemplate = "noche" | "aurora"
 
 export type Restaurant = {
   id: number
