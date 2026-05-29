@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { ok, fail, type Result } from "@/services/result"
@@ -55,5 +55,6 @@ export async function updateMenuHeaderStyle(
   if (error) return fail("No se pudo guardar los cambios")
 
   revalidateTag("menu", "max")
+  revalidatePath("/[id]/menu", "page")
   return ok(null)
 }
