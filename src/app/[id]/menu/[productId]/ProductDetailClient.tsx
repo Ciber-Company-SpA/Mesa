@@ -10,6 +10,7 @@ import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { BackButton } from "@/components/ui/BackButton"
 import { useLastOrder } from "@/hooks/useLastOrder"
+import { getTemplateDesign } from "@/lib/menu/templates"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
@@ -35,6 +36,7 @@ export function ProductDetailClient({
 
   const realProductId = decodeId(productId)
   const { restaurant, tableId, products } = menu
+  const design = getTemplateDesign(restaurant?.menu_template)
   const menuProduct = products.find((item) => item.id === realProductId)
   const { product, loading, error } = useProductDetail(realProductId, menuProduct)
   const { activeOrder, syncOrder } = useLastOrder()
@@ -240,8 +242,8 @@ export function ProductDetailClient({
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-stone-950 pb-28 text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]" />
+    <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
+      <div className={`pointer-events-none fixed inset-0 ${design.overlayClass}`} />
 
       <div
         className={`fixed bottom-28 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 ${
