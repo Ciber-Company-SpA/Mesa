@@ -51,6 +51,13 @@ export const MENU_TEMPLATES: TemplateMeta[] = [
     swatch:
       "radial-gradient(circle at 85% 20%, rgba(217,70,239,0.45) 0%, transparent 50%), radial-gradient(circle at 15% 80%, rgba(29,78,216,0.35) 0%, transparent 50%), #090514",
   },
+  {
+    id: "eclipse",
+    label: "Eclipse",
+    description: "Negro profundo con un sutil resplandor gris plata. Minimalismo puro.",
+    swatch:
+      "radial-gradient(circle at 50% 10%, rgba(255,255,255,0.12) 0%, transparent 50%), #050507",
+  },
 ]
 
 export const TEMPLATE_IDS = MENU_TEMPLATES.map((t) => t.id) as [MenuTemplate, ...MenuTemplate[]]
@@ -63,7 +70,7 @@ const DESIGNS: Record<MenuTemplate, TemplateDesign> = {
     mesaText: "text-orange-200/80",
     titleClass: "text-white",
     abiertoBadge: "bg-white/10 text-orange-100 ring-1 ring-white/10 backdrop-blur",
-    stickyClass: "backdrop-blur-md",
+    stickyClass: "",
     pillActive: "bg-orange-500 text-stone-950 shadow-orange-500/25",
     pillInactive: "bg-white/10 text-stone-200 ring-1 ring-white/10 backdrop-blur",
     catDivider: "border-white/5",
@@ -80,6 +87,30 @@ const DESIGNS: Record<MenuTemplate, TemplateDesign> = {
     emptyCard: "bg-white/10 ring-1 ring-white/10 backdrop-blur",
     emptyTitle: "text-white",
   },
+  eclipse: {
+    mainClass: "bg-[#050507] text-white",
+    overlayClass:
+      "bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06)_0%,transparent_50%)]",
+    mesaText: "text-zinc-500",
+    titleClass: "text-white tracking-wide",
+    abiertoBadge: "bg-white/[0.02] text-zinc-300 ring-1 ring-white/5 backdrop-blur-xl",
+    stickyClass: "",
+    pillActive: "bg-white text-stone-950 shadow-white/10",
+    pillInactive: "bg-white/[0.02] text-zinc-300 ring-1 ring-white/5 backdrop-blur-xl",
+    catDivider: "border-white/5",
+    catAccentBar:
+      "bg-gradient-to-b from-zinc-300 to-zinc-600 shadow-[0_0_8px_rgba(255,255,255,0.2)]",
+    catTitle: "text-white",
+    catCount: "bg-white/[0.03] text-zinc-300 ring-1 ring-white/5",
+    card: "bg-white/[0.02] ring-1 ring-white/5 backdrop-blur-xl",
+    cardImageBg: "bg-gradient-to-br from-zinc-900 via-zinc-950 to-black",
+    cardCat: "text-zinc-500",
+    cardName: "text-white",
+    cardPrice: "text-zinc-200",
+    cardDesc: "text-zinc-400",
+    emptyCard: "bg-white/[0.02] ring-1 ring-white/5 backdrop-blur-xl",
+    emptyTitle: "text-white",
+  },
   "cyber-ruby": {
     mainClass: "bg-[#090514] text-white",
     overlayClass:
@@ -87,7 +118,7 @@ const DESIGNS: Record<MenuTemplate, TemplateDesign> = {
     mesaText: "text-fuchsia-300/80",
     titleClass: "text-white tracking-wide",
     abiertoBadge: "bg-fuchsia-950/20 text-fuchsia-200 ring-1 ring-fuchsia-500/10 backdrop-blur-xl",
-    stickyClass: "backdrop-blur-xl",
+    stickyClass: "",
     pillActive: "bg-fuchsia-500 text-white shadow-fuchsia-500/30",
     pillInactive: "bg-fuchsia-950/20 text-fuchsia-100 ring-1 ring-fuchsia-500/10 backdrop-blur-xl",
     catDivider: "border-fuchsia-500/10",
@@ -111,7 +142,7 @@ const DESIGNS: Record<MenuTemplate, TemplateDesign> = {
     mesaText: "text-violet-300/80",
     titleClass: "text-white",
     abiertoBadge: "bg-white/5 text-cyan-200 ring-1 ring-white/10 backdrop-blur-xl",
-    stickyClass: "backdrop-blur-xl",
+    stickyClass: "",
     pillActive: "bg-violet-500 text-white shadow-violet-500/25",
     pillInactive: "bg-white/5 text-slate-200 ring-1 ring-white/10 backdrop-blur-xl",
     catDivider: "border-white/10",

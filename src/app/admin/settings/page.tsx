@@ -28,12 +28,15 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
   const overlayBg =
     template === "aurora" ? "bg-[#090d16]"
     : template === "cyber-ruby" ? "bg-[#090514]"
+    : template === "eclipse" ? "bg-[#050507]"
     : "bg-stone-950"
   const overlayGradient =
     template === "aurora"
       ? "bg-[radial-gradient(circle_at_15%_20%,rgba(91,33,182,0.45)_0%,transparent_50%),radial-gradient(circle_at_85%_80%,rgba(6,182,212,0.3)_0%,transparent_50%)]"
       : template === "cyber-ruby"
       ? "bg-[radial-gradient(circle_at_85%_20%,rgba(217,70,239,0.18)_0%,transparent_50%),radial-gradient(circle_at_15%_80%,rgba(29,78,216,0.15)_0%,transparent_50%)]"
+      : template === "eclipse"
+      ? "bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06)_0%,transparent_50%)]"
       : "bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]"
 
   return (
