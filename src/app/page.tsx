@@ -2,32 +2,21 @@ import Link from "next/link"
 import Image from "next/image"
 import mesaLogo from "@/image/MESA.svg"
 
-const menuLinks = [
-  { label: "Categorías", href: "/admin/categories" },
-  { label: "Productos", href: "/admin/products" },
-  { label: "Mesas", href: "/admin/tables" },
-  { label: "Pedidos", href: "/admin/orders" },
-]
-
-const benefits = [
+const modules = [
   {
     title: "Categorías del menú",
-    href: "/admin/categories",
     description: "Organiza tu carta por categorías para que cada producto sea fácil de encontrar y editar.",
   },
   {
     title: "Productos y precios",
-    href: "/admin/products",
     description: "Administra platos, descripciones, precios, estado visible e imagen de cada producto.",
   },
   {
     title: "Mesas del local",
-    href: "/admin/tables",
-    description: "Crea mesas y usa su código QR asociado para recibir pedidos desde el local.",
+    description: "Cada mesa tiene su QR único para que los clientes pidan desde el celular.",
   },
   {
     title: "Seguimiento de pedidos",
-    href: "/admin/orders",
     description: "Revisa pedidos por mesa, estado, tiempo de ingreso y total durante el servicio.",
   },
 ]
@@ -65,30 +54,12 @@ export default function Home() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-1 text-sm font-medium text-stone-600 md:flex">
-            {menuLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-full px-3 py-2 transition hover:bg-white hover:text-stone-950"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
           <nav className="flex items-center gap-2 text-sm font-medium">
             <Link
               href="/login"
-              className="rounded-full px-4 py-2 text-stone-700 transition hover:bg-white hover:text-stone-950"
-            >
-              Iniciar sesión
-            </Link>
-            <Link
-              href="/register"
               className="rounded-full bg-stone-950 px-4 py-2 text-white shadow-sm transition hover:bg-stone-800"
             >
-              Crear restaurante
+              Iniciar sesión
             </Link>
           </nav>
         </header>
@@ -111,14 +82,8 @@ export default function Home() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/register"
-                className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
-              >
-                Crear mi restaurante
-              </Link>
-              <Link
                 href="/login"
-                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-stone-400 hover:bg-stone-100"
+                className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
               >
                 Iniciar sesión
               </Link>
@@ -220,24 +185,20 @@ export default function Home() {
             Módulos del panel
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">
-            Entra directo a las áreas principales de tu restaurante.
+            Todo lo que necesitás para operar tu local.
           </h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {benefits.map((benefit) => (
-            <Link
-              href={benefit.href}
-              key={benefit.title}
-              className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          {modules.map((module) => (
+            <div
+              key={module.title}
+              className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm"
             >
               <div className="mb-5 h-10 w-10 rounded-2xl bg-orange-100" />
-              <h3 className="text-lg font-semibold text-stone-950">{benefit.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-stone-600">{benefit.description}</p>
-              <span className="mt-5 inline-flex text-sm font-semibold text-orange-600">
-                Abrir módulo
-              </span>
-            </Link>
+              <h3 className="text-lg font-semibold text-stone-950">{module.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-stone-600">{module.description}</p>
+            </div>
           ))}
         </div>
       </section>
@@ -279,16 +240,16 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 pb-16 pt-10 sm:px-8 lg:px-10 lg:pb-24">
         <div className="rounded-[2rem] bg-stone-950 px-6 py-10 text-center text-white shadow-2xl shadow-stone-900/10 sm:px-10">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">
-            Empieza con tu local
+            Ingresá a tu panel
           </p>
           <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Crea tu restaurante y configura categorías, productos, mesas y pedidos desde un panel simple.
+            Iniciá sesión para administrar categorías, productos, mesas y pedidos.
           </h2>
           <Link
-            href="/register"
+            href="/login"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
           >
-            Crear mi restaurante
+            Iniciar sesión
           </Link>
         </div>
       </section>
