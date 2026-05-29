@@ -24,6 +24,8 @@
     "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "browser-image-compression": "^2.0.2",
     "capacitor-native-settings": "^8.1.0",
     "cloudinary": "^2.10.0",
