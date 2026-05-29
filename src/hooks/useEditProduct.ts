@@ -238,7 +238,7 @@ export function useEditProduct(productId: number | null) {
 
         const result = await uploadImage(
           fileToUpload,
-          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!,
+          "mesa-products",
           { alreadyProcessed: true }
         )
 

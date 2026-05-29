@@ -160,7 +160,7 @@ export function useCreateProduct() {
 
         const result = await uploadImage(
           fileToUpload,
-          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!,
+          "mesa-products",
           { alreadyProcessed: true }
         )
 
