@@ -1,37 +1,44 @@
 import Link from "next/link"
 import Image from "next/image"
 import mesaLogo from "@/image/MESA.svg"
+import categoriesIcon from "@/image/categories.png"
+import productsIcon from "@/image/products.png"
+import tablesIcon from "@/image/tables.png"
+import ordersIcon from "@/image/orders.png"
+import waitersIcon from "@/image/waiters.png"
 
 const modules = [
   {
     title: "Categorías del menú",
     description: "Organiza tu carta por categorías para que cada producto sea fácil de encontrar y editar.",
+    icon: categoriesIcon,
   },
   {
     title: "Productos y precios",
     description: "Administra platos, descripciones, precios, estado visible e imagen de cada producto.",
+    icon: productsIcon,
   },
   {
     title: "Mesas del local",
     description: "Cada mesa tiene su QR único para que los clientes pidan desde el celular.",
+    icon: tablesIcon,
   },
   {
     title: "Seguimiento de pedidos",
     description: "Revisa pedidos por mesa, estado, tiempo de ingreso y total durante el servicio.",
+    icon: ordersIcon,
+  },
+  {
+    title: "Gestión de meseros",
+    description: "Agregá meseros desde el panel y MESA les envía las credenciales por correo para que accedan al área de meseros.",
+    icon: waitersIcon,
   },
 ]
 
-const metrics = [
-  { label: "Ventas del día", value: "$428k", detail: "Desde pedidos completados" },
-  { label: "Pedidos activos", value: "18", detail: "Nuevos, en preparación o listos" },
-  { label: "Mesas registradas", value: "16", detail: "Cada mesa mantiene su QR" },
-  { label: "Productos", value: "42", detail: "Platos y bebidas del menú" },
-]
-
 const orders = [
-  { table: "Mesa 04", item: "Pedido #101 · $25.990", status: "Nuevo", tone: "bg-orange-100 text-orange-700" },
-  { table: "Mesa 02", item: "Pedido #102 · $18.990", status: "Preparación", tone: "bg-stone-900 text-white" },
-  { table: "Mesa 07", item: "Pedido #103 · $32.990", status: "Listo", tone: "bg-emerald-100 text-emerald-700" },
+  { table: "Mesa 4", item: "Pedido #101 · $25.990", status: "Nuevo", tone: "bg-orange-50 text-orange-700 ring-orange-200/50" },
+  { table: "Mesa 2", item: "Pedido #102 · $18.990", status: "En preparación", tone: "bg-stone-950 text-white ring-stone-900/50" },
+  { table: "Mesa 7", item: "Pedido #103 · $32.990", status: "Listo", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200/50" },
 ]
 
 export default function Home() {
@@ -81,17 +88,11 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
-              >
-                Iniciar sesión
-              </Link>
               <a
                 href="#"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-stone-400 hover:bg-stone-100"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -126,62 +127,69 @@ export default function Home() {
 
             <div className="relative rounded-[2.25rem] border border-stone-200 bg-stone-950 p-3 shadow-2xl shadow-stone-900/20">
               <div className="rounded-[1.75rem] bg-stone-50 p-4">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-stone-500">Panel admin</p>
-                    <h2 className="text-xl font-semibold tracking-tight">Café Aurora</h2>
-                  </div>
-                  <div className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white">
-                    Abierto
-                  </div>
-                </div>
-
-                <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-200">
-                  <div className="mb-4 flex items-center justify-between">
+                <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-medium text-stone-500">Ventas del día</p>
-                      <p className="text-3xl font-semibold tracking-tight">$428k</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+                        Ventas del día
+                      </p>
+                      <p className="mt-1 text-3xl font-extrabold tracking-tight tabular-nums text-stone-900">
+                        $428.000
+                      </p>
                     </div>
-                    <div className="rounded-2xl bg-orange-50 px-3 py-2 text-right">
-                      <p className="text-xs font-semibold text-orange-700">24 completados</p>
-                      <p className="text-[11px] text-stone-500">pedidos cerrados</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="h-2 rounded-full bg-stone-100">
-                      <div className="h-2 w-4/5 rounded-full bg-orange-500" />
-                    </div>
-                    <div className="flex justify-between text-xs text-stone-500">
-                      <span>Calculado desde pedidos completados</span>
-                      <span>Hoy</span>
+                    <div className="rounded-2xl bg-orange-50 px-3 py-2 text-right ring-1 ring-orange-200/50">
+                      <p className="text-[10px] font-semibold text-orange-800">pedidos cerrados</p>
+                      <p className="mt-0.5 text-xl font-bold tabular-nums text-orange-700">24</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-3xl bg-orange-500 p-4 text-white shadow-lg shadow-orange-500/20">
-                    <p className="text-xs font-medium text-orange-100">Pedidos activos</p>
-                    <p className="mt-2 text-3xl font-semibold">18</p>
+                  <div className="rounded-3xl bg-orange-500 p-4 text-white shadow-lg shadow-orange-500/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-orange-100">
+                        Pedidos activos
+                      </p>
+                      <span className="text-sm">▣</span>
+                    </div>
+                    <p className="mt-3 text-4xl font-extrabold tabular-nums">18</p>
+                    <p className="mt-2 text-[10px] font-medium text-orange-100">
+                      Ver comandas →
+                    </p>
                   </div>
-                  <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-200">
-                    <p className="text-xs font-medium text-stone-500">Mesas</p>
-                    <p className="mt-2 text-3xl font-semibold">16</p>
+                  <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                        Mesas totales
+                      </p>
+                      <span className="text-sm text-stone-400">◫</span>
+                    </div>
+                    <p className="mt-3 text-4xl font-extrabold tabular-nums text-stone-900">16</p>
+                    <p className="mt-2 text-[10px] font-medium text-stone-500">
+                      Ver QR y estados →
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    Pedidos Recientes
+                  </p>
+                  <span className="text-[10px] font-bold text-orange-600">Ver todos</span>
+                </div>
+
+                <div className="mt-2 space-y-2">
                   {orders.map((order) => (
                     <div
                       key={order.table}
-                      className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-200"
+                      className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-stone-950">{order.table}</p>
-                          <p className="mt-1 text-xs leading-5 text-stone-500">{order.item}</p>
+                          <p className="text-sm font-bold text-stone-900">{order.table}</p>
+                          <p className="mt-0.5 text-[11px] font-medium tabular-nums text-stone-500">{order.item}</p>
                         </div>
-                        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${order.tone}`}>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-stone-950/5 ${order.tone}`}>
                           {order.status}
                         </span>
                       </div>
@@ -210,7 +218,17 @@ export default function Home() {
               key={module.title}
               className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm"
             >
-              <div className="mb-5 h-10 w-10 rounded-2xl bg-orange-100" />
+              <div className="mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
+                {module.icon ? (
+                  <Image
+                    src={module.icon}
+                    alt=""
+                    className="h-full w-full scale-125 object-cover"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-xl bg-orange-100" />
+                )}
+              </div>
               <h3 className="text-lg font-semibold text-stone-950">{module.title}</h3>
               <p className="mt-3 text-sm leading-6 text-stone-600">{module.description}</p>
             </div>
@@ -218,73 +236,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
-        <div className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm sm:p-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-                Vista del negocio
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">
-                Indicadores pensados para el panel administrador.
-              </h2>
-            </div>
-            <p className="max-w-sm text-sm leading-6 text-stone-600">
-              Información simulada, basada en lo que tendrá sentido medir dentro
-              de MESA: ventas, pedidos, mesas y productos.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((metric) => (
-              <div
-                key={metric.label}
-                className="rounded-3xl border border-stone-200 bg-stone-50 p-5"
-              >
-                <p className="text-sm font-medium text-stone-500">{metric.label}</p>
-                <p className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">
-                  {metric.value}
-                </p>
-                <p className="mt-2 text-sm text-stone-600">{metric.detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-16 pt-10 sm:px-8 lg:px-10 lg:pb-24">
-        <div className="rounded-[2rem] bg-stone-950 px-6 py-10 text-center text-white shadow-2xl shadow-stone-900/10 sm:px-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">
-            Ingresá a tu panel
-          </p>
-          <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Iniciá sesión para administrar categorías, productos, mesas y pedidos.
-          </h2>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
-            >
-              Iniciar sesión
-            </Link>
-            <a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" />
-              </svg>
-              Contacta a un ejecutivo
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </section>
     </main>
   )
 }
