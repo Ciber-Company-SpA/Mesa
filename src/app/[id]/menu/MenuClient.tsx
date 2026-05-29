@@ -94,10 +94,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           </span>
         </header>
 
-        <div
-          className="sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 backdrop-blur-md border-b border-white/5"
-          style={{ background: headerBackground }}
-        >
+        <div className="sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 backdrop-blur-md">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               type="button"
