@@ -54,6 +54,6 @@ export async function updateMenuHeaderStyle(
 
   if (error) return fail("No se pudo guardar los cambios")
 
-  revalidateTag("menu")
+  revalidateTag("menu", "max")
   return ok(null)
 }
