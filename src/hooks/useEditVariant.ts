@@ -52,7 +52,7 @@ export function useEditVariant(variant: ProductVariant) {
       if (variantImage) {
         const uploaded = await uploadImage(
           variantImage,
-          "mesa-products"
+          process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
         )
 
         if (!uploaded) throw new Error("Error al subir imagen")
