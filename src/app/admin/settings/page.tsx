@@ -9,6 +9,20 @@ import type { MenuHeaderType } from "@/types/restaurant"
 const DEFAULT_COLOR_1 = "#0c0a09"
 const DEFAULT_COLOR_2 = "#1c1917"
 
+type Preset = {
+  name: string
+  type: MenuHeaderType
+  color1: string
+  color2: string | null
+}
+
+const PRESETS: Preset[] = [
+  { name: "Noche", type: "gradient", color1: "#1c1917", color2: "#0c0a09" },
+  { name: "Ocaso", type: "gradient", color1: "#7c2d12", color2: "#431407" },
+  { name: "Bosque", type: "gradient", color1: "#064e3b", color2: "#022c22" },
+  { name: "Océano", type: "gradient", color1: "#1e3a8a", color2: "#0c4a6e" },
+]
+
 export default function AdminSettingsPage() {
   const { restaurant, loading } = useRestaurant()
 
@@ -68,6 +82,36 @@ export default function AdminSettingsPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-5">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">Temas</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {PRESETS.map((preset) => {
+                  const presetBg = preset.type === "gradient" && preset.color2
+                    ? `linear-gradient(180deg, ${preset.color1} 0%, ${preset.color2} 100%)`
+                    : preset.color1
+                  const isActive = type === preset.type && color1 === preset.color1 &&
+                    (preset.color2 ? color2 === preset.color2 : true)
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        setType(preset.type)
+                        setColor1(preset.color1)
+                        if (preset.color2) setColor2(preset.color2)
+                      }}
+                      className={`overflow-hidden rounded-2xl border text-left transition ${
+                        isActive ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+                      }`}
+                    >
+                      <div className="h-14 w-full" style={{ background: presetBg }} />
+                      <div className="px-3 py-2 text-xs font-bold text-stone-800">{preset.name}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">Tipo</p>
               <div className="grid grid-cols-2 gap-2">
