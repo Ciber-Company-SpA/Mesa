@@ -1,4 +1,4 @@
-export type MenuTemplate = "noche" | "aurora" | "cyber-ruby" | "eclipse"
+export type MenuTemplate = "noche" | "aurora" | "cyber-ruby" | "eclipse" | "forest-moss" | "nordic-minimal"
 
 export type Restaurant = {
   id: number

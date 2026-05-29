@@ -58,6 +58,20 @@ export const MENU_TEMPLATES: TemplateMeta[] = [
     swatch:
       "radial-gradient(circle at 50% 10%, rgba(255,255,255,0.12) 0%, transparent 50%), #050507",
   },
+  {
+    id: "forest-moss",
+    label: "Forest Moss",
+    description: "Bosque profundo con luz ámbar entre las hojas. Orgánico y vibrante.",
+    swatch:
+      "radial-gradient(circle at 85% 20%, rgba(245,158,11,0.35) 0%, transparent 45%), radial-gradient(circle at 20% 80%, rgba(22,163,74,0.45) 0%, transparent 60%), radial-gradient(circle at 50% 50%, rgba(163,230,53,0.08) 0%, transparent 60%), #0b1411",
+  },
+  {
+    id: "nordic-minimal",
+    label: "Nordic Minimal",
+    description: "Tonos fríos y limpios, perfecto para menús diurnos y locales luminosos.",
+    swatch:
+      "linear-gradient(120deg, rgba(235,243,250,1) 0%, rgba(225,235,245,0.6) 40%, rgba(240,244,248,1) 100%), linear-gradient(45deg, transparent 70%, rgba(215,228,240,0.4) 70%), #eef3f7",
+  },
 ]
 
 export const TEMPLATE_IDS = MENU_TEMPLATES.map((t) => t.id) as [MenuTemplate, ...MenuTemplate[]]
@@ -86,6 +100,54 @@ const DESIGNS: Record<MenuTemplate, TemplateDesign> = {
     cardDesc: "text-stone-300",
     emptyCard: "bg-white/10 ring-1 ring-white/10 backdrop-blur",
     emptyTitle: "text-white",
+  },
+  "nordic-minimal": {
+    mainClass: "bg-[#eef3f7] text-slate-800",
+    overlayClass:
+      "bg-[linear-gradient(120deg,rgba(235,243,250,1)_0%,rgba(225,235,245,0.6)_40%,rgba(240,244,248,1)_100%),linear-gradient(45deg,transparent_70%,rgba(215,228,240,0.4)_70%)]",
+    mesaText: "text-slate-500",
+    titleClass: "text-slate-800 tracking-wide",
+    abiertoBadge: "bg-white/60 text-slate-700 ring-1 ring-slate-300/40 backdrop-blur-md",
+    stickyClass: "",
+    pillActive: "bg-slate-800 text-white shadow-slate-800/20",
+    pillInactive: "bg-white/60 text-slate-600 ring-1 ring-slate-300/40 backdrop-blur-md",
+    catDivider: "border-slate-300/40",
+    catAccentBar:
+      "bg-gradient-to-b from-slate-400 to-slate-600 shadow-[0_0_8px_rgba(148,163,184,0.3)]",
+    catTitle: "text-slate-800",
+    catCount: "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+    card: "bg-white/60 ring-1 ring-slate-300/40 backdrop-blur-md shadow-[0_15px_35px_rgba(148,163,184,0.15)]",
+    cardImageBg: "bg-gradient-to-br from-slate-100 via-white to-slate-50",
+    cardCat: "text-slate-500",
+    cardName: "text-slate-800",
+    cardPrice: "text-slate-900",
+    cardDesc: "text-slate-600",
+    emptyCard: "bg-white/60 ring-1 ring-slate-300/40 backdrop-blur-md",
+    emptyTitle: "text-slate-800",
+  },
+  "forest-moss": {
+    mainClass: "bg-[#0b1411] text-white",
+    overlayClass:
+      "bg-[radial-gradient(circle_at_85%_20%,rgba(245,158,11,0.22)_0%,transparent_45%),radial-gradient(circle_at_20%_80%,rgba(22,163,74,0.32)_0%,transparent_60%),radial-gradient(circle_at_50%_50%,rgba(163,230,53,0.06)_0%,transparent_60%)]",
+    mesaText: "text-amber-300/80",
+    titleClass: "text-emerald-50 tracking-wide",
+    abiertoBadge: "bg-emerald-950/30 text-emerald-200 ring-1 ring-emerald-500/20 backdrop-blur-xl",
+    stickyClass: "",
+    pillActive: "bg-amber-500 text-stone-950 shadow-amber-500/30",
+    pillInactive: "bg-emerald-950/30 text-emerald-100 ring-1 ring-emerald-500/15 backdrop-blur-xl",
+    catDivider: "border-emerald-500/15",
+    catAccentBar:
+      "bg-gradient-to-b from-amber-400 to-emerald-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]",
+    catTitle: "text-emerald-50",
+    catCount: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
+    card: "bg-emerald-950/25 ring-1 ring-emerald-500/15 backdrop-blur-xl",
+    cardImageBg: "bg-gradient-to-br from-emerald-950 via-stone-900 to-amber-950",
+    cardCat: "text-amber-300/70",
+    cardName: "text-emerald-50",
+    cardPrice: "text-amber-300",
+    cardDesc: "text-emerald-200/70",
+    emptyCard: "bg-emerald-950/25 ring-1 ring-emerald-500/15 backdrop-blur-xl",
+    emptyTitle: "text-emerald-50",
   },
   eclipse: {
     mainClass: "bg-[#050507] text-white",

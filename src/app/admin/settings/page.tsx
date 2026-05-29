@@ -29,6 +29,8 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
     template === "aurora" ? "bg-[#090d16]"
     : template === "cyber-ruby" ? "bg-[#090514]"
     : template === "eclipse" ? "bg-[#050507]"
+    : template === "forest-moss" ? "bg-[#0b1411]"
+    : template === "nordic-minimal" ? "bg-[#eef3f7]"
     : "bg-stone-950"
   const overlayGradient =
     template === "aurora"
@@ -37,6 +39,10 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
       ? "bg-[radial-gradient(circle_at_85%_20%,rgba(217,70,239,0.18)_0%,transparent_50%),radial-gradient(circle_at_15%_80%,rgba(29,78,216,0.15)_0%,transparent_50%)]"
       : template === "eclipse"
       ? "bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06)_0%,transparent_50%)]"
+      : template === "forest-moss"
+      ? "bg-[radial-gradient(circle_at_85%_20%,rgba(245,158,11,0.22)_0%,transparent_45%),radial-gradient(circle_at_20%_80%,rgba(22,163,74,0.32)_0%,transparent_60%),radial-gradient(circle_at_50%_50%,rgba(163,230,53,0.06)_0%,transparent_60%)]"
+      : template === "nordic-minimal"
+      ? "bg-[linear-gradient(120deg,rgba(235,243,250,1)_0%,rgba(225,235,245,0.6)_40%,rgba(240,244,248,1)_100%),linear-gradient(45deg,transparent_70%,rgba(215,228,240,0.4)_70%)]"
       : "bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),radial-gradient(circle_at_85%_12%,_rgba(120,53,15,0.34),_transparent_28%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]"
 
   return (
