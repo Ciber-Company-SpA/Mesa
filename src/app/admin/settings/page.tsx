@@ -126,7 +126,6 @@ export default function AdminSettingsPage() {
       }
       if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
       refresh()
-      setSelectedOverride(null)
       setFeedback({ kind: "ok", message: "Cambios guardados" })
     } finally {
       setSaving(false)
