@@ -131,7 +131,13 @@ export default function PrinterPage() {
         .maybeSingle<FetchedOrder>()
 
       if (error || !data) {
-        appendEntry({ orderId, kind: "error", message: "No se pudo leer el pedido" })
+        // eslint-disable-next-line no-console -- diagnóstico temporal
+        console.error("printer: read order failed", { orderId, error, data })
+        appendEntry({
+          orderId,
+          kind: "error",
+          message: `No se pudo leer el pedido: ${error?.message ?? "data null"}`,
+        })
         return
       }
 
