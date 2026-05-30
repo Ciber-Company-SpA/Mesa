@@ -331,13 +331,20 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
     ...(variantImagesRes.data ?? []).map((v) => v.variant_image_public_id),
   ]
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("products")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", productId)
 
   if (error) {
-    return fail("Error al eliminar el producto")
+    // eslint-disable-next-line no-console -- diagnóstico temporal
+    console.error("deleteProduct failed", { productId, error })
+    return fail(`Error al eliminar el producto: ${error.message}`)
+  }
+  if (count === 0) {
+    // eslint-disable-next-line no-console -- diagnóstico temporal
+    console.error("deleteProduct: 0 rows affected (RLS?)", { productId })
+    return fail("No se borró ninguna fila. Probable bloqueo de RLS.")
   }
 
   await deleteImagesBestEffort(publicIds)
