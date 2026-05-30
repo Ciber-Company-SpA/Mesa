@@ -133,13 +133,20 @@ export async function deleteCategory(input: DeleteCategoryInput): Promise<Result
   if (!guard.ok) return fail(guard.error)
   const { supabase } = guard.data
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("categories")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", categoryId)
 
   if (error) {
-    return fail("Error al eliminar la categoría")
+    // eslint-disable-next-line no-console -- diagnóstico temporal
+    console.error("deleteCategory failed", { categoryId, error })
+    return fail(`Error al eliminar la categoría: ${error.message}`)
+  }
+  if (count === 0) {
+    // eslint-disable-next-line no-console -- diagnóstico temporal
+    console.error("deleteCategory: 0 rows affected (RLS?)", { categoryId })
+    return fail("No se borró ninguna fila. Probable bloqueo de RLS.")
   }
   return ok({ id: categoryId })
 }
