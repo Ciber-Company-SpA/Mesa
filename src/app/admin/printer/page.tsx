@@ -123,12 +123,6 @@ export default function PrinterPage() {
     if (!current?.printer_enabled) return
     if (printedOrderIds.current.has(orderId)) return
 
-    const currentPrinter = printerRef.current
-    if (!currentPrinter) {
-      appendEntry({ orderId, kind: "error", message: "Impresora no conectada" })
-      return
-    }
-
     try {
       const { data, error } = await supabase
         .from("orders")
@@ -143,9 +137,7 @@ export default function PrinterPage() {
 
       if (data.status_id !== EN_PREPARACION_STATUS_ID) return
 
-      printedOrderIds.current.add(orderId)
-
-      const ticket = buildOrderTicket({
+      const ticketInput = {
         restaurantName: current.restaurant_name ?? "Restaurante",
         tableNumber: data.tables?.table_number ?? data.table_id,
         orderId: data.id,
@@ -153,8 +145,20 @@ export default function PrinterPage() {
           quantity: item.quantity,
           name: item.products?.product_name ?? "Producto",
         })),
-      })
+      }
 
+      // Actualizar preview con el ticket real (independiente de si imprime o no).
+      setPreviewText(formatTicketAsText(ticketInput))
+
+      const currentPrinter = printerRef.current
+      if (!currentPrinter) {
+        appendEntry({ orderId, kind: "error", message: "Impresora no conectada (ver vista previa)" })
+        return
+      }
+
+      printedOrderIds.current.add(orderId)
+
+      const ticket = buildOrderTicket(ticketInput)
       await sendToPrinter(currentPrinter, ticket)
       appendEntry({ orderId, kind: "ok", message: "Ticket impreso" })
     } catch (err) {
