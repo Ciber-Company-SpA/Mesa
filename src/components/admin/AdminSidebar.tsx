@@ -226,7 +226,7 @@ export function AdminSidebar() {
             >
               <span className="shrink-0">{tab.icon}</span>
               {!collapsed && <span className="flex-1 truncate">{tab.label}</span>}
-              {tab.badge !== undefined && (
+              {!collapsed && tab.badge !== undefined && (
                 <span
                   className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
                     isActive ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-700"
