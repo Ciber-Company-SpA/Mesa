@@ -46,6 +46,25 @@ export function writeCache<T>(key: string, data: T): void {
   }
 }
 
+const cacheSubscribers = new Map<string, Set<() => void>>()
+
+function subscribeCache(key: string, fn: () => void): () => void {
+  let bucket = cacheSubscribers.get(key)
+  if (!bucket) {
+    bucket = new Set()
+    cacheSubscribers.set(key, bucket)
+  }
+  bucket.add(fn)
+  return () => {
+    bucket?.delete(fn)
+    if (bucket && bucket.size === 0) cacheSubscribers.delete(key)
+  }
+}
+
+function notifyCache(key: string): void {
+  cacheSubscribers.get(key)?.forEach((fn) => fn())
+}
+
 export function invalidateCache(keyOrPrefix: string): void {
   try {
     if (typeof window === "undefined") return
@@ -58,10 +77,14 @@ export function invalidateCache(keyOrPrefix: string): void {
           localStorage.removeItem(k)
         }
       })
+      cacheSubscribers.forEach((bucket, key) => {
+        if (key.startsWith(prefix)) bucket.forEach((fn) => fn())
+      })
       return
     }
 
     localStorage.removeItem(keyOrPrefix)
+    notifyCache(keyOrPrefix)
   } catch {
   }
 }
@@ -169,10 +192,22 @@ export function useCache<T>(
     window.addEventListener("focus", refreshFromCache)
     document.addEventListener("visibilitychange", refreshWhenVisible)
 
+    const unsubscribe = subscribeCache(key, () => {
+      fetcher()
+        .then((fresh) => {
+          writeCache(key, fresh)
+          setData(fresh)
+          setIsFromCache(false)
+          setError(null)
+        })
+        .catch(() => {})
+    })
+
     return () => {
       window.removeEventListener("online", refreshFromCache)
       window.removeEventListener("focus", refreshFromCache)
       document.removeEventListener("visibilitychange", refreshWhenVisible)
+      unsubscribe()
     }
   }, [enabled, key, fetcher, isFromCache])
 
