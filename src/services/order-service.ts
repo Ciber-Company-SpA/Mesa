@@ -14,6 +14,7 @@ export const ORDER_STATUS_PAGADO = 4
 export type WaiterOrderItem = {
   id: number
   productName: string
+  variantName: string | null
   productPrice: number
   productQuantity: number
   notes: string | null
@@ -41,6 +42,7 @@ type OrderRow = {
   order_items: Array<{
     id: number
     product_name: string | null
+    variant_name: string | null
     product_price: number | null
     product_quantity: number
     notes: string | null
@@ -59,6 +61,7 @@ function mapOrderRow(row: OrderRow): WaiterOrder {
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
+      variantName: it.variant_name,
       productPrice: Number(it.product_price ?? 0),
       productQuantity: it.product_quantity,
       notes: it.notes,
@@ -106,7 +109,7 @@ export async function listActiveOrdersForRestaurant(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, table_id, total, status_id, created_at, ready_at, tables(table_number), order_items(id, product_name, product_price, product_quantity, notes)"
+      "id, table_id, total, status_id, created_at, ready_at, tables(table_number), order_items(id, product_name, variant_name, product_price, product_quantity, notes)"
     )
     .eq("restaurant_id", restaurantId)
     .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO, ORDER_STATUS_PAGADO])
@@ -338,16 +341,50 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail(`El producto "${inactiveProduct.product_name}" no está disponible`)
   }
 
-  // 5. Construir items con datos REALES de la DB
+  // 5. Resolver variantes (si las hay). El cliente puede mandar variantId null.
+  const variantIds = items
+    .map((i) => i.variantId)
+    .filter((v): v is number => typeof v === "number")
+
+  let variantMap = new Map<number, { id: number; product_id: number; variant_name: string; variant_price: number }>()
+  if (variantIds.length > 0) {
+    const { data: variants, error: variantsError } = await supabase
+      .from("product_variants")
+      .select("id, product_id, variant_name, variant_price")
+      .in("id", variantIds)
+      .in("product_id", productIds)
+
+    if (variantsError) return fail("Error al verificar las variantes")
+    if (!variants || variants.length !== variantIds.length) {
+      return fail("Una o más variantes no pertenecen al producto correcto")
+    }
+
+    variantMap = new Map(variants.map((v) => [v.id, v]))
+  }
+
+  // 6. Construir items con datos REALES de la DB. Si hay variante, su precio
+  // y nombre mandan. Si no, cae al producto base.
   const productMap = new Map(products.map((p) => [p.id, p]))
+  const mismatchedVariant = items.find((it) => {
+    if (it.variantId == null) return false
+    const variant = variantMap.get(it.variantId)
+    return !variant || variant.product_id !== it.productId
+  })
+  if (mismatchedVariant) {
+    return fail("Una variante no pertenece a su producto")
+  }
+
   const serverItems = items.map((clientItem) => {
     const product = productMap.get(clientItem.productId)!
+    const variant = clientItem.variantId ? variantMap.get(clientItem.variantId) ?? null : null
     return {
       productId: product.id,
       productName: product.product_name ?? "",
-      productPrice: Number(product.product_price ?? 0),
+      productPrice: Number(variant?.variant_price ?? product.product_price ?? 0),
       productQuantity: clientItem.productQuantity,
       notes: clientItem.notes ?? null,
+      variantId: variant?.id ?? null,
+      variantName: variant?.variant_name ?? null,
     }
   })
 
@@ -385,6 +422,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
         product_price: item.productPrice,
         product_quantity: item.productQuantity,
         notes: item.notes,
+        variant_id: item.variantId,
+        variant_name: item.variantName,
       }))
     )
 

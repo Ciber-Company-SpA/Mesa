@@ -12,7 +12,7 @@ type FetchedOrder = {
   table_id: number
   created_at: string
   tables: { table_number: number | null } | null
-  order_items: { product_quantity: number; product_name: string | null }[]
+  order_items: { product_quantity: number; product_name: string | null; variant_name: string | null }[]
 }
 
 type DisplayOrder = {
@@ -55,7 +55,7 @@ function ScreenPage() {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status_id, table_id, created_at, tables ( table_number ), order_items ( product_quantity, product_name )")
+        .select("id, status_id, table_id, created_at, tables ( table_number ), order_items ( product_quantity, product_name, variant_name )")
         .eq("id", orderId)
         .maybeSingle<FetchedOrder>()
 
@@ -70,7 +70,9 @@ function ScreenPage() {
         receivedAt: new Date(),
         items: data.order_items.map((item) => ({
           quantity: item.product_quantity,
-          name: item.product_name ?? "Producto",
+          name: item.variant_name
+            ? `${item.product_name ?? "Producto"} · ${item.variant_name}`
+            : item.product_name ?? "Producto",
         })),
       }
 

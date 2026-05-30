@@ -539,7 +539,7 @@ function WaiterControlSystem() {
                   {selectedOrder.items.map((item) => (
                     <li key={item.id} className="py-2.5 flex justify-between font-semibold">
                       <span>
-                        {item.productQuantity}x {item.productName}
+                        {item.productQuantity}x {item.productName}{item.variantName ? ` · ${item.variantName}` : ""}
                         {item.notes && (
                           <span className="block text-[10px] text-orange-600 italic font-normal mt-0.5">
                             📝 {item.notes}
@@ -662,7 +662,7 @@ function OrderCard({
           {order.items.map((item) => (
             <li key={item.id} className="flex justify-between font-medium">
               <span className="truncate pr-2">
-                {item.productQuantity}x {item.productName}
+                {item.productQuantity}x {item.productName}{item.variantName ? ` · ${item.variantName}` : ""}
               </span>
               <span className="text-stone-400 shrink-0">
                 ${(item.productPrice * item.productQuantity).toLocaleString("es-CL")}
