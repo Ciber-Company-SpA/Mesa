@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
-import { advanceOrderStatusAction } from "@/app/actions/order-actions"
 import { buildOrderTicket } from "@/lib/printer/escpos"
 import {
   isWebBluetoothAvailable,
@@ -29,7 +28,7 @@ type LogEntry = {
   at: Date
 }
 
-const NUEVO_STATUS_ID = 1
+const EN_PREPARACION_STATUS_ID = 2
 
 export default function PrinterPage() {
   const { restaurant, loading } = useRestaurant()
@@ -40,6 +39,7 @@ export default function PrinterPage() {
   const [pairError, setPairError] = useState<string | null>(null)
   const restaurantRef = useRef(restaurant)
   const printerRef = useRef<BluetoothPrinter | null>(null)
+  const printedOrderIds = useRef<Set<number>>(new Set())
 
   useEffect(() => {
     restaurantRef.current = restaurant
@@ -74,11 +74,12 @@ export default function PrinterPage() {
     }
   }
 
-  const handleNewOrder = useCallback(async (orderId: number) => {
+  const handleOrderEvent = useCallback(async (orderId: number) => {
     const current = restaurantRef.current
-    const currentPrinter = printerRef.current
-    if (!current || current.order_handling_mode !== "printer") return
+    if (!current?.printer_enabled) return
+    if (printedOrderIds.current.has(orderId)) return
 
+    const currentPrinter = printerRef.current
     if (!currentPrinter) {
       appendEntry({ orderId, kind: "error", message: "Impresora no conectada" })
       return
@@ -96,7 +97,9 @@ export default function PrinterPage() {
         return
       }
 
-      if (data.status_id !== NUEVO_STATUS_ID) return
+      if (data.status_id !== EN_PREPARACION_STATUS_ID) return
+
+      printedOrderIds.current.add(orderId)
 
       const ticket = buildOrderTicket({
         restaurantName: current.restaurant_name ?? "Restaurante",
@@ -109,19 +112,9 @@ export default function PrinterPage() {
       })
 
       await sendToPrinter(currentPrinter, ticket)
-
-      const advance = await advanceOrderStatusAction(orderId)
-      if (!advance.ok) {
-        appendEntry({
-          orderId,
-          kind: "error",
-          message: `Impreso pero falló avanzar estado: ${advance.error}`,
-        })
-        return
-      }
-
-      appendEntry({ orderId, kind: "ok", message: "Impreso y marcado en preparación" })
+      appendEntry({ orderId, kind: "ok", message: "Ticket impreso" })
     } catch (err) {
+      printedOrderIds.current.delete(orderId)
       logger.error("printer page error", { error: String(err) })
       appendEntry({
         orderId,
@@ -146,7 +139,20 @@ export default function PrinterPage() {
         },
         (payload) => {
           const id = (payload.new as { id?: number }).id
-          if (typeof id === "number") handleNewOrder(id)
+          if (typeof id === "number") handleOrderEvent(id)
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurant.id}`,
+        },
+        (payload) => {
+          const id = (payload.new as { id?: number }).id
+          if (typeof id === "number") handleOrderEvent(id)
         }
       )
       .subscribe()
@@ -154,7 +160,7 @@ export default function PrinterPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [restaurant?.id, channelId, handleNewOrder])
+  }, [restaurant?.id, channelId, handleOrderEvent])
 
   if (loading) {
     return (
@@ -172,10 +178,10 @@ export default function PrinterPage() {
     )
   }
 
-  const modeOk = restaurant.order_handling_mode === "printer"
+  const printerEnabled = restaurant.printer_enabled
   const btSupported = isWebBluetoothAvailable()
   const connected = Boolean(printer)
-  const ready = modeOk && connected
+  const ready = printerEnabled && connected
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-10 text-stone-900">
@@ -207,8 +213,8 @@ export default function PrinterPage() {
             <p className="text-sm font-bold text-stone-900">
               {ready
                 ? "Listo para imprimir"
-                : !modeOk
-                ? "Activá el modo Impresora en /admin/settings"
+                : !printerEnabled
+                ? "Activá la impresión en /admin/settings"
                 : !btSupported
                 ? "Tu navegador no soporta Web Bluetooth"
                 : "Falta emparejar la impresora"}
@@ -217,9 +223,9 @@ export default function PrinterPage() {
 
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-stone-500">Modo</dt>
+              <dt className="text-xs font-medium uppercase tracking-wider text-stone-500">Destino</dt>
               <dd className="mt-1 font-semibold">
-                {restaurant.order_handling_mode === "printer" ? "Impresora" : "Mesero"}
+                {restaurant.order_destination === "kitchen" ? "Cocina directa" : "Mesero"}
               </dd>
             </div>
             <div>
@@ -230,7 +236,7 @@ export default function PrinterPage() {
             </div>
           </dl>
 
-          {modeOk && btSupported && (
+          {printerEnabled && btSupported && (
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -254,17 +260,17 @@ export default function PrinterPage() {
             </p>
           )}
 
-          {!modeOk && (
+          {!printerEnabled && (
             <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-              El modo de pedidos está en &quot;Mesero&quot;. Cambialo en <span className="font-mono">/admin/settings</span>.
+              La impresión está desactivada. Activala en <span className="font-mono">/admin/settings</span>.
             </p>
           )}
         </div>
 
         <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-500">Últimos pedidos</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-500">Últimos tickets</h2>
           {entries.length === 0 ? (
-            <p className="mt-3 text-sm text-stone-500">Esperando pedidos nuevos…</p>
+            <p className="mt-3 text-sm text-stone-500">Esperando pedidos en preparación…</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {entries.map((entry) => (

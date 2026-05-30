@@ -5,9 +5,14 @@ import { useRestaurant } from "@/hooks/useRestaurant"
 import { useCategories } from "@/hooks/useCategories"
 import { useProducts } from "@/hooks/useProducts"
 import { invalidateCache } from "@/hooks/useCache"
-import { updateMenuTemplate, updateOrderHandling, updateRestaurantName } from "@/services/restaurant-service"
+import {
+  updateMenuTemplate,
+  updateOrderDestination,
+  updatePrinterConfig,
+  updateRestaurantName,
+} from "@/services/restaurant-service"
 import { MENU_TEMPLATES, getTemplateDesign } from "@/lib/menu/templates"
-import type { MenuTemplate, OrderHandlingMode, Restaurant } from "@/types/restaurant"
+import type { MenuTemplate, OrderDestination, Restaurant } from "@/types/restaurant"
 import type { Category } from "@/types/category"
 import type { Product } from "@/types/product"
 
@@ -199,37 +204,127 @@ type OrderHandlingSectionProps = {
   onSaved: () => void
 }
 
-function OrderHandlingSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
-  const initialMode: OrderHandlingMode = restaurant?.order_handling_mode ?? "waiter"
+function OrderDestinationSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
+  const initial: OrderDestination = restaurant?.order_destination ?? "waiter"
+
+  const [override, setOverride] = useState<OrderDestination | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  const destination: OrderDestination = override ?? initial
+  const isDirty = destination !== initial
+
+  async function handleSave() {
+    if (saving || !isDirty) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const result = await updateOrderDestination({ destination })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      onSaved()
+      setOverride(null)
+      setFeedback({ kind: "ok", message: "Cambios guardados" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Destino de pedidos</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Elegí si los pedidos pasan primero por un mesero o llegan directo a cocina.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setOverride("waiter")}
+          className={`rounded-2xl border p-4 text-left transition ${
+            destination === "waiter" ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-stone-900">Mesero</p>
+          <p className="mt-1 text-xs leading-5 text-stone-500">
+            Los pedidos inician en &quot;Nuevo&quot; y el mesero los confirma para que pasen a cocina.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setOverride("kitchen")}
+          className={`rounded-2xl border p-4 text-left transition ${
+            destination === "kitchen" ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-stone-900">Cocina directa</p>
+          <p className="mt-1 text-xs leading-5 text-stone-500">
+            Los pedidos llegan en &quot;En preparación&quot; sin pasar por el mesero.
+          </p>
+        </button>
+      </div>
+
+      {feedback && (
+        <p
+          className={`mt-5 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
+
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+        {!isDirty && !saving && (
+          <span className="text-xs font-medium text-stone-400">Sin cambios.</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function PrinterConfigSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
+  const initialEnabled = restaurant?.printer_enabled ?? false
   const initialDeviceName = restaurant?.printer_bluetooth_name ?? ""
 
-  const [modeOverride, setModeOverride] = useState<OrderHandlingMode | null>(null)
+  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null)
   const [deviceNameOverride, setDeviceNameOverride] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
 
-  const mode: OrderHandlingMode = modeOverride ?? initialMode
-  const deviceName: string = deviceNameOverride ?? initialDeviceName
-
+  const enabled = enabledOverride ?? initialEnabled
+  const deviceName = deviceNameOverride ?? initialDeviceName
   const isDirty =
-    mode !== initialMode ||
+    enabled !== initialEnabled ||
     (deviceNameOverride !== null && deviceNameOverride.trim() !== initialDeviceName.trim())
 
   async function handleSave() {
-    if (saving) return
+    if (saving || !isDirty) return
     setSaving(true)
     setFeedback(null)
     try {
-      const result = await updateOrderHandling({
-        mode,
-        bluetoothName: mode === "printer" ? deviceName.trim() : null,
+      const result = await updatePrinterConfig({
+        enabled,
+        bluetoothName: enabled ? deviceName.trim() : null,
       })
       if (!result.ok) {
         setFeedback({ kind: "error", message: result.error })
         return
       }
       onSaved()
-      setModeOverride(null)
+      setEnabledOverride(null)
       setDeviceNameOverride(null)
       setFeedback({ kind: "ok", message: "Cambios guardados" })
     } finally {
@@ -239,39 +334,33 @@ function OrderHandlingSection({ restaurant, onSaved }: OrderHandlingSectionProps
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-bold text-stone-900">Modo de pedidos</h3>
+      <h3 className="text-lg font-bold text-stone-900">Impresión de pedidos</h3>
       <p className="mt-1 text-xs font-medium text-stone-500">
-        Elegí si los pedidos los acepta un mesero o se imprimen automáticamente vía Bluetooth.
+        Activá la impresión por Bluetooth para que cocina reciba un ticket cuando el pedido entra en preparación.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 flex items-center gap-3">
         <button
           type="button"
-          onClick={() => setModeOverride("waiter")}
-          className={`rounded-2xl border p-4 text-left transition ${
-            mode === "waiter" ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+          onClick={() => setEnabledOverride(!enabled)}
+          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition ${
+            enabled ? "bg-orange-500" : "bg-stone-200"
           }`}
+          role="switch"
+          aria-checked={enabled}
         >
-          <p className="text-sm font-bold text-stone-900">Mesero</p>
-          <p className="mt-1 text-xs leading-5 text-stone-500">
-            El mesero recibe el pedido en su app y lo confirma a mano.
-          </p>
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+              enabled ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
         </button>
-        <button
-          type="button"
-          onClick={() => setModeOverride("printer")}
-          className={`rounded-2xl border p-4 text-left transition ${
-            mode === "printer" ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
-          }`}
-        >
-          <p className="text-sm font-bold text-stone-900">Impresora Bluetooth</p>
-          <p className="mt-1 text-xs leading-5 text-stone-500">
-            El pedido se imprime automáticamente y pasa a &quot;En preparación&quot;.
-          </p>
-        </button>
+        <span className="text-sm font-semibold text-stone-900">
+          {enabled ? "Impresión activada" : "Impresión desactivada"}
+        </span>
       </div>
 
-      {mode === "printer" && (
+      {enabled && (
         <div className="mt-6 max-w-md">
           <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
             Nombre del dispositivo (opcional)
@@ -286,7 +375,7 @@ function OrderHandlingSection({ restaurant, onSaved }: OrderHandlingSectionProps
           />
           <p className="mt-2 text-[11px] leading-4 text-stone-500">
             El emparejamiento se hace desde <span className="font-mono">/printer</span> en el dispositivo del local
-            (tablet o PC con Chrome/Edge). Si dejás vacío, vas a poder elegir cualquier impresora desde el diálogo del navegador.
+            (tablet o PC con Chrome/Edge). Si dejás vacío, vas a elegir la impresora desde el diálogo del navegador.
           </p>
         </div>
       )}
@@ -374,7 +463,15 @@ export default function AdminSettingsPage() {
         }}
       />
 
-      <OrderHandlingSection
+      <OrderDestinationSection
+        restaurant={restaurant ?? null}
+        onSaved={() => {
+          if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+          refresh()
+        }}
+      />
+
+      <PrinterConfigSection
         restaurant={restaurant ?? null}
         onSaved={() => {
           if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)

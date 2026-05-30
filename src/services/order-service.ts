@@ -305,7 +305,17 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
 
   const restaurantId = table.restaurant_id
 
-  // 2. Cargar productos reales desde DB, filtrados por restaurante
+  // 2. Cargar configuración del restaurante para decidir el status inicial.
+  // Si order_destination = 'kitchen' los pedidos arrancan en "En preparación"
+  // (status_id=2), saltando al mesero. Caso contrario inician en "Nuevo".
+  const { data: restaurantRow } = await supabase
+    .from("restaurants")
+    .select("order_destination")
+    .eq("id", restaurantId)
+    .maybeSingle()
+
+  const initialStatusId = restaurantRow?.order_destination === "kitchen" ? 2 : 1
+
   const productIds = items.map((i) => i.productId)
   const { data: products, error: productsError } = await supabase
     .from("products")
@@ -354,7 +364,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
       table_id: tableId,
       restaurant_id: restaurantId,
       total,
-      status_id: 1,
+      status_id: initialStatusId,
       created_at: new Date().toISOString(),
     })
     .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")

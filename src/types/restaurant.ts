@@ -1,6 +1,6 @@
 export type MenuTemplate = "noche" | "aurora" | "cyber-ruby" | "eclipse" | "forest-moss" | "nordic-minimal"
 
-export type OrderHandlingMode = "waiter" | "printer"
+export type OrderDestination = "waiter" | "kitchen"
 
 export type PublicRestaurant = {
   id: number
@@ -10,6 +10,7 @@ export type PublicRestaurant = {
 }
 
 export type Restaurant = PublicRestaurant & {
-  order_handling_mode: OrderHandlingMode
+  order_destination: OrderDestination
+  printer_enabled: boolean
   printer_bluetooth_name: string | null
 }

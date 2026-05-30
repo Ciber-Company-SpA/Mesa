@@ -37,22 +37,16 @@ export async function updateMenuTemplate(
   return ok(null)
 }
 
-const UpdateOrderHandlingSchema = z.object({
-  mode: z.enum(["waiter", "printer"]),
-  bluetoothName: z
-    .string()
-    .trim()
-    .max(80, "Máximo 80 caracteres")
-    .optional()
-    .nullable(),
+const UpdateOrderDestinationSchema = z.object({
+  destination: z.enum(["waiter", "kitchen"]),
 })
 
-export type UpdateOrderHandlingInput = z.infer<typeof UpdateOrderHandlingSchema>
+export type UpdateOrderDestinationInput = z.infer<typeof UpdateOrderDestinationSchema>
 
-export async function updateOrderHandling(
-  input: UpdateOrderHandlingInput
+export async function updateOrderDestination(
+  input: UpdateOrderDestinationInput
 ): Promise<Result<null>> {
-  const parsed = UpdateOrderHandlingSchema.safeParse(input)
+  const parsed = UpdateOrderDestinationSchema.safeParse(input)
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
   }
@@ -61,13 +55,48 @@ export async function updateOrderHandling(
   if (!auth.ok) return auth
 
   const { supabase, restaurantId } = auth.data
-  const { mode, bluetoothName } = parsed.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ order_destination: parsed.data.destination })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  return ok(null)
+}
+
+const UpdatePrinterConfigSchema = z.object({
+  enabled: z.boolean(),
+  bluetoothName: z
+    .string()
+    .trim()
+    .max(80, "Máximo 80 caracteres")
+    .optional()
+    .nullable(),
+})
+
+export type UpdatePrinterConfigInput = z.infer<typeof UpdatePrinterConfigSchema>
+
+export async function updatePrinterConfig(
+  input: UpdatePrinterConfigInput
+): Promise<Result<null>> {
+  const parsed = UpdatePrinterConfigSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+  const { enabled, bluetoothName } = parsed.data
 
   const { error } = await supabase
     .from("restaurants")
     .update({
-      order_handling_mode: mode,
-      printer_bluetooth_name: mode === "printer" ? (bluetoothName?.trim() || null) : null,
+      printer_enabled: enabled,
+      printer_bluetooth_name: enabled ? (bluetoothName?.trim() || null) : null,
     })
     .eq("id", restaurantId)
 
