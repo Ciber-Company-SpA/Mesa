@@ -29,8 +29,9 @@ export function AdminHeader() {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
+    supabase.removeAllChannels()
     clearUserScopedCache()
+    await supabase.auth.signOut({ scope: "local" })
     router.replace("/login")
   }
 
