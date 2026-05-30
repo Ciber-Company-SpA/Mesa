@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 export type TableOrderItem = {
   id: number
   productName: string
+  variantName: string | null
   productPrice: number
   productQuantity: number
   notes: string | null
@@ -30,6 +31,7 @@ type OrderRow = {
   order_items: Array<{
     id: number
     product_name: string | null
+    variant_name: string | null
     product_price: number | null
     product_quantity: number
     notes: string | null
@@ -68,6 +70,7 @@ function mapRow(row: OrderRow): TableOrder {
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
+      variantName: it.variant_name,
       productPrice: Number(it.product_price ?? 0),
       productQuantity: it.product_quantity,
       notes: it.notes,
@@ -89,7 +92,7 @@ export function useTableOrders(tableId: number | null) {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status_id, created_at, ready_at, order_status(status_name), order_items(id, product_name, product_price, product_quantity, notes)")
+        .select("id, total, status_id, created_at, ready_at, order_status(status_name), order_items(id, product_name, variant_name, product_price, product_quantity, notes)")
         .eq("table_id", tableId)
         .order("created_at", { ascending: false })
 

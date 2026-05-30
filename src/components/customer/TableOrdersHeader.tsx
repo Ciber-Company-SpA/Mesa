@@ -241,7 +241,7 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
                         {item.productQuantity}x
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-white truncate">{item.productName}</p>
+                        <p className="text-xs font-black text-white truncate">{item.productName}{item.variantName ? ` · ${item.variantName}` : ""}</p>
                         {item.notes && (
                           <p className="mt-0.5 text-[10px] text-stone-400 leading-normal italic">
                             Nota: &ldquo;{item.notes}&rdquo;
