@@ -94,15 +94,31 @@ export function AdminHeader() {
         </svg>
       ),
     },
-    {
-      label: "Impresora",
-      href: "/admin/printer",
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-        </svg>
-      ),
-    },
+    ...(restaurant?.output_mode === "printer"
+      ? [
+          {
+            label: "Impresora",
+            href: "/admin/printer",
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+            ),
+          },
+        ]
+      : restaurant?.output_mode === "screen"
+      ? [
+          {
+            label: "Pantalla",
+            href: "/admin/screen",
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     {
       label: "Ajustes",
       href: "/admin/settings",
@@ -122,6 +138,7 @@ export function AdminHeader() {
                      pathname !== "/admin/categories" &&
                      pathname !== "/admin/waiters" &&
                      pathname !== "/admin/printer" &&
+                     pathname !== "/admin/screen" &&
                      pathname !== "/admin/settings"
 
   return (

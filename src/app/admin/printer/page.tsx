@@ -120,7 +120,7 @@ export default function PrinterPage() {
 
   const handleOrderEvent = useCallback(async (orderId: number) => {
     const current = restaurantRef.current
-    if (!current?.printer_enabled) return
+    if (current?.output_mode !== "printer") return
     if (printedOrderIds.current.has(orderId)) return
 
     try {
@@ -232,7 +232,7 @@ export default function PrinterPage() {
     )
   }
 
-  const printerEnabled = restaurant.printer_enabled
+  const printerEnabled = restaurant.output_mode === "printer"
   const btSupported = isWebBluetoothAvailable()
   const connected = Boolean(printer)
   const ready = printerEnabled && connected
@@ -268,7 +268,7 @@ export default function PrinterPage() {
               {ready
                 ? "Listo para imprimir"
                 : !printerEnabled
-                ? "Activá la impresión en /admin/settings"
+                ? "Elegí 'Impresora térmica' en /admin/settings"
                 : !btSupported
                 ? "Tu navegador no soporta Web Bluetooth"
                 : "Falta emparejar la impresora"}
@@ -351,7 +351,7 @@ export default function PrinterPage() {
 
           {!printerEnabled && (
             <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-              La impresión está desactivada. Activala en <span className="font-mono">/admin/settings</span>.
+              La salida actual no es impresora. Cambiala en <span className="font-mono">/admin/settings</span>.
             </p>
           )}
         </div>

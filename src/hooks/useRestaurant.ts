@@ -10,7 +10,7 @@ export function useRestaurant() {
   const fetchRestaurant = useCallback(async (): Promise<Restaurant> => {
     const { data, error } = await supabase
       .from("restaurants")
-      .select("id, restaurant_name, restaurant_logo, menu_template, order_destination, printer_enabled, printer_bluetooth_name")
+      .select("id, restaurant_name, restaurant_logo, menu_template, order_destination, output_mode, printer_bluetooth_name")
       .eq("id", restaurantId)
       .single()
 

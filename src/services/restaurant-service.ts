@@ -66,8 +66,8 @@ export async function updateOrderDestination(
   return ok(null)
 }
 
-const UpdatePrinterConfigSchema = z.object({
-  enabled: z.boolean(),
+const UpdateOutputModeSchema = z.object({
+  mode: z.enum(["none", "printer", "screen"]),
   bluetoothName: z
     .string()
     .trim()
@@ -76,12 +76,12 @@ const UpdatePrinterConfigSchema = z.object({
     .nullable(),
 })
 
-export type UpdatePrinterConfigInput = z.infer<typeof UpdatePrinterConfigSchema>
+export type UpdateOutputModeInput = z.infer<typeof UpdateOutputModeSchema>
 
-export async function updatePrinterConfig(
-  input: UpdatePrinterConfigInput
+export async function updateOutputMode(
+  input: UpdateOutputModeInput
 ): Promise<Result<null>> {
-  const parsed = UpdatePrinterConfigSchema.safeParse(input)
+  const parsed = UpdateOutputModeSchema.safeParse(input)
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
   }
@@ -90,13 +90,13 @@ export async function updatePrinterConfig(
   if (!auth.ok) return auth
 
   const { supabase, restaurantId } = auth.data
-  const { enabled, bluetoothName } = parsed.data
+  const { mode, bluetoothName } = parsed.data
 
   const { error } = await supabase
     .from("restaurants")
     .update({
-      printer_enabled: enabled,
-      printer_bluetooth_name: enabled ? (bluetoothName?.trim() || null) : null,
+      output_mode: mode,
+      printer_bluetooth_name: mode === "printer" ? (bluetoothName?.trim() || null) : null,
     })
     .eq("id", restaurantId)
 

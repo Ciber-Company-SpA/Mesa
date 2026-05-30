@@ -8,11 +8,11 @@ import { invalidateCache } from "@/hooks/useCache"
 import {
   updateMenuTemplate,
   updateOrderDestination,
-  updatePrinterConfig,
+  updateOutputMode,
   updateRestaurantName,
 } from "@/services/restaurant-service"
 import { MENU_TEMPLATES, getTemplateDesign } from "@/lib/menu/templates"
-import type { MenuTemplate, OrderDestination, Restaurant } from "@/types/restaurant"
+import type { MenuTemplate, OrderDestination, OutputMode, Restaurant } from "@/types/restaurant"
 import type { Category } from "@/types/category"
 import type { Product } from "@/types/product"
 
@@ -295,36 +295,56 @@ function OrderDestinationSection({ restaurant, onSaved }: OrderHandlingSectionPr
   )
 }
 
-function PrinterConfigSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
-  const initialEnabled = restaurant?.printer_enabled ?? false
+const OUTPUT_OPTIONS: Array<{ id: OutputMode; title: string; description: string }> = [
+  {
+    id: "none",
+    title: "Ninguna",
+    description: "No se envía el pedido a impresora ni pantalla. Los meseros lo gestionan desde el panel.",
+  },
+  {
+    id: "printer",
+    title: "Impresora térmica",
+    description: "Bluetooth (58/80mm). Cocina recibe un ticket cuando el pedido entra en preparación.",
+  },
+  {
+    id: "screen",
+    title: "Pantalla en cocina",
+    description: "Vista kiosko en /admin/screen para abrir en una TV o tablet en cocina.",
+  },
+]
+
+function OutputModeSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
+  const initialMode: OutputMode = restaurant?.output_mode ?? "none"
   const initialDeviceName = restaurant?.printer_bluetooth_name ?? ""
 
-  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null)
+  const [modeOverride, setModeOverride] = useState<OutputMode | null>(null)
   const [deviceNameOverride, setDeviceNameOverride] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
 
-  const enabled = enabledOverride ?? initialEnabled
+  const mode = modeOverride ?? initialMode
   const deviceName = deviceNameOverride ?? initialDeviceName
   const isDirty =
-    enabled !== initialEnabled ||
-    (deviceNameOverride !== null && deviceNameOverride.trim() !== initialDeviceName.trim())
+    mode !== initialMode ||
+    (mode === "printer" &&
+      deviceNameOverride !== null &&
+      deviceNameOverride.trim() !== initialDeviceName.trim())
 
   async function handleSave() {
     if (saving || !isDirty) return
     setSaving(true)
     setFeedback(null)
     try {
-      const result = await updatePrinterConfig({
-        enabled,
-        bluetoothName: enabled ? deviceName.trim() : null,
+      const result = await updateOutputMode({
+        mode,
+        bluetoothName: mode === "printer" ? deviceName.trim() : null,
       })
       if (!result.ok) {
         setFeedback({ kind: "error", message: result.error })
         return
       }
       onSaved()
-      setEnabledOverride(null)
+      setModeOverride(null)
       setDeviceNameOverride(null)
       setFeedback({ kind: "ok", message: "Cambios guardados" })
     } finally {
@@ -334,33 +354,31 @@ function PrinterConfigSection({ restaurant, onSaved }: OrderHandlingSectionProps
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-bold text-stone-900">Impresión de pedidos</h3>
+      <h3 className="text-lg font-bold text-stone-900">Salida del pedido</h3>
       <p className="mt-1 text-xs font-medium text-stone-500">
-        Activá la impresión por Bluetooth para que cocina reciba un ticket cuando el pedido entra en preparación.
+        Elegí cómo recibe cocina los pedidos cuando entran en preparación.
       </p>
 
-      <div className="mt-5 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setEnabledOverride(!enabled)}
-          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition ${
-            enabled ? "bg-orange-500" : "bg-stone-200"
-          }`}
-          role="switch"
-          aria-checked={enabled}
-        >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-              enabled ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
-        <span className="text-sm font-semibold text-stone-900">
-          {enabled ? "Impresión activada" : "Impresión desactivada"}
-        </span>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {OUTPUT_OPTIONS.map((option) => {
+          const selected = mode === option.id
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setModeOverride(option.id)}
+              className={`rounded-2xl border p-4 text-left transition ${
+                selected ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+              }`}
+            >
+              <p className="text-sm font-bold text-stone-900">{option.title}</p>
+              <p className="mt-1 text-xs leading-5 text-stone-500">{option.description}</p>
+            </button>
+          )
+        })}
       </div>
 
-      {enabled && (
+      {mode === "printer" && (
         <div className="mt-6 max-w-md">
           <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
             Nombre del dispositivo (opcional)
@@ -376,6 +394,15 @@ function PrinterConfigSection({ restaurant, onSaved }: OrderHandlingSectionProps
           <p className="mt-2 text-[11px] leading-4 text-stone-500">
             El emparejamiento se hace desde <span className="font-mono">/admin/printer</span> en el dispositivo del local
             (tablet o PC con Chrome/Edge). Si dejás vacío, vas a elegir la impresora desde el diálogo del navegador.
+          </p>
+        </div>
+      )}
+
+      {mode === "screen" && (
+        <div className="mt-6 max-w-md rounded-2xl border border-stone-200 bg-stone-50 p-4">
+          <p className="text-xs leading-5 text-stone-600">
+            Abrí <span className="font-mono font-semibold">/admin/screen</span> en la TV o tablet de cocina. Los pedidos
+            van a aparecer ahí en grande cuando entren en preparación.
           </p>
         </div>
       )}
@@ -471,7 +498,7 @@ export default function AdminSettingsPage() {
         }}
       />
 
-      <PrinterConfigSection
+      <OutputModeSection
         restaurant={restaurant ?? null}
         onSaved={() => {
           if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
