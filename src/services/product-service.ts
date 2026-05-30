@@ -131,7 +131,9 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
     .single()
 
   if (productError || !productData) {
-    return fail("Error al crear el producto")
+    // eslint-disable-next-line no-console -- diagnóstico temporal
+    console.error("createProduct insert failed", productError)
+    return fail(`Error al crear el producto: ${productError?.message ?? "desconocido"}`)
   }
 
   if (options.length > 1) {
