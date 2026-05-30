@@ -44,6 +44,32 @@ export type TicketInput = {
   items: TicketItem[]
 }
 
+const TICKET_WIDTH = 32
+
+function centerLine(text: string): string {
+  const trimmed = text.trim()
+  if (trimmed.length >= TICKET_WIDTH) return trimmed
+  const pad = Math.floor((TICKET_WIDTH - trimmed.length) / 2)
+  return " ".repeat(pad) + trimmed
+}
+
+/**
+ * Devuelve el mismo contenido que `buildOrderTicket` pero como texto plano,
+ * sin códigos ESC/POS. Útil para previews en pantalla.
+ */
+export function formatTicketAsText(input: TicketInput): string {
+  const lines: string[] = []
+  lines.push(centerLine(input.restaurantName.toUpperCase()))
+  lines.push("-".repeat(TICKET_WIDTH))
+  lines.push(`Mesa ${input.tableNumber}`)
+  lines.push(`Pedido #${input.orderId}`)
+  lines.push("-".repeat(TICKET_WIDTH))
+  for (const item of input.items) {
+    lines.push(`${item.quantity}x  ${item.name}`)
+  }
+  return lines.join("\n")
+}
+
 export function buildOrderTicket(input: TicketInput): Uint8Array {
   const lines: Uint8Array[] = [INIT]
 

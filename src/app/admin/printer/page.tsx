@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
-import { buildOrderTicket } from "@/lib/printer/escpos"
+import { buildOrderTicket, formatTicketAsText } from "@/lib/printer/escpos"
 import {
   isWebBluetoothAvailable,
   requestPrinter,
@@ -57,6 +57,25 @@ export default function PrinterPage() {
   }
 
   const [testing, setTesting] = useState(false)
+  const [previewText, setPreviewText] = useState<string | null>(null)
+
+  function buildSampleTicket() {
+    const current = restaurantRef.current
+    return {
+      restaurantName: current?.restaurant_name ?? "Restaurante",
+      tableNumber: 1,
+      orderId: 9999,
+      items: [
+        { quantity: 1, name: "Café con leche" },
+        { quantity: 2, name: "Empanada de carne" },
+        { quantity: 1, name: "Coca-Cola 500ml" },
+      ],
+    }
+  }
+
+  function handlePreview() {
+    setPreviewText(formatTicketAsText(buildSampleTicket()))
+  }
 
   async function handleTestPrint() {
     if (testing) return
@@ -66,16 +85,7 @@ export default function PrinterPage() {
 
     setTesting(true)
     try {
-      const ticket = buildOrderTicket({
-        restaurantName: current.restaurant_name ?? "Restaurante",
-        tableNumber: 1,
-        orderId: 9999,
-        items: [
-          { quantity: 1, name: "Café con leche" },
-          { quantity: 2, name: "Empanada de carne" },
-          { quantity: 1, name: "Coca-Cola 500ml" },
-        ],
-      })
+      const ticket = buildOrderTicket(buildSampleTicket())
       await sendToPrinter(currentPrinter, ticket)
       appendEntry({ orderId: 9999, kind: "ok", message: "Ticket de prueba impreso" })
     } catch (err) {
@@ -290,11 +300,36 @@ export default function PrinterPage() {
                   {testing ? "Imprimiendo..." : "Probar impresión"}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handlePreview}
+                className="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
+              >
+                Vista previa del ticket
+              </button>
               {connected && (
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                   Conectado
                 </span>
               )}
+            </div>
+          )}
+
+          {previewText && (
+            <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Vista previa</p>
+                <button
+                  type="button"
+                  onClick={() => setPreviewText(null)}
+                  className="text-xs font-semibold text-stone-500 hover:text-stone-800"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <pre className="overflow-x-auto whitespace-pre font-mono text-xs leading-5 text-stone-800">
+{previewText}
+              </pre>
             </div>
           )}
 
