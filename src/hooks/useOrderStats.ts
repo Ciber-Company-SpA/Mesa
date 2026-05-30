@@ -25,9 +25,8 @@ function isCompletedOrder(row: OrderStatsRow) {
 
   return (
     row.status_id === 4 ||
-    statusName.includes("entregado") ||
-    statusName.includes("cerrado") ||
-    statusName.includes("pagado")
+    statusName.includes("pagado") ||
+    statusName.includes("cerrado")
   )
 }
 

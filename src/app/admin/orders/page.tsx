@@ -6,7 +6,7 @@ const statusStyles: Record<string, string> = {
   Nuevo: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/50",
   Preparación: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/50",
   Listo: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/50",
-  Entregado: "bg-stone-50 text-stone-600 ring-1 ring-stone-200/50",
+  Pagado: "bg-stone-50 text-stone-600 ring-1 ring-stone-200/50",
   Cancelado: "bg-red-50 text-red-700 ring-1 ring-red-200/50",
 }
 
