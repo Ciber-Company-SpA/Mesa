@@ -56,6 +56,40 @@ export default function PrinterPage() {
     ])
   }
 
+  const [testing, setTesting] = useState(false)
+
+  async function handleTestPrint() {
+    if (testing) return
+    const current = restaurantRef.current
+    const currentPrinter = printerRef.current
+    if (!current || !currentPrinter) return
+
+    setTesting(true)
+    try {
+      const ticket = buildOrderTicket({
+        restaurantName: current.restaurant_name ?? "Restaurante",
+        tableNumber: 1,
+        orderId: 9999,
+        items: [
+          { quantity: 1, name: "Café con leche" },
+          { quantity: 2, name: "Empanada de carne" },
+          { quantity: 1, name: "Coca-Cola 500ml" },
+        ],
+      })
+      await sendToPrinter(currentPrinter, ticket)
+      appendEntry({ orderId: 9999, kind: "ok", message: "Ticket de prueba impreso" })
+    } catch (err) {
+      logger.error("test print failed", { error: String(err) })
+      appendEntry({
+        orderId: 9999,
+        kind: "error",
+        message: err instanceof Error ? err.message : "Error en impresión de prueba",
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
+
   async function handlePair() {
     if (pairing) return
     setPairing(true)
@@ -246,6 +280,16 @@ export default function PrinterPage() {
               >
                 {pairing ? "Emparejando..." : connected ? "Reemparejar" : "Emparejar impresora"}
               </button>
+              {connected && (
+                <button
+                  type="button"
+                  onClick={handleTestPrint}
+                  disabled={testing}
+                  className="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {testing ? "Imprimiendo..." : "Probar impresión"}
+                </button>
+              )}
               {connected && (
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                   Conectado

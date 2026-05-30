@@ -1,18 +1,28 @@
+/// <reference types="web-bluetooth" />
 /**
  * Web Bluetooth para impresoras térmicas ESC/POS.
  *
  * La mayoría de impresoras 58mm/80mm chinas (POS-58, MTP-II, RPP02N, GOOJPRT)
- * exponen un servicio Nordic UART-like sobre el UUID 0x18f0 con una
- * característica writable (0x2af1). Algunas usan FFE0/FFE1. Hacemos
- * descubrimiento adaptativo: pedimos ambos servicios y elegimos el primero
- * con una característica writable que aparezca.
+ * exponen su característica writable bajo uno de varios servicios conocidos.
+ * Hacemos descubrimiento adaptativo: declaramos todos los servicios posibles
+ * en `optionalServices` y elegimos el primero que tenga una característica
+ * escribible.
+ *
+ * IMPORTANTE: cada servicio que se intente con getPrimaryService() DEBE estar
+ * declarado en optionalServices del requestDevice(), o el navegador lo bloquea.
  */
 
-const PRIMARY_SERVICE = "000018f0-0000-1000-8000-00805f9b34fb"
-const FALLBACK_SERVICE = "0000ff00-0000-1000-8000-00805f9b34fb"
+// Todos los servicios que vamos a intentar. Mismo array para optionalServices
+// y para el loop de descubrimiento — así nunca se desincronizan.
+const PRINTER_SERVICES = [
+  "000018f0-0000-1000-8000-00805f9b34fb", // POS-58, MTP-II, GOOJPRT, RPP02N
+  "0000ffe0-0000-1000-8000-00805f9b34fb", // HM-10 / FFE0-FFE1 (muy común)
+  "0000ff00-0000-1000-8000-00805f9b34fb", // algunos clones
+  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // Microchip / ISSC
+]
 
-const CHUNK_SIZE = 100 // BLE típico: MTU 23 (20 payload). Chrome negocia más, pero 100 funciona seguro.
-const CHUNK_DELAY_MS = 30 // delay entre paquetes para que el buffer del printer no se sature.
+const CHUNK_SIZE = 100 // BLE: MTU 23 (20 payload). Chrome negocia más; 100 es seguro.
+const CHUNK_DELAY_MS = 30 // delay entre paquetes para no saturar el buffer del printer.
 
 export type BluetoothPrinter = {
   device: BluetoothDevice
@@ -28,15 +38,14 @@ export async function requestPrinter(preferredName?: string | null): Promise<Blu
     throw new Error("Tu navegador no soporta Web Bluetooth. Usá Chrome o Edge en escritorio o Android.")
   }
 
-  const filters = preferredName?.trim()
-    ? [{ namePrefix: preferredName.trim() }]
-    : undefined
+  // No se pueden pasar `filters` y `acceptAllDevices` a la vez: la spec lo prohíbe.
+  // Construimos el objeto condicionalmente.
+  const name = preferredName?.trim()
+  const options: RequestDeviceOptions = name
+    ? { filters: [{ namePrefix: name }], optionalServices: PRINTER_SERVICES }
+    : { acceptAllDevices: true, optionalServices: PRINTER_SERVICES }
 
-  const device = await navigator.bluetooth.requestDevice({
-    filters,
-    acceptAllDevices: !filters,
-    optionalServices: [PRIMARY_SERVICE, FALLBACK_SERVICE],
-  })
+  const device = await navigator.bluetooth.requestDevice(options)
 
   return connectToDevice(device)
 }
@@ -44,9 +53,10 @@ export async function requestPrinter(preferredName?: string | null): Promise<Blu
 async function connectToDevice(device: BluetoothDevice): Promise<BluetoothPrinter> {
   if (!device.gatt) throw new Error("El dispositivo no expone GATT.")
 
-  const server = await device.gatt.connect()
+  // Si ya está conectado (p. ej. al reemparejar), reusamos el server.
+  const server = device.gatt.connected ? device.gatt : await device.gatt.connect()
 
-  for (const service of [PRIMARY_SERVICE, FALLBACK_SERVICE]) {
+  for (const service of PRINTER_SERVICES) {
     try {
       const gattService = await server.getPrimaryService(service)
       const chars = await gattService.getCharacteristics()
@@ -55,7 +65,7 @@ async function connectToDevice(device: BluetoothDevice): Promise<BluetoothPrinte
       )
       if (writable) return { device, characteristic: writable }
     } catch {
-      // probamos el siguiente service
+      // Este servicio no existe en el dispositivo; probamos el siguiente.
     }
   }
 
