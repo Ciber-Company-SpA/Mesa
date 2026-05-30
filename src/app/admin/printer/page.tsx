@@ -17,7 +17,7 @@ type FetchedOrder = {
   status_id: number
   table_id: number
   tables: { table_number: number | null } | null
-  order_items: { quantity: number; products: { product_name: string } | null }[]
+  order_items: { product_quantity: number; product_name: string | null }[]
 }
 
 type LogEntry = {
@@ -126,7 +126,7 @@ export default function PrinterPage() {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status_id, table_id, tables ( table_number ), order_items ( quantity, products ( product_name ) )")
+        .select("id, status_id, table_id, tables ( table_number ), order_items ( product_quantity, product_name )")
         .eq("id", orderId)
         .maybeSingle<FetchedOrder>()
 
@@ -148,8 +148,8 @@ export default function PrinterPage() {
         tableNumber: data.tables?.table_number ?? data.table_id,
         orderId: data.id,
         items: data.order_items.map((item) => ({
-          quantity: item.quantity,
-          name: item.products?.product_name ?? "Producto",
+          quantity: item.product_quantity,
+          name: item.product_name ?? "Producto",
         })),
       }
 
