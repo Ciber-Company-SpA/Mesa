@@ -374,7 +374,7 @@ function PrinterConfigSection({ restaurant, onSaved }: OrderHandlingSectionProps
             className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
           />
           <p className="mt-2 text-[11px] leading-4 text-stone-500">
-            El emparejamiento se hace desde <span className="font-mono">/printer</span> en el dispositivo del local
+            El emparejamiento se hace desde <span className="font-mono">/admin/printer</span> en el dispositivo del local
             (tablet o PC con Chrome/Edge). Si dejás vacío, vas a elegir la impresora desde el diálogo del navegador.
           </p>
         </div>
