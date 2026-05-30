@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { logger } from "@/lib/logger"
+import { AdminGuard } from "@/app/admin/AdminGuard"
 
 type FetchedOrder = {
   id: number
@@ -27,7 +28,15 @@ function formatClock(date: Date) {
   return date.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
 }
 
-export default function ScreenPage() {
+export default function ScreenPageWrapper() {
+  return (
+    <AdminGuard>
+      <ScreenPage />
+    </AdminGuard>
+  )
+}
+
+function ScreenPage() {
   const { restaurant, loading } = useRestaurant()
   const channelId = useId()
   const [orders, setOrders] = useState<DisplayOrder[]>([])

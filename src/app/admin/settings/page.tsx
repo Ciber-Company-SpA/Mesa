@@ -309,7 +309,7 @@ const OUTPUT_OPTIONS: Array<{ id: OutputMode; title: string; description: string
   {
     id: "screen",
     title: "Pantalla en cocina",
-    description: "Vista kiosko en /admin/screen para abrir en una TV o tablet en cocina.",
+    description: "Vista kiosko en /screen para abrir en una TV o tablet en cocina.",
   },
 ]
 
@@ -401,7 +401,7 @@ function OutputModeSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
       {mode === "screen" && (
         <div className="mt-6 max-w-md rounded-2xl border border-stone-200 bg-stone-50 p-4">
           <p className="text-xs leading-5 text-stone-600">
-            Abrí <span className="font-mono font-semibold">/admin/screen</span> en la TV o tablet de cocina. Los pedidos
+            Abrí <span className="font-mono font-semibold">/screen</span> en la TV o tablet de cocina. Los pedidos
             van a aparecer ahí en grande cuando entren en preparación.
           </p>
         </div>
