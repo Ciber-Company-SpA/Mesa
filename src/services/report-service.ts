@@ -81,16 +81,7 @@ export async function getSalesReport(range: ReportRange): Promise<Result<SalesRe
     p_granularity: parsed.data.granularity,
   })
 
-  if (error || !data) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("get_sales_report RPC failed", {
-      error,
-      hasData: !!data,
-      restaurantId,
-      range: parsed.data,
-    })
-    return fail(`Error al cargar el reporte: ${error?.message ?? "sin datos"}`)
-  }
+  if (error || !data) return fail("Error al cargar el reporte")
 
   const raw = data as RpcResult
 
