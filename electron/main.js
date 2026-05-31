@@ -1,8 +1,19 @@
-﻿const { app, BrowserWindow, shell, Menu } = require('electron')
+﻿const { app, BrowserWindow, shell, Menu, session } = require('electron')
 
 const BASE_URL = 'https://mesa-production-f46d.up.railway.app'
 const APP_URL = `${BASE_URL}/admin`
 const isDev = !app.isPackaged
+
+
+const ALLOWED_ORIGIN = new URL(BASE_URL).origin
+
+function isAllowedUrl(targetUrl) {
+  try {
+    return new URL(targetUrl).origin === ALLOWED_ORIGIN
+  } catch {
+    return false
+  }
+}
 
 Menu.setApplicationMenu(null)
 
@@ -44,13 +55,42 @@ function createWindow() {
     }
   })
 
+ 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
   })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedUrl(url)) {
+      event.preventDefault()
+      shell.openExternal(url)
+    }
+  })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  session.fromPartition('persist:mesa').webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          [
+            "default-src 'self' " + BASE_URL,
+            "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co",
+            "connect-src 'self' " + BASE_URL +
+              " https://api.cloudinary.com https://*.supabase.co wss://*.supabase.co",
+            "style-src 'self' 'unsafe-inline'",
+            "script-src 'self' 'unsafe-inline'",
+            "frame-ancestors 'none'",
+          ].join('; '),
+        ],
+      },
+    })
+  })
+
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
