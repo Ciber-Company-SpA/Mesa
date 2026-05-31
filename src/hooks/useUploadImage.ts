@@ -10,8 +10,15 @@ type UploadResult = {
 } | null
 
 type UploadOptions = ProcessImageOptions & {
-  /** Si la imagen ya viene procesada (compresión / quitar fondo), saltar el preprocesado. */
   alreadyProcessed?: boolean
+}
+
+type SignResponse = {
+  signature: string
+  timestamp: number
+  folder: string
+  apiKey: string
+  cloudName: string
 }
 
 export function useUploadImage() {
@@ -20,7 +27,7 @@ export function useUploadImage() {
 
   async function uploadImage(
     file: File,
-    preset: string,
+    _preset: string,
     options: UploadOptions = {}
   ): Promise<UploadResult> {
     try {
@@ -31,12 +38,21 @@ export function useUploadImage() {
         ? file
         : await processImage(file, { removeBg: options.removeBg })
 
+      const signRes = await fetch("/api/cloudinary-sign", { method: "POST" })
+      if (!signRes.ok) {
+        throw new Error("No autorizado para subir imágenes")
+      }
+      const sign = (await signRes.json()) as SignResponse
+
       const formData = new FormData()
       formData.append("file", finalFile)
-      formData.append("upload_preset", preset)
+      formData.append("api_key", sign.apiKey)
+      formData.append("timestamp", String(sign.timestamp))
+      formData.append("signature", sign.signature)
+      formData.append("folder", sign.folder)
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${sign.cloudName}/image/upload`,
         { method: "POST", body: formData }
       )
 
