@@ -20,21 +20,11 @@ export async function createOrderAction(
 
   try {
     const result = await checkPublicOrderLimit(input.tableId)
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.log("[ratelimit]", {
-      tableId: input.tableId,
-      success: result.success,
-      remaining: result.remaining,
-      limit: result.limit,
-      reset: result.reset,
-    })
     if (!result.success) {
       return fail("Estás haciendo pedidos demasiado rápido. Espera un momento e intenta de nuevo.")
     }
   } catch (err) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("[ratelimit] FALLÓ Upstash:", err)
-    logger.error("Rate limit no disponible (Upstash)", err)
+      logger.error("Rate limit no disponible (Upstash)", err)
   }
 
   return createOrderService(input)

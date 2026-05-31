@@ -1,0 +1,47 @@
+name: CI
+
+# Se ejecuta en cada push y en cada pull request hacia main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Lint: falla solo con ERRORES, no con warnings (--max-warnings no se
+      # usa para no bloquear por el <img> conocido). El script de lint ya está
+      # en package.json; eslint devuelve código de error solo si hay errores.
+      - name: Lint
+        run: npm run lint
+
+      # Build: la verificación más importante. Si no compila, el CI falla.
+      - name: Build
+        run: npm run build
+        env:
+          # Variables públicas mínimas para que el build no falle al leerlas.
+          # Los valores reales viven en Railway; aquí solo evitan errores de
+          # "variable undefined" durante el build. Ajusta si tu build las exige.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+
+      # Audit: informativo. No bloquea el CI (|| true) porque hay un postcss
+      # moderado vía Next aceptado como riesgo. Sirve para ver el reporte.
+      - name: Audit de seguridad (informativo)
+        run: npm audit --omit=dev || true

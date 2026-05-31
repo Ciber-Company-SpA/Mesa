@@ -109,6 +109,7 @@ export function useTableOrders(tableId: number | null) {
   }, [tableId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de pedidos al montar
     fetchOrders()
   }, [fetchOrders])
 

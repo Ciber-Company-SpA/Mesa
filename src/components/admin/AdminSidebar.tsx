@@ -36,6 +36,7 @@ export function AdminSidebar() {
 
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSE_KEY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación desde localStorage al montar
     if (stored === "1") setCollapsed(true)
     setHydrated(true)
   }, [])

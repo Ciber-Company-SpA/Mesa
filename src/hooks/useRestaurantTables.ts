@@ -8,9 +8,7 @@ export type RestaurantTable = {
   currentWaiterId: number | null
 }
 
-// Todas las mesas del restaurante con su estado de ocupación. Se usa para
-// mostrar al mesero qué mesas están libres vs ocupadas. Se suscribe a
-// `tables` en realtime para reflejar asignaciones/liberaciones al instante.
+
 export function useRestaurantTables(restaurantId: number | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,8 +43,9 @@ export function useRestaurantTables(restaurantId: number | null) {
     )
   }, [])
 
-  useEffect(() => {
+ useEffect(() => {
     if (!restaurantId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al cambiar/quitar restaurantId
       setTables([])
       setLoading(false)
       return

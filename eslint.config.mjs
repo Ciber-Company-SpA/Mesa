@@ -3,16 +3,25 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
 const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
+  // Ignores globales: van PRIMERO para que apliquen a todo el resto.
   globalIgnores([
-    // Default ignores of eslint-config-next:
+    // Defaults de eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefactos y código fuera de src que no debe pasar por el linter:
+    ".claude/**",
+    "android/**",
+    "ios/**",
+    "electron/**",
+    "dist/**",
+    "resources/**",
+    "scripts/**",
+    "**/*.config.{js,mjs,cjs}",
   ]),
+  ...nextVitals,
+  ...nextTs,
 ]);
 
 export default eslintConfig;

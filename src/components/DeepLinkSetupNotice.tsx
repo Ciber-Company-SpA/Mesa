@@ -97,8 +97,7 @@ export function DeepLinkSetupNotice() {
               <strong>2.</strong> Buscá <span className="font-semibold">Meseros-App</span> y entrá.
             </li>
             <li>
-              <strong>3.</strong> Tocá <span className="font-semibold">Abrir de forma predeterminada</span> (o "Otros permisos" → "Abrir enlaces compatibles").
-            </li>
+              <strong>3.</strong> Tocá <span className="font-semibold">Abrir de forma predeterminada</span>{' (o "Otros permisos" → "Abrir enlaces compatibles").'}</li>
             <li>
               <strong>4.</strong> Activá el toggle del dominio{" "}
               <code className="rounded bg-stone-200 px-1 py-0.5 text-[10px] font-semibold text-stone-700">

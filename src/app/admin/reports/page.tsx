@@ -141,6 +141,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (!range) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de reporte al cambiar el rango
     setLoading(true)
     setError(null)
     getSalesReport(range)
