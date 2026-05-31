@@ -1,3 +1,4 @@
+import { revalidateTag, revalidatePath } from "next/cache"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
   CreateCategorySchema,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/validation/category"
 import { ok, fail, type Result } from "@/services/result"
 import { requireAdminForRestaurant } from "@/services/auth-guard"
+import { menuTag } from "@/lib/menu/menu-cache"
 
 export type CreatedCategory = {
   id: number
@@ -19,10 +21,11 @@ export type CategoryForEdit = {
   name: string
 }
 
-/**
- * Lee restaurant_id de una categoría. Helper interno para validar permisos
- * cuando la action recibe solo categoryId (update/delete/read).
- */
+function revalidateMenu(restaurantId: number) {
+  revalidateTag(menuTag(restaurantId), "max")
+  revalidatePath("/[id]/menu", "page")
+}
+
 async function getRestaurantIdForCategory(categoryId: number): Promise<number | null> {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
@@ -62,7 +65,6 @@ export async function getCategoryForEdit(categoryId: number): Promise<Result<Cat
   })
 }
 
-// ============ CREATE (admin) ============
 
 export async function createCategory(input: CreateCategoryInput): Promise<Result<CreatedCategory>> {
   const validation = CreateCategorySchema.safeParse(input)
@@ -87,10 +89,11 @@ export async function createCategory(input: CreateCategoryInput): Promise<Result
   if (error || !data) {
     return fail("Error al crear la categoría")
   }
+
+  revalidateMenu(restaurantId)
   return ok({ id: data.id })
 }
 
-// ============ UPDATE (admin) ============
 
 export async function updateCategory(input: UpdateCategoryInput): Promise<Result<{ id: number }>> {
   const validation = UpdateCategorySchema.safeParse(input)
@@ -114,10 +117,11 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Result
   if (error) {
     return fail("Error al actualizar la categoría")
   }
+
+  revalidateMenu(restaurantId)
   return ok({ id: categoryId })
 }
 
-// ============ DELETE (admin) ============
 
 export async function deleteCategory(input: DeleteCategoryInput): Promise<Result<{ id: number }>> {
   const validation = DeleteCategorySchema.safeParse(input)
@@ -139,14 +143,12 @@ export async function deleteCategory(input: DeleteCategoryInput): Promise<Result
     .eq("id", categoryId)
 
   if (error) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("deleteCategory failed", { categoryId, error })
     return fail(`Error al eliminar la categoría: ${error.message}`)
   }
   if (count === 0) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("deleteCategory: 0 rows affected (RLS?)", { categoryId })
     return fail("No se borró ninguna fila. Probable bloqueo de RLS.")
   }
+
+  revalidateMenu(restaurantId)
   return ok({ id: categoryId })
 }

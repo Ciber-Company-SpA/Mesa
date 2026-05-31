@@ -1,3 +1,4 @@
+import { revalidateTag, revalidatePath } from "next/cache"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
   CreateProductSchema,
@@ -12,6 +13,7 @@ import {
 import { ok, fail, type Result } from "@/services/result"
 import { deleteImagesBestEffort } from "@/lib/cloudinary/delete-image-server"
 import { requireAdminForRestaurant } from "@/services/auth-guard"
+import { menuTag } from "@/lib/menu/menu-cache"
 
 export type CreatedProduct = {
   id: number
@@ -34,10 +36,12 @@ export type ProductForEdit = {
   fallbackImagePublicId: string | null
 }
 
-/**
- * Lee restaurant_id de un producto. Helper interno para validar permisos
- * cuando la action recibe solo productId (update/delete/status/read).
- */
+function revalidateMenu(restaurantId: number) {
+  revalidateTag(menuTag(restaurantId), "max")
+  revalidatePath("/[id]/menu", "page")
+}
+
+
 async function getRestaurantIdForProduct(productId: number): Promise<number | null> {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
@@ -48,7 +52,6 @@ async function getRestaurantIdForProduct(productId: number): Promise<number | nu
   return data?.restaurant_id ?? null
 }
 
-// ============ READ (admin) ============
 
 export async function getProductForEdit(productId: number): Promise<Result<ProductForEdit>> {
   if (!productId || productId <= 0) {
@@ -97,7 +100,6 @@ export async function getProductForEdit(productId: number): Promise<Result<Produ
   })
 }
 
-// ============ CREATE (admin) ============
 
 export async function createProduct(input: CreateProductInput): Promise<Result<CreatedProduct>> {
   const validation = CreateProductSchema.safeParse(input)
@@ -131,8 +133,6 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
     .single()
 
   if (productError || !productData) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("createProduct insert failed", productError)
     return fail(`Error al crear el producto: ${productError?.message ?? "desconocido"}`)
   }
 
@@ -155,10 +155,10 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
     }
   }
 
+  revalidateMenu(restaurantId)
   return ok({ id: productData.id })
 }
 
-// ============ UPDATE (admin) ============
 
 export async function updateProduct(input: UpdateProductInput): Promise<Result<{ id: number }>> {
   const validation = UpdateProductSchema.safeParse(input)
@@ -176,7 +176,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
   if (!guard.ok) return fail(guard.error)
   const { supabase } = guard.data
 
-  // 1. Leer estado previo de imágenes
   const [previousProductRes, previousVariantsRes] = await Promise.all([
     supabase
       .from("products")
@@ -194,11 +193,9 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
     (previousVariantsRes.data ?? []).map((v) => [v.id, v.variant_image_public_id])
   )
 
-  // 2. Calcular opción de portada
   const coverIndex = Math.floor((options.length - 1) / 2)
   const coverOption = options[coverIndex]
 
-  // 3. UPDATE del producto
   const { error: productError } = await supabase
     .from("products")
     .update({
@@ -213,7 +210,6 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
 
   if (productError) return fail("Error al actualizar producto")
 
-  // 4. Sincronizar variantes
   const orphanedImagePublicIds: Array<string | null | undefined> = []
 
   if (previousProductImagePublicId && previousProductImagePublicId !== coverOption.imagePublicId) {
@@ -292,10 +288,10 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
     await deleteImagesBestEffort(orphanedImagePublicIds)
   }
 
+  revalidateMenu(restaurantId)
   return ok({ id: productId })
 }
 
-// ============ DELETE (admin) ============
 
 export async function deleteProduct(input: DeleteProductInput): Promise<Result<{ id: number }>> {
   const validation = DeleteProductSchema.safeParse(input)
@@ -313,7 +309,6 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
   if (!guard.ok) return fail(guard.error)
   const { supabase } = guard.data
 
-  // Recolectar public_ids antes del DELETE
   const [productImageRes, variantImagesRes] = await Promise.all([
     supabase
       .from("products")
@@ -337,22 +332,18 @@ export async function deleteProduct(input: DeleteProductInput): Promise<Result<{
     .eq("id", productId)
 
   if (error) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("deleteProduct failed", { productId, error })
     return fail(`Error al eliminar el producto: ${error.message}`)
   }
   if (count === 0) {
-    // eslint-disable-next-line no-console -- diagnóstico temporal
-    console.error("deleteProduct: 0 rows affected (RLS?)", { productId })
     return fail("No se borró ninguna fila. Probable bloqueo de RLS.")
   }
 
   await deleteImagesBestEffort(publicIds)
 
+  revalidateMenu(restaurantId)
   return ok({ id: productId })
 }
 
-// ============ UPDATE STATUS (admin) ============
 
 export async function updateProductStatus(input: UpdateProductStatusInput): Promise<Result<{ id: number }>> {
   const validation = UpdateProductStatusSchema.safeParse(input)
@@ -379,5 +370,6 @@ export async function updateProductStatus(input: UpdateProductStatusInput): Prom
     return fail("Error al actualizar el estado del producto")
   }
 
+  revalidateMenu(restaurantId)
   return ok({ id: productId })
 }

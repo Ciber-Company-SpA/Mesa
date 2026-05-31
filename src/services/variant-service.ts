@@ -1,3 +1,4 @@
+import { revalidateTag, revalidatePath } from "next/cache"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
   CreateVariantSchema,
@@ -10,9 +11,19 @@ import {
 import { ok, fail, type Result } from "@/services/result"
 import { deleteImageBestEffort } from "@/lib/cloudinary/delete-image-server"
 import { requireAdminForRestaurant } from "@/services/auth-guard"
+import { menuTag } from "@/lib/menu/menu-cache"
 
 export type CreatedVariant = {
   id: number
+}
+
+/**
+ * Invalida el cache del menú del restaurante (tag por restaurante) y la ruta.
+ * Las variantes aparecen en el menú, por eso se invalida tras cambiarlas.
+ */
+function revalidateMenu(restaurantId: number) {
+  revalidateTag(menuTag(restaurantId), "max")
+  revalidatePath("/[id]/menu", "page")
 }
 
 /**
@@ -81,6 +92,7 @@ export async function createVariant(input: CreateVariantInput): Promise<Result<C
     return fail("Error al crear la variante")
   }
 
+  revalidateMenu(restaurantId)
   return ok({ id: data.id })
 }
 
@@ -129,6 +141,7 @@ export async function updateVariant(input: UpdateVariantInput): Promise<Result<{
     await deleteImageBestEffort(previousImagePublicId)
   }
 
+  revalidateMenu(restaurantId)
   return ok({ id: variantId })
 }
 
@@ -168,5 +181,6 @@ export async function deleteVariant(input: DeleteVariantInput): Promise<Result<{
 
   await deleteImageBestEffort(previous?.variant_image_public_id)
 
+  revalidateMenu(restaurantId)
   return ok({ id: variantId })
 }

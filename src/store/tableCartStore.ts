@@ -57,6 +57,7 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
 
   setTable: (tableId, restaurantId) => set({ tableId, restaurantId }),
 
+  // LECTURA: sin cambios. Se mantiene directa (RLS permite leer mesas activas).
   fetchItems: async () => {
     const { tableId } = get()
     if (!tableId) {
@@ -82,48 +83,20 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
     }
   },
 
+  // ESCRITURA: ahora por RPC. La RPC valida mesa/QR activo, recalcula precio
+  // desde la BD y maneja el "sumar si ya existe" internamente.
   addItem: async (input) => {
-    const { tableId, restaurantId } = get()
-    if (!tableId || !restaurantId) return
+    const { tableId } = get()
+    if (!tableId) return
 
-    const variantId = input.variantId ?? null
-    const notes = input.notes ?? null
-    const quantity = input.quantity ?? 1
-    let matchingRowQuery = supabase
-      .from("table_cart_items")
-      .select("id, quantity")
-      .eq("table_id", tableId)
-      .eq("product_id", input.productId)
-      .limit(1)
-
-    matchingRowQuery = variantId === null
-      ? matchingRowQuery.is("variant_id", null)
-      : matchingRowQuery.eq("variant_id", variantId)
-    matchingRowQuery = notes === null
-      ? matchingRowQuery.is("notes", null)
-      : matchingRowQuery.eq("notes", notes)
-
-    const { data: existing, error: findError } = await matchingRowQuery.maybeSingle()
-    if (findError) {
-      logger.error("Error buscando item del carrito", findError)
-      return
-    }
-
-    const { error } = existing
-      ? await supabase
-          .from("table_cart_items")
-          .update({ quantity: existing.quantity + quantity })
-          .eq("id", existing.id)
-      : await supabase.from("table_cart_items").insert({
-          restaurant_id: restaurantId,
-          table_id: tableId,
-          product_id: input.productId,
-          variant_id: variantId,
-          unit_price: input.price,
-          quantity,
-          notes,
-          added_by: getGuestId(),
-        })
+    const { error } = await supabase.rpc("cart_add_item", {
+      p_table_id: tableId,
+      p_product_id: input.productId,
+      p_variant_id: input.variantId ?? null,
+      p_quantity: input.quantity ?? 1,
+      p_notes: input.notes ?? null,
+      p_added_by: getGuestId(),
+    })
 
     if (error) {
       logger.error("Error agregando item al carrito", error)
@@ -138,10 +111,11 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
       await get().removeItem(rowId)
       return
     }
-    const { error } = await supabase
-      .from("table_cart_items")
-      .update({ quantity })
-      .eq("id", rowId)
+
+    const { error } = await supabase.rpc("cart_update_quantity", {
+      p_row_id: rowId,
+      p_quantity: quantity,
+    })
 
     if (error) {
       logger.error("Error actualizando cantidad del carrito", error)
@@ -152,10 +126,9 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
   },
 
   removeItem: async (rowId) => {
-    const { error } = await supabase
-      .from("table_cart_items")
-      .delete()
-      .eq("id", rowId)
+    const { error } = await supabase.rpc("cart_remove_item", {
+      p_row_id: rowId,
+    })
 
     if (error) {
       logger.error("Error eliminando item del carrito", error)
@@ -169,10 +142,9 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
     const { tableId } = get()
     if (!tableId) return
 
-    const { error } = await supabase
-      .from("table_cart_items")
-      .delete()
-      .eq("table_id", tableId)
+    const { error } = await supabase.rpc("cart_clear", {
+      p_table_id: tableId,
+    })
 
     if (error) {
       logger.error("Error vaciando carrito", error)
