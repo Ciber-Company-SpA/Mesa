@@ -8,7 +8,6 @@ import { clearUserScopedCache } from "@/lib/session-cache"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
-import { useAdminProfile } from "@/hooks/useAdminProfile"
 import { useProductList } from "@/hooks/useProductList"
 import { useCategoryList } from "@/hooks/useCategoryList"
 import { useWaiters } from "@/hooks/useWaiters"
@@ -26,7 +25,6 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { restaurant, loading: loadingRestaurant } = useRestaurant()
-  const { profile, loading: loadingProfile } = useAdminProfile()
   const { totalTables, loading: loadingTables } = useTableList()
   const { totalProducts, loading: loadingProducts } = useProductList()
   const { totalCategories, loading: loadingCategories } = useCategoryList()
@@ -238,61 +236,21 @@ export function AdminSidebar() {
             </Link>
           )
         })}
+
+        <button
+          type="button"
+          onClick={handleSignOut}
+          title={collapsed ? "Cerrar sesión" : undefined}
+          className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          {!collapsed && <span className="flex-1 truncate text-left">Cerrar sesión</span>}
+        </button>
       </nav>
-
-      {/* PROFILE */}
-      <div className="border-t border-stone-100 p-3">
-        <div className="relative group">
-          <button
-            type="button"
-            className={`flex w-full items-center gap-3 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-left text-xs font-bold text-stone-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-semibold text-stone-600">
-              {loadingProfile ? "..." : profile?.initials ?? "A"}
-            </span>
-            {!collapsed && (
-              <span className="min-w-0 flex-1 truncate">
-                {loadingProfile ? "Perfil" : profile?.name ?? "Perfil"}
-              </span>
-            )}
-          </button>
-
-          <div
-            className={`absolute bottom-full z-50 hidden pb-2 group-hover:block ${
-              collapsed ? "left-full ml-2 bottom-0" : "left-0 right-0"
-            }`}
-          >
-            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-900/10">
-              <div className="border-b border-stone-100 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-sm font-bold text-stone-700">
-                    {loadingProfile ? "..." : profile?.initials ?? "A"}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-stone-900">
-                      {loadingProfile ? "Cargando perfil..." : profile?.name ?? "Admin"}
-                    </p>
-                    <p className="truncate text-xs font-medium text-stone-500">
-                      {profile?.email || "Sesión administrador"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1 p-3 text-xs">
-                <button
-                  onClick={handleSignOut}
-                  className="w-full rounded-xl px-3 py-2 text-left font-bold text-red-600 transition hover:bg-red-50"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   )
 }

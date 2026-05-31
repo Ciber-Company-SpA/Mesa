@@ -69,10 +69,7 @@ function mapOrderRow(row: OrderRow): WaiterOrder {
   }
 }
 
-/**
- * Lee restaurant_id de una orden. Helper interno para validar permisos
- * cuando la action recibe solo orderId.
- */
+
 async function getRestaurantIdForOrder(orderId: number): Promise<number | null> {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
@@ -83,10 +80,7 @@ async function getRestaurantIdForOrder(orderId: number): Promise<number | null> 
   return data?.restaurant_id ?? null
 }
 
-/**
- * Lee restaurant_id de una mesa. Helper interno para validar permisos
- * cuando la action recibe solo tableId.
- */
+
 async function getRestaurantIdForTable(tableId: number): Promise<number | null> {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
@@ -97,7 +91,7 @@ async function getRestaurantIdForTable(tableId: number): Promise<number | null> 
   return data?.restaurant_id ?? null
 }
 
-// ============ LIST (staff) ============
+
 
 export async function listActiveOrdersForRestaurant(
   restaurantId: number
@@ -120,7 +114,7 @@ export async function listActiveOrdersForRestaurant(
   return ok((data ?? []).map((row) => mapOrderRow(row as unknown as OrderRow)))
 }
 
-// ============ ADVANCE STATUS (staff) ============
+
 
 export async function advanceOrderStatus(
   orderId: number
@@ -164,11 +158,7 @@ export async function advanceOrderStatus(
   return ok({ id: orderId, statusId: nextStatus })
 }
 
-// ============ MARK PAID (staff) ============
 
-// Marca un pedido como Pagado. Si todos los pedidos activos de la mesa
-// quedan en estado Pagado, libera la mesa (current_waiter_id = null) para
-// que otro mesero pueda reclamarla escaneando el QR.
 export async function markOrderAsPaid(
   orderId: number
 ): Promise<Result<{ id: number; statusId: number; tableReleased: boolean }>> {
@@ -221,11 +211,9 @@ export async function markOrderAsPaid(
   return ok({ id: orderId, statusId: ORDER_STATUS_PAGADO, tableReleased })
 }
 
-// ============ MARK TABLE PAID (staff) ============
 
-// Marca como pagados TODOS los pedidos activos (Nuevo/Preparando/Listo) de una
-// mesa en una sola operación. Libera la mesa (current_waiter_id = null) si
-// queda sin pedidos activos.
+
+
 export async function markTableOrdersAsPaid(
   tableId: number
 ): Promise<Result<{ tableId: number; paidIds: number[]; tableReleased: boolean }>> {
@@ -268,7 +256,7 @@ export async function markTableOrdersAsPaid(
   return ok({ tableId, paidIds, tableReleased })
 }
 
-// ============ CREATE ORDER (PÚBLICO — cliente escanea QR) ============
+
 
 export type CreatedOrder = {
   id: number
@@ -280,10 +268,20 @@ export type CreatedOrder = {
   total: number
 }
 
+
+type CreatePublicOrderRpcResult = {
+  id: number
+  status_id: number
+  status_name: string | null
+  created_at: string
+  table_id: number
+  restaurant_id: number
+  total: number
+}
+
 export async function createOrder(input: CreateOrderInput): Promise<Result<CreatedOrder>> {
-  // NOTA: NO requiere auth — esta acción la dispara el CLIENTE del menú
-  // (escaneando un QR). La protección está en validar que la mesa existe
-  // y que los productos pertenecen al mismo restaurante.
+
+  // productos/variantes y recalcula el total.
 
   const validation = CreateOrderSchema.safeParse(input)
 
@@ -293,156 +291,38 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
 
   const { tableId, items } = validation.data
 
+  // Construir el array jsonb que espera la RPC (snake_case).
+  const rpcItems = items.map((item) => ({
+    product_id: item.productId,
+    variant_id: item.variantId ?? null,
+    quantity: item.productQuantity,
+    notes: item.notes ?? null,
+  }))
+
   const supabase = await createSupabaseServerClient()
 
-  // 1. Resolver el restaurante real desde la mesa (no confiamos en el cliente)
-  const { data: table, error: tableError } = await supabase
-    .from("tables")
-    .select("id, restaurant_id")
-    .eq("id", tableId)
-    .maybeSingle()
-
-  if (tableError || !table || !table.restaurant_id) {
-    return fail("Mesa no encontrada")
-  }
-
-  const restaurantId = table.restaurant_id
-
-  // 2. Cargar configuración del restaurante para decidir el status inicial.
-  // Si order_destination = 'kitchen' los pedidos arrancan en "En preparación"
-  // (status_id=2), saltando al mesero. Caso contrario inician en "Nuevo".
-  const { data: restaurantRow } = await supabase
-    .from("restaurants")
-    .select("order_destination")
-    .eq("id", restaurantId)
-    .maybeSingle()
-
-  const initialStatusId = restaurantRow?.order_destination === "kitchen" ? 2 : 1
-
-  const productIds = items.map((i) => i.productId)
-  const { data: products, error: productsError } = await supabase
-    .from("products")
-    .select("id, product_name, product_price, restaurant_id, status_id")
-    .in("id", productIds)
-    .eq("restaurant_id", restaurantId)
-
-  if (productsError) {
-    return fail("Error al verificar los productos")
-  }
-
-  // 3. Validar que TODOS los productos existen y son del mismo restaurante
-  if (!products || products.length !== productIds.length) {
-    return fail("Uno o más productos no pertenecen a este restaurante")
-  }
-
-  // 4. Validar que todos están activos
-  const inactiveProduct = products.find((p) => p.status_id !== 1)
-  if (inactiveProduct) {
-    return fail(`El producto "${inactiveProduct.product_name}" no está disponible`)
-  }
-
-  // 5. Resolver variantes (si las hay). El cliente puede mandar variantId null.
-  const variantIds = items
-    .map((i) => i.variantId)
-    .filter((v): v is number => typeof v === "number")
-
-  let variantMap = new Map<number, { id: number; product_id: number; variant_name: string; variant_price: number }>()
-  if (variantIds.length > 0) {
-    const { data: variants, error: variantsError } = await supabase
-      .from("product_variants")
-      .select("id, product_id, variant_name, variant_price")
-      .in("id", variantIds)
-      .in("product_id", productIds)
-
-    if (variantsError) return fail("Error al verificar las variantes")
-    if (!variants || variants.length !== variantIds.length) {
-      return fail("Una o más variantes no pertenecen al producto correcto")
-    }
-
-    variantMap = new Map(variants.map((v) => [v.id, v]))
-  }
-
-  // 6. Construir items con datos REALES de la DB. Si hay variante, su precio
-  // y nombre mandan. Si no, cae al producto base.
-  const productMap = new Map(products.map((p) => [p.id, p]))
-  const mismatchedVariant = items.find((it) => {
-    if (it.variantId == null) return false
-    const variant = variantMap.get(it.variantId)
-    return !variant || variant.product_id !== it.productId
-  })
-  if (mismatchedVariant) {
-    return fail("Una variante no pertenece a su producto")
-  }
-
-  const serverItems = items.map((clientItem) => {
-    const product = productMap.get(clientItem.productId)!
-    const variant = clientItem.variantId ? variantMap.get(clientItem.variantId) ?? null : null
-    return {
-      productId: product.id,
-      productName: product.product_name ?? "",
-      productPrice: Number(variant?.variant_price ?? product.product_price ?? 0),
-      productQuantity: clientItem.productQuantity,
-      notes: clientItem.notes ?? null,
-      variantId: variant?.id ?? null,
-      variantName: variant?.variant_name ?? null,
-    }
+  const { data, error } = await supabase.rpc("create_public_order", {
+    p_table_id: tableId,
+    p_items: rpcItems,
   })
 
-  // 6. Calcular total con precios reales
-  const total = serverItems.reduce(
-    (sum, item) => sum + item.productPrice * item.productQuantity,
-    0
-  )
+  if (error) {
 
-  // 7. Crear la orden con datos del servidor
-  const { data: orderData, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      table_id: tableId,
-      restaurant_id: restaurantId,
-      total,
-      status_id: initialStatusId,
-      created_at: new Date().toISOString(),
-    })
-    .select("id, status_id, created_at, table_id, restaurant_id, total, order_status(status_name)")
-    .single()
+    return fail(error.message ?? "Error al crear el pedido")
+  }
 
-  if (orderError || !orderData) {
+  const result = data as CreatePublicOrderRpcResult | null
+  if (!result || !result.id) {
     return fail("Error al crear el pedido")
   }
 
-  // 8. Insertar items con datos REALES
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(
-      serverItems.map((item) => ({
-        order_id: orderData.id,
-        product_id: item.productId,
-        product_name: item.productName,
-        product_price: item.productPrice,
-        product_quantity: item.productQuantity,
-        notes: item.notes,
-        variant_id: item.variantId,
-        variant_name: item.variantName,
-      }))
-    )
-
-  if (itemsError) {
-    await supabase.from("orders").delete().eq("id", orderData.id)
-    return fail("Error al guardar los items del pedido")
-  }
-
-  const statusName = Array.isArray(orderData.order_status)
-    ? orderData.order_status[0]?.status_name ?? null
-    : (orderData.order_status as { status_name: string | null } | null)?.status_name ?? null
-
   return ok({
-    id: orderData.id,
-    statusId: orderData.status_id,
-    statusName,
-    createdAt: orderData.created_at,
-    tableId: orderData.table_id,
-    restaurantId: orderData.restaurant_id,
-    total: orderData.total,
+    id: result.id,
+    statusId: result.status_id,
+    statusName: result.status_name,
+    createdAt: result.created_at,
+    tableId: result.table_id,
+    restaurantId: result.restaurant_id,
+    total: result.total,
   })
 }

@@ -5,9 +5,7 @@ import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useCache } from "@/hooks/useCache"
 import type { Category } from "@/types/category"
 
-// Trae TODAS las categorías del restaurante (con un techo de seguridad de 200).
-// Usar SOLO en dropdowns/selects donde el usuario necesita ver todas las opciones.
-// Para listados paginados (admin/categories), usar useCategories en su lugar.
+
 export function useAllCategories() {
   const { restaurantId, loading: loadingId, error: idError } = useRestaurantId()
 

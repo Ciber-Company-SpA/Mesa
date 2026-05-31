@@ -178,7 +178,6 @@ export function useCache<T>(
           setError(null)
         })
         .catch(() => {
-          // Keep the cached data visible if the background refresh fails.
         })
     }
 
