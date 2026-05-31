@@ -1,32 +1,54 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireCurrentAdmin } from "@/services/auth-guard"
+import { checkRemoveBgLimit } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
-  // 1. Verificar sesión de Supabase
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  // 1. Exigir ADMIN (no solo sesión). Un mesero no debe gastar tu cuota
+  //    de remove.bg. requireCurrentAdmin valida sesión + role_id=2 +
+  //    que tenga restaurante, y nos devuelve restaurantId y userId.
+  const guard = await requireCurrentAdmin()
+  if (!guard.ok) {
+    return NextResponse.json({ error: guard.error }, { status: 403 })
+  }
+  const { userId, restaurantId } = guard.data
+
+  // 2. Rate limit por usuario (protege tu cuota/costos de remove.bg).
+  try {
+    const { success } = await checkRemoveBgLimit(userId)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Demasiadas imágenes seguidas. Espera un momento e intenta de nuevo." },
+        { status: 429 }
+      )
+    }
+  } catch (err) {
+    // Fail closed aquí: si el rate limit no responde, NO procesamos, porque
+    // este endpoint cuesta dinero real. Mejor rechazar que arriesgar la cuota.
+    console.error("Rate limit no disponible en remove-background:", err)
+    return NextResponse.json(
+      { error: "Servicio no disponible, intenta más tarde." },
+      { status: 503 }
+    )
   }
 
-  // 2. Leer el archivo del FormData
+  // 3. Leer el archivo del FormData
   const formData = await request.formData()
   const file = formData.get("image")
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Falta la imagen" }, { status: 400 })
   }
 
-  // 3. Validaciones
-  const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+  // 4. Validaciones de tamaño y tipo (bajado a 5 MB).
+  const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Imagen demasiado grande" }, { status: 400 })
+    return NextResponse.json({ error: "Imagen demasiado grande (máximo 5 MB)" }, { status: 400 })
   }
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
   if (!allowedTypes.includes(file.type)) {
     return NextResponse.json({ error: "Tipo de archivo no permitido" }, { status: 400 })
   }
 
-  // 4. Llamar a remove.bg desde el servidor
+  // 5. Llamar a remove.bg desde el servidor
   const removeBgFormData = new FormData()
   removeBgFormData.append("image_file", file)
   removeBgFormData.append("size", "auto")
@@ -47,6 +69,13 @@ export async function POST(request: NextRequest) {
       { status: 502 }
     )
   }
+
+  // 6. Registro de uso por restaurante (para auditar consumo/costos).
+  //    Log simple a consola. Si más adelante quieres persistirlo, puedes
+  //    insertar en una tabla de auditoría aquí.
+  console.info(
+    `[remove-bg] usado por user=${userId} restaurant=${restaurantId} bytes=${file.size}`
+  )
 
   const imageBuffer = await response.arrayBuffer()
   return new NextResponse(imageBuffer, {

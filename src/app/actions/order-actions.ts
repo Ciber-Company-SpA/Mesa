@@ -10,11 +10,23 @@ import {
   type WaiterOrder,
 } from "@/services/order-service"
 import type { CreateOrderInput } from "@/lib/validation/order"
-import type { Result } from "@/services/result"
+import { fail, type Result } from "@/services/result"
+import { checkPublicOrderLimit } from "@/lib/rate-limit"
+import { logger } from "@/lib/logger"
 
 export async function createOrderAction(
   input: CreateOrderInput
 ): Promise<Result<CreatedOrder>> {
+
+  try {
+    const { success } = await checkPublicOrderLimit(input.tableId)
+    if (!success) {
+      return fail("Estás haciendo pedidos demasiado rápido. Espera un momento e intenta de nuevo.")
+    }
+  } catch (err) {
+    logger.error("Rate limit no disponible (Upstash)", err)
+  }
+
   return createOrderService(input)
 }
 
