@@ -42,7 +42,7 @@ function getAppBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.VERCEL_URL ??
-    "http://localhost:3000"
+    "http://https://mesa-production-f46d.up.railway.app/"
   )
 }
 
@@ -103,6 +103,21 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
     }
     return fail(signupError.message ?? "Error al crear el mesero")
   }
+
+  // ===== BLOQUE NUEVO: ligar el mesero al restaurante vía RPC validada =====
+  // El trigger creó al usuario como "mesero pendiente" (role 1, sin
+  // restaurante). Como admin ya validado, lo asignamos a nuestro restaurante.
+  const { error: assignError } = await serverClient.rpc("assign_waiter", {
+    p_waiter_email: email,
+    p_restaurant_id: restaurantId,
+  })
+
+  if (assignError) {
+    return fail(assignError.message ?? "Error al asignar el mesero al restaurante")
+  }
+  // ===== FIN BLOQUE NUEVO =====
+
+ 
 
   // Best-effort: enviar email con credenciales
   const loginUrl = `${getAppBaseUrl()}/waiter/login`
