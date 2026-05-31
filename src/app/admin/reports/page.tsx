@@ -11,10 +11,7 @@ import {
   YAxis,
 } from "recharts"
 import {
-  getSalesSummary,
-  getTopProducts,
-  getSalesByTable,
-  getSalesTimeline,
+  getSalesReport,
   type ReportRange,
   type SalesSummary,
   type TopProduct,
@@ -146,22 +143,17 @@ export default function ReportsPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    Promise.all([
-      getSalesSummary(range),
-      getTopProducts(range),
-      getSalesByTable(range),
-      getSalesTimeline(range),
-    ])
-      .then(([s, p, t, tl]) => {
+    getSalesReport(range)
+      .then((res) => {
         if (cancelled) return
-        if (!s.ok || !p.ok || !t.ok || !tl.ok) {
-          setError("No se pudo cargar el reporte")
+        if (!res.ok) {
+          setError(res.error)
           return
         }
-        setSummary(s.data)
-        setTopProducts(p.data)
-        setSalesByTable(t.data)
-        setTimeline(tl.data)
+        setSummary(res.data.summary)
+        setTopProducts(res.data.topProducts)
+        setSalesByTable(res.data.salesByTable)
+        setTimeline(res.data.timeline)
       })
       .catch(() => {
         if (!cancelled) setError("Error inesperado")
@@ -291,9 +283,10 @@ export default function ReportsPage() {
                     <XAxis dataKey="bucket" tick={{ fontSize: 11 }} stroke="#78716c" />
                     <YAxis tick={{ fontSize: 11 }} stroke="#78716c" />
                     <Tooltip
-                      formatter={(value: number, name: string) =>
-                        name === "revenue" ? formatCLP(value) : value
-                      }
+                      formatter={(value, name) => {
+                        const num = typeof value === "number" ? value : Number(value ?? 0)
+                        return name === "revenue" ? formatCLP(num) : num
+                      }}
                       labelStyle={{ color: "#1c1917", fontWeight: 700 }}
                       contentStyle={{ borderRadius: 12, border: "1px solid #e7e5e4" }}
                     />
