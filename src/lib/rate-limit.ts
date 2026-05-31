@@ -7,7 +7,7 @@ const redis = Redis.fromEnv()
 
 export const publicOrderRatelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(3, "60 s"),
+  limiter: Ratelimit.slidingWindow(10, "60 s"),
   prefix: "rl:public-order",
   analytics: true,
 })
