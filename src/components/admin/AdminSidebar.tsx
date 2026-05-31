@@ -169,7 +169,7 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={`sticky top-0 z-40 flex h-screen ${width} shrink-0 flex-col border-r border-stone-200 bg-white transition-[width] duration-200 ${
+      className={`sticky top-0 z-40 flex h-screen max-h-screen self-start ${width} shrink-0 flex-col border-r border-stone-200 bg-white transition-[width] duration-200 ${
         hydrated ? "" : "invisible"
       }`}
     >
