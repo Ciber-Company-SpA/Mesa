@@ -40,6 +40,16 @@ export function AdminSidebar() {
     setHydrated(true)
   }, [])
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-w",
+      collapsed ? "4rem" : "15rem"
+    )
+    return () => {
+      document.documentElement.style.removeProperty("--sidebar-w")
+    }
+  }, [collapsed])
+
   function toggle() {
     setCollapsed((prev) => {
       const next = !prev
@@ -169,7 +179,7 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={`sticky top-0 z-40 flex h-screen max-h-screen self-start ${width} shrink-0 flex-col border-r border-stone-200 bg-white transition-[width] duration-200 ${
+      className={`fixed left-0 top-0 z-40 flex h-screen ${width} flex-col border-r border-stone-200 bg-white transition-[width] duration-200 ${
         hydrated ? "" : "invisible"
       }`}
     >
