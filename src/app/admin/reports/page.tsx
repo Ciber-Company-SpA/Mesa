@@ -256,7 +256,7 @@ export default function ReportsPage() {
               </p>
             </div>
             <div className="rounded-2xl bg-white px-5 py-4 ring-1 ring-stone-200 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Ticket promedio</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Promedio por pedido</p>
               <p className="mt-2 text-3xl font-extrabold leading-none tracking-tight text-stone-900 tabular-nums">
                 {formatCLP(summary.averageTicket)}
               </p>
