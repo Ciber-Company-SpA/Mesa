@@ -90,11 +90,12 @@ export function useTableOrders(tableId: number | null) {
 
     setIsLoading(true)
     try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, total, status_id, created_at, ready_at, order_status(status_name), order_items(id, product_name, variant_name, product_price, product_quantity, notes)")
-        .eq("table_id", tableId)
-        .order("created_at", { ascending: false })
+      // RPC SECURITY DEFINER: el cliente público (anon) no tiene SELECT directo
+      // sobre orders/order_items; esta función solo devuelve los pedidos de la
+      // mesa que pasa como parámetro.
+      const { data, error } = await supabase.rpc("get_orders_for_table", {
+        p_table_id: tableId,
+      })
 
       if (error) throw error
 
