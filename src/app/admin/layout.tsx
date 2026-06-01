@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { AdminGuard } from "./AdminGuard"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
+import { OnboardingModal } from "@/components/admin/OnboardingModal"
 
 export const metadata: Metadata = {
   title: "Administración",
@@ -17,6 +18,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           {children}
         </main>
+        <OnboardingModal />
       </div>
     </AdminGuard>
   )

@@ -109,6 +109,46 @@ const UpdateRestaurantNameSchema = z.object({
   name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
 })
 
+const CompleteOnboardingSchema = z.object({
+  restaurantName: z.string().trim().min(1, "El nombre del restaurante no puede estar vacío").max(60, "Máximo 60 caracteres"),
+  adminName: z.string().trim().min(1, "Tu nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
+})
+
+export type CompleteOnboardingInput = z.infer<typeof CompleteOnboardingSchema>
+
+export async function completeOnboarding(
+  input: CompleteOnboardingInput
+): Promise<Result<null>> {
+  const parsed = CompleteOnboardingSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId, userId } = auth.data
+
+  const [restaurantRes, userRes] = await Promise.all([
+    supabase
+      .from("restaurants")
+      .update({ restaurant_name: parsed.data.restaurantName })
+      .eq("id", restaurantId),
+    supabase
+      .from("users")
+      .update({ user_name: parsed.data.adminName })
+      .eq("auth_user_id", userId),
+  ])
+
+  if (restaurantRes.error || userRes.error) {
+    return fail("No se pudo completar la configuración inicial")
+  }
+
+  revalidateTag("menu", "max")
+  revalidatePath("/[id]/menu", "page")
+  return ok(null)
+}
+
 export type UpdateRestaurantNameInput = z.infer<typeof UpdateRestaurantNameSchema>
 
 export async function updateRestaurantName(

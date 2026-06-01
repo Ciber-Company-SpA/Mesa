@@ -123,13 +123,7 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-6 text-center text-sm text-stone-600">
-              ¿No tienes cuenta?{" "}
-              <Link
-                href="/register"
-                className="font-semibold text-orange-600 transition hover:text-orange-700"
-              >
-                Registra tu restaurante
-              </Link>
+              ¿No tenés cuenta? Contactá al administrador para que te dé acceso.
             </p>
           </div>
         </section>
