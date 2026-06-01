@@ -5,6 +5,7 @@ import {
   updateCategoryAction,
   getCategoryForEditAction,
 } from "@/app/actions/category-actions"
+import { invalidateCategoryCaches } from "@/lib/cache-invalidation"
 
 export function useEditCategory(categoryId: number | null) {
   const pendingNameRef = useRef("")
@@ -41,6 +42,7 @@ export function useEditCategory(categoryId: number | null) {
       throw new Error(result.error)
     }
 
+    invalidateCategoryCaches()
     successRef.current = true
   })
 

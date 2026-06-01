@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createVariantAction } from "@/app/actions/variant-actions"
+import { invalidateProductCaches } from "@/lib/cache-invalidation"
 import { CreateVariantSchema } from "@/lib/validation/variant"
 
 type PendingCreateVariant = {
@@ -34,6 +35,8 @@ export function useCreateVariant(productId: number) {
     if (!result.ok) {
       throw new Error(result.error)
     }
+
+    invalidateProductCaches()
   })
 
   async function createVariant() {

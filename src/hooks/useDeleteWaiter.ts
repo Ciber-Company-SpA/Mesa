@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteWaiterAction } from "@/app/actions/waiter-actions"
+import { invalidateWaiterCaches } from "@/lib/cache-invalidation"
 
 export function useDeleteWaiter() {
   const [loading, setLoading] = useState(false)
@@ -20,6 +21,7 @@ export function useDeleteWaiter() {
       throw new Error(result.error)
     }
 
+    invalidateWaiterCaches()
     return true
   })
 

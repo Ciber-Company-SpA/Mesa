@@ -5,6 +5,7 @@ import {
   updateTableAction,
   getTableForEditAction,
 } from "@/app/actions/table-actions"
+import { invalidateTableCaches } from "@/lib/cache-invalidation"
 
 export function useEditTable(tableId: number | null) {
   const pendingTableNumberRef = useRef("")
@@ -41,6 +42,7 @@ export function useEditTable(tableId: number | null) {
       throw new Error(result.error)
     }
 
+    invalidateTableCaches()
     successRef.current = true
   })
 

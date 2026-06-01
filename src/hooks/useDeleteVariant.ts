@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteVariantAction } from "@/app/actions/variant-actions"
+import { invalidateProductCaches } from "@/lib/cache-invalidation"
 
 export function useDeleteVariant() {
   const [loading, setLoading] = useState(false)
@@ -20,6 +21,7 @@ export function useDeleteVariant() {
       throw new Error(result.error)
     }
 
+    invalidateProductCaches()
     return true
   })
 

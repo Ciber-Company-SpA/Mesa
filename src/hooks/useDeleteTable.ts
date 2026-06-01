@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteTableAction } from "@/app/actions/table-actions"
+import { invalidateTableCaches } from "@/lib/cache-invalidation"
 
 type PendingDeleteTable = {
   tableId: number
@@ -28,6 +29,7 @@ export function useDeleteTable() {
       throw new Error(result.error)
     }
 
+    invalidateTableCaches()
     return true
   })
 

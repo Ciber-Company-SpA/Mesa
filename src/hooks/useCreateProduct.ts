@@ -4,6 +4,7 @@ import { useUploadImage } from "@/hooks/useUploadImage"
 import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createProductAction } from "@/app/actions/product-actions"
+import { invalidateProductCaches } from "@/lib/cache-invalidation"
 import { processImage } from "@/lib/image-processing"
 import { readRemoveBgPreference, writeRemoveBgPreference } from "@/lib/preferences/remove-bg"
 import {
@@ -236,6 +237,7 @@ export function useCreateProduct() {
       throw new Error(result.error)
     }
 
+    invalidateProductCaches()
     successRef.current = true
   })
 

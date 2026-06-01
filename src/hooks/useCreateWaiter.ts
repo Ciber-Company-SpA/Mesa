@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createWaiterAction } from "@/app/actions/waiter-actions"
+import { invalidateWaiterCaches } from "@/lib/cache-invalidation"
 import { CreateWaiterSchema, type CreateWaiterInput } from "@/lib/validation/waiter"
 
 type CreatedWaiterSummary = {
@@ -34,6 +35,7 @@ export function useCreateWaiter() {
       throw new Error(result.error)
     }
 
+    invalidateWaiterCaches()
     createdRef.current = result.data
   })
 

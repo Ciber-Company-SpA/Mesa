@@ -8,6 +8,7 @@ import {
   updateProductAction,
   getProductForEditAction,
 } from "@/app/actions/product-actions"
+import { invalidateProductCaches } from "@/lib/cache-invalidation"
 import {
   UpdateProductOptionSchema,
   UpdateProductSchema,
@@ -312,6 +313,7 @@ export function useEditProduct(productId: number | null) {
       throw new Error(result.error)
     }
 
+    invalidateProductCaches()
     successRef.current = true
   })
 

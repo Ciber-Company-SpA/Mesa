@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { updateVariantAction } from "@/app/actions/variant-actions"
+import { invalidateProductCaches } from "@/lib/cache-invalidation"
 import { UpdateVariantSchema } from "@/lib/validation/variant"
 import type { ProductVariant } from "@/types/product-variant"
 
@@ -37,6 +38,8 @@ export function useEditVariant(variant: ProductVariant) {
     if (!result.ok) {
       throw new Error(result.error)
     }
+
+    invalidateProductCaches()
   })
 
   async function updateVariant() {

@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createCategoryAction } from "@/app/actions/category-actions"
+import { invalidateCategoryCaches } from "@/lib/cache-invalidation"
 
 export function useCreateCategory() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
@@ -30,6 +31,7 @@ export function useCreateCategory() {
       throw new Error(result.error)
     }
 
+    invalidateCategoryCaches()
     successRef.current = true
   })
 

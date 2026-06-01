@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createTableAction } from "@/app/actions/table-actions"
+import { invalidateTableCaches } from "@/lib/cache-invalidation"
 import { CreateTableSchema } from "@/lib/validation/table"
 
 export function useCreateTable() {
@@ -36,6 +37,7 @@ export function useCreateTable() {
       throw new Error(result.error)
     }
 
+    invalidateTableCaches()
     successRef.current = true
   })
 

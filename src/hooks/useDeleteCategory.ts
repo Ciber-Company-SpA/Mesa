@@ -3,6 +3,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { deleteCategoryAction } from "@/app/actions/category-actions"
+import { invalidateCategoryCaches } from "@/lib/cache-invalidation"
 
 export function useDeleteCategory() {
   const [loading, setLoading] = useState(false)
@@ -21,6 +22,7 @@ export function useDeleteCategory() {
       throw new Error(result.error)
     }
 
+    invalidateCategoryCaches()
     return true
   })
 
