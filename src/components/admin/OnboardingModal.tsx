@@ -112,6 +112,47 @@ export function OnboardingModal() {
             />
           </div>
 
+          <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-orange-700">
+              Definí tu contraseña
+            </p>
+            <p className="mb-3 text-[11px] leading-4 text-stone-600">
+              Por seguridad cambiá la contraseña temporal que te pasaron. Mínimo 8 caracteres.
+            </p>
+
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nueva contraseña"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 pr-10 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+                  aria-label={showPassword ? "Ocultar" : "Mostrar"}
+                >
+                  {showPassword ? "Ocultar" : "Ver"}
+                </button>
+              </div>
+
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmá la contraseña"
+                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+              />
+            </div>
+          </div>
+
           {error && (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
               {error}
