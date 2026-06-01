@@ -13,6 +13,9 @@ export function OnboardingModal() {
 
   const [restaurantName, setRestaurantName] = useState("")
   const [adminName, setAdminName] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,6 +25,16 @@ export function OnboardingModal() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (saving) return
+
+    if (newPassword.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden.")
+      return
+    }
+
     setSaving(true)
     setError(null)
     try {
@@ -33,7 +46,14 @@ export function OnboardingModal() {
         setError(result.error)
         return
       }
-      await supabase.auth.updateUser({ data: { admin_name: adminName.trim() } })
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { admin_name: adminName.trim() },
+      })
+      if (updateError) {
+        setError(`No se pudo actualizar la contraseña: ${updateError.message}`)
+        return
+      }
       if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
       invalidateCache("admin-profile")
       refresh()
