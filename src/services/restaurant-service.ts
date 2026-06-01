@@ -127,17 +127,14 @@ export async function completeOnboarding(
   const auth = await requireCurrentAdmin()
   if (!auth.ok) return auth
 
-  const { supabase, restaurantId, userId } = auth.data
+  const { supabase, restaurantId } = auth.data
 
   const [restaurantRes, userRes] = await Promise.all([
     supabase
       .from("restaurants")
       .update({ restaurant_name: parsed.data.restaurantName })
       .eq("id", restaurantId),
-    supabase
-      .from("users")
-      .update({ user_name: parsed.data.adminName })
-      .eq("auth_user_id", userId),
+    supabase.rpc("update_own_user_name", { p_user_name: parsed.data.adminName }),
   ])
 
   if (restaurantRes.error || userRes.error) {
