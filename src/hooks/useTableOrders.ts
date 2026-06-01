@@ -114,26 +114,18 @@ export function useTableOrders(tableId: number | null) {
     fetchOrders()
   }, [fetchOrders])
 
+  // El cliente público (anon) no recibe eventos de postgres_changes sobre
+  // orders porque la RLS de Supabase realtime se lo bloquea. Polling cada 15s
+  // mientras la mesa esté abierta cubre el gap. Si en el futuro el usuario está
+  // autenticado (mesero), realtime sí funciona y el polling es solo un fallback
+  // barato.
   useEffect(() => {
     if (!tableId) return
-
-    const channel = supabase
-      .channel(`table-orders-${tableId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `table_id=eq.${tableId}`,
-        },
-        () => fetchOrders()
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return
+      fetchOrders()
+    }, 15_000)
+    return () => window.clearInterval(id)
   }, [tableId, fetchOrders])
 
   return { orders, isLoading, refresh: fetchOrders }
