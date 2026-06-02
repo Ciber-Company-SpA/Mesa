@@ -99,7 +99,7 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
     <main className={`relative min-h-screen ${overlayBg}`}>
       <div className={`pointer-events-none absolute inset-0 ${overlayGradient}`} />
 
-      <div className="relative mx-auto max-w-6xl px-5 py-8 lg:px-8">
+      <div className="relative mx-auto max-w-5xl px-5 py-8 lg:px-8">
         <div className="mb-4 flex items-center justify-between">
           <Link
             href="/"
@@ -112,7 +112,7 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
           </span>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[280px_1fr] lg:items-start lg:gap-10">
+        <div className="grid gap-8 lg:grid-cols-[240px_1fr] lg:items-start lg:gap-12">
           <aside className="lg:sticky lg:top-8">
             <header className="flex items-start gap-4 lg:flex-col lg:items-stretch">
               {restaurant.restaurant_logo ? (
