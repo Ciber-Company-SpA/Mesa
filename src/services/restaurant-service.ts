@@ -109,6 +109,69 @@ const UpdateRestaurantNameSchema = z.object({
   name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
 })
 
+const RESERVED_SLUGS = new Set([
+  "admin", "api", "forgot-password", "login", "r", "register",
+  "reset-password", "restaurant", "screen", "sumate", "waiter",
+  "monitoring", "icons", "public", "static", "_next",
+])
+
+const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+const UpdateDeliveryConfigSchema = z.object({
+  enabled: z.boolean(),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3, "El identificador debe tener al menos 3 caracteres")
+    .max(60, "Máximo 60 caracteres")
+    .regex(SLUG_REGEX, "Solo letras minúsculas, números y guiones (sin espacios ni acentos)")
+    .refine((s) => !RESERVED_SLUGS.has(s), {
+      message: "Ese identificador está reservado, probá con otro",
+    })
+    .nullable()
+    .optional(),
+})
+
+export type UpdateDeliveryConfigInput = z.infer<typeof UpdateDeliveryConfigSchema>
+
+export async function updateDeliveryConfig(
+  input: UpdateDeliveryConfigInput
+): Promise<Result<null>> {
+  const parsed = UpdateDeliveryConfigSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const { enabled, slug } = parsed.data
+
+  if (enabled && !slug) {
+    return fail("Necesitás definir un identificador para activar delivery")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      delivery_enabled: enabled,
+      delivery_slug: slug ?? null,
+    })
+    .eq("id", restaurantId)
+
+  if (error) {
+    if (error.code === "23505") {
+      return fail("Ese identificador ya está en uso por otro local")
+    }
+    return fail("No se pudo guardar los cambios")
+  }
+
+  return ok(null)
+}
+
 const UpdateRestaurantCitySchema = z.object({
   city: z.string().trim().max(80, "Máximo 80 caracteres").nullable(),
 })

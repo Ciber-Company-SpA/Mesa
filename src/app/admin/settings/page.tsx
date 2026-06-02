@@ -6,6 +6,7 @@ import { useCategories } from "@/hooks/useCategories"
 import { useProducts } from "@/hooks/useProducts"
 import { invalidateCache } from "@/hooks/useCache"
 import {
+  updateDeliveryConfig,
   updateMenuTemplate,
   updateOrderDestination,
   updateOutputMode,
@@ -262,6 +263,158 @@ function RestaurantCitySection({ currentCity, onSaved }: RestaurantCitySectionPr
       )}
 
       <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+        {!isDirty && !saving && (
+          <span className="text-xs font-medium text-stone-400">Sin cambios.</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
+type DeliverySectionProps = {
+  restaurant: Restaurant | null
+  onSaved: () => void
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+}
+
+function DeliverySection({ restaurant, onSaved }: DeliverySectionProps) {
+  const initialEnabled = restaurant?.delivery_enabled ?? false
+  const initialSlug = restaurant?.delivery_slug ?? ""
+
+  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null)
+  const [slugOverride, setSlugOverride] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  const enabled = enabledOverride ?? initialEnabled
+  const slug = slugOverride ?? initialSlug
+  const isDirty =
+    enabled !== initialEnabled ||
+    (slugOverride !== null && slugOverride.trim() !== initialSlug.trim())
+
+  async function handleSave() {
+    if (saving || !isDirty) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const result = await updateDeliveryConfig({
+        enabled,
+        slug: slug.trim() || null,
+      })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      onSaved()
+      setEnabledOverride(null)
+      setSlugOverride(null)
+      setFeedback({ kind: "ok", message: "Cambios guardados" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleAutoSlug() {
+    if (!restaurant?.restaurant_name) return
+    setSlugOverride(slugify(restaurant.restaurant_name))
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Delivery</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Activá delivery para aparecer en el directorio público y tener tu URL propia.
+      </p>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setEnabledOverride(!enabled)}
+          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition ${
+            enabled ? "bg-orange-500" : "bg-stone-200"
+          }`}
+          role="switch"
+          aria-checked={enabled}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+              enabled ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+        <span className="text-sm font-semibold text-stone-900">
+          {enabled ? "Delivery activado" : "Delivery desactivado"}
+        </span>
+      </div>
+
+      {enabled && (
+        <div className="mt-6 max-w-md">
+          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
+            Identificador (slug)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlugOverride(e.target.value.toLowerCase())}
+              placeholder="la-parrilla-de-benja"
+              maxLength={60}
+              className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-mono text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+            {restaurant?.restaurant_name && (
+              <button
+                type="button"
+                onClick={handleAutoSlug}
+                className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-bold text-stone-600 transition hover:bg-stone-50"
+              >
+                Sugerir
+              </button>
+            )}
+          </div>
+          {slug.trim() && (
+            <p className="mt-2 text-[11px] leading-4 text-stone-500">
+              Tu URL pública será:{" "}
+              <span className="font-mono font-semibold text-stone-700">
+                mesa.app/{slug.trim()}
+              </span>
+            </p>
+          )}
+          <p className="mt-2 text-[11px] leading-4 text-stone-500">
+            Solo minúsculas, números y guiones. Debe ser único entre todos los locales de MESA.
+          </p>
+        </div>
+      )}
+
+      {feedback && (
+        <p
+          className={`mt-5 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
+
+      <div className="mt-6 flex items-center gap-3">
         <button
           type="button"
           onClick={handleSave}
@@ -571,6 +724,14 @@ export default function AdminSettingsPage() {
 
       <RestaurantCitySection
         currentCity={restaurant?.restaurant_city}
+        onSaved={() => {
+          if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+          refresh()
+        }}
+      />
+
+      <DeliverySection
+        restaurant={restaurant ?? null}
         onSaved={() => {
           if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
           refresh()

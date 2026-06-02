@@ -11,6 +11,7 @@ type PublicRestaurantRow = {
   restaurant_logo: string | null
   menu_template: MenuTemplate
   restaurant_city: string | null
+  delivery_slug: string
   product_count: number
   category_count: number
 }
@@ -69,7 +70,7 @@ export default async function Home() {
             {restaurants.map((r) => (
               <Link
                 key={r.id}
-                href={`/restaurant/${r.id}`}
+                href={`/${r.delivery_slug}`}
                 className="group overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div

@@ -7,15 +7,14 @@ import type { MenuTemplate } from "@/types/restaurant"
 
 type Params = Promise<{ id: string }>
 
-type RestaurantRow = {
+type Variant = {
   id: number
-  restaurant_name: string
-  restaurant_logo: string | null
-  menu_template: MenuTemplate
-  restaurant_city: string | null
+  variant_name: string
+  variant_price: number
+  variant_image: string | null
 }
 
-type ProductRow = {
+type Product = {
   id: number
   product_name: string
   product_description: string | null
@@ -23,62 +22,49 @@ type ProductRow = {
   product_image: string | null
   category_id: number
   status_id: number
-  categories: { category_name: string } | null
-  product_variants: Array<{
-    id: number
-    variant_name: string
-    variant_price: number
-    variant_image: string | null
-  }>
+  category_name: string | null
+  variants: Variant[]
 }
 
-type CategoryRow = {
+type Category = { id: number; category_name: string }
+
+type RestaurantInfo = {
   id: number
-  category_name: string
+  restaurant_name: string
+  restaurant_logo: string | null
+  restaurant_city: string | null
+  menu_template: MenuTemplate
+  delivery_slug: string
 }
 
-async function fetchPublicRestaurant(restaurantId: number) {
+type RpcResult = {
+  restaurant: RestaurantInfo
+  categories: Category[]
+  products: Product[]
+}
+
+async function fetchBySlug(slug: string): Promise<RpcResult | null> {
   const supabase = createSupabaseAnonClient()
-
-  const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
-    supabase
-      .from("restaurants")
-      .select("id, restaurant_name, restaurant_logo, menu_template, restaurant_city")
-      .eq("id", restaurantId)
-      .maybeSingle(),
-    supabase
-      .from("products")
-      .select(`id, product_name, product_description, product_price, product_image, category_id, status_id, categories ( category_name ), product_variants ( id, variant_name, variant_price, variant_image )`)
-      .eq("restaurant_id", restaurantId),
-    supabase
-      .from("categories")
-      .select("id, category_name")
-      .eq("restaurant_id", restaurantId),
-  ])
-
-  if (restaurantRes.error || !restaurantRes.data) return null
-
-  return {
-    restaurant: restaurantRes.data as RestaurantRow,
-    products: (productsRes.data ?? []) as unknown as ProductRow[],
-    categories: (categoriesRes.data ?? []) as CategoryRow[],
-  }
+  const { data, error } = await supabase.rpc("get_restaurant_by_slug", { p_slug: slug })
+  if (error || !data) return null
+  return data as unknown as RpcResult
 }
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
 }
 
-export default async function PublicRestaurantPage({ params }: { params: Params }) {
-  const { id } = await params
-  const restaurantId = Number(id)
+export default async function DeliveryRestaurantPage({ params }: { params: Params }) {
+  const { id: slug } = await params
 
-  if (!restaurantId || Number.isNaN(restaurantId)) notFound()
+  // Si llega un valor numérico es probable que el usuario haya entrado por el viejo
+  // /restaurant/[id] o un link antiguo — no resolvemos por id desde el slug route.
+  if (!slug || !/^[a-z0-9][a-z0-9-]*$/i.test(slug)) notFound()
 
-  const data = await fetchPublicRestaurant(restaurantId)
+  const data = await fetchBySlug(slug)
   if (!data) notFound()
 
-  const { restaurant, products, categories } = data
+  const { restaurant, categories, products } = data
   const design = getTemplateDesign(restaurant.menu_template)
 
   const overlayBg =
@@ -102,10 +88,12 @@ export default async function PublicRestaurantPage({ params }: { params: Params 
       ? "bg-[linear-gradient(120deg,rgba(235,243,250,1)_0%,rgba(225,235,245,0.6)_40%,rgba(240,244,248,1)_100%)]"
       : "bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.22),_transparent_34%),linear-gradient(180deg,_#1c1917_0%,_#0c0a09_58%,_#020617_100%)]"
 
-  const productsByCategory = categories.map((cat) => ({
-    category: cat,
-    items: products.filter((p) => p.category_id === cat.id && p.status_id === 1),
-  })).filter((g) => g.items.length > 0)
+  const productsByCategory = categories
+    .map((cat) => ({
+      category: cat,
+      items: products.filter((p) => p.category_id === cat.id && p.status_id === 1),
+    }))
+    .filter((g) => g.items.length > 0)
 
   return (
     <main className={`relative min-h-screen ${overlayBg}`}>
@@ -120,7 +108,7 @@ export default async function PublicRestaurantPage({ params }: { params: Params 
             ← Volver a MESA
           </Link>
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${design.abiertoBadge}`}>
-            Vista pública
+            Delivery
           </span>
         </div>
 
@@ -196,9 +184,9 @@ export default async function PublicRestaurantPage({ params }: { params: Params 
                             {item.product_description}
                           </p>
                         )}
-                        {item.product_variants && item.product_variants.length > 0 ? (
+                        {item.variants && item.variants.length > 0 ? (
                           <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.product_variants.map((v) => (
+                            {item.variants.map((v) => (
                               <span
                                 key={v.id}
                                 className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${design.pillInactive}`}
