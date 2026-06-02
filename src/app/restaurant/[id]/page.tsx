@@ -155,10 +155,10 @@ export default async function PublicRestaurantPage({ params }: { params: Params 
 
         <div className={`mb-6 rounded-2xl border border-white/10 p-4 ${design.card}`}>
           <p className={`text-sm font-semibold ${design.cardName}`}>
-            Para hacer un pedido, escaneá el código QR de tu mesa.
+            ¿Querés pedir? Hacé tu pedido por delivery o escaneá el QR de tu mesa.
           </p>
           <p className={`mt-1 text-xs ${design.cardDesc}`}>
-            Esta es una vista pública del menú. Los pedidos solo se reciben desde la app del local.
+            Próximamente vas a poder armar tu pedido directo desde acá.
           </p>
         </div>
 
