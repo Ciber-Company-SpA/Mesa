@@ -99,7 +99,7 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
     <main className={`relative min-h-screen ${overlayBg}`}>
       <div className={`pointer-events-none absolute inset-0 ${overlayGradient}`} />
 
-      <div className="relative mx-auto max-w-3xl px-5 py-8">
+      <div className="relative mx-auto max-w-6xl px-5 py-8 lg:px-8">
         <div className="mb-4 flex items-center justify-between">
           <Link
             href="/"
@@ -112,61 +112,65 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
           </span>
         </div>
 
-        <header className="mb-6 flex items-start gap-4">
-          {restaurant.restaurant_logo ? (
-            <Image
-              src={restaurant.restaurant_logo}
-              alt={restaurant.restaurant_name}
-              width={72}
-              height={72}
-              className="h-18 w-18 shrink-0 rounded-2xl object-cover ring-1 ring-white/10"
-              unoptimized
-            />
-          ) : (
-            <div className={`flex h-18 w-18 shrink-0 items-center justify-center rounded-2xl ${design.card}`}>
-              <span className={`text-2xl font-black ${design.titleClass}`}>
-                {restaurant.restaurant_name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-          <div className="min-w-0">
-            <h1 className={`text-3xl font-black tracking-tight ${design.titleClass}`}>
-              {restaurant.restaurant_name}
-            </h1>
-            {restaurant.restaurant_city && (
-              <p className={`mt-1 text-sm ${design.mesaText}`}>
-                📍 {restaurant.restaurant_city}
+        <div className="grid gap-8 lg:grid-cols-[280px_1fr] lg:items-start lg:gap-10">
+          <aside className="lg:sticky lg:top-8">
+            <header className="flex items-start gap-4 lg:flex-col lg:items-stretch">
+              {restaurant.restaurant_logo ? (
+                <Image
+                  src={restaurant.restaurant_logo}
+                  alt={restaurant.restaurant_name}
+                  width={120}
+                  height={120}
+                  className="h-18 w-18 shrink-0 rounded-2xl object-cover ring-1 ring-white/10 lg:h-28 lg:w-28"
+                  unoptimized
+                />
+              ) : (
+                <div className={`flex h-18 w-18 shrink-0 items-center justify-center rounded-2xl lg:h-28 lg:w-28 ${design.card}`}>
+                  <span className={`text-2xl font-black lg:text-4xl ${design.titleClass}`}>
+                    {restaurant.restaurant_name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className={`text-3xl font-black tracking-tight lg:text-4xl ${design.titleClass}`}>
+                  {restaurant.restaurant_name}
+                </h1>
+                {restaurant.restaurant_city && (
+                  <p className={`mt-1 text-sm ${design.mesaText}`}>
+                    📍 {restaurant.restaurant_city}
+                  </p>
+                )}
+              </div>
+            </header>
+
+            <div className={`mt-6 rounded-2xl border border-white/10 p-4 ${design.card}`}>
+              <p className={`text-sm font-semibold ${design.cardName}`}>
+                ¿Querés pedir? Hacé tu pedido por delivery o escaneá el QR de tu mesa.
               </p>
-            )}
-          </div>
-        </header>
+              <p className={`mt-1 text-xs ${design.cardDesc}`}>
+                Próximamente vas a poder armar tu pedido directo desde acá.
+              </p>
+            </div>
+          </aside>
 
-        <div className={`mb-6 rounded-2xl border border-white/10 p-4 ${design.card}`}>
-          <p className={`text-sm font-semibold ${design.cardName}`}>
-            ¿Querés pedir? Hacé tu pedido por delivery o escaneá el QR de tu mesa.
-          </p>
-          <p className={`mt-1 text-xs ${design.cardDesc}`}>
-            Próximamente vas a poder armar tu pedido directo desde acá.
-          </p>
-        </div>
-
-        {productsByCategory.length === 0 ? (
-          <p className={`text-center text-sm ${design.cardDesc}`}>
-            Este restaurante todavía no publicó su menú.
-          </p>
-        ) : (
-          <div className="space-y-8">
-            {productsByCategory.map(({ category, items }) => (
-              <section key={category.id}>
-                <h2 className={`mb-3 text-lg font-black uppercase tracking-wider ${design.titleClass}`}>
-                  {category.category_name}
-                </h2>
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <article
-                      key={item.id}
-                      className={`flex gap-3 rounded-2xl p-3 ${design.card}`}
-                    >
+          <div className="min-w-0">
+            {productsByCategory.length === 0 ? (
+              <p className={`text-center text-sm ${design.cardDesc}`}>
+                Este restaurante todavía no publicó su menú.
+              </p>
+            ) : (
+              <div className="space-y-10">
+                {productsByCategory.map(({ category, items }) => (
+                  <section key={category.id}>
+                    <h2 className={`mb-3 text-lg font-black uppercase tracking-wider ${design.titleClass}`}>
+                      {category.category_name}
+                    </h2>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {items.map((item) => (
+                        <article
+                          key={item.id}
+                          className={`flex gap-3 rounded-2xl p-3 ${design.card}`}
+                        >
                       <div className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl ${design.cardImageBg}`}>
                         {item.product_image ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -208,6 +212,8 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
             ))}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </main>
   )
