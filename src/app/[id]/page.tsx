@@ -3,6 +3,7 @@ import Image from "next/image"
 import { notFound } from "next/navigation"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
 import { getTemplateDesign } from "@/lib/menu/templates"
+import { encodeId } from "@/lib/hashids"
 import type { MenuTemplate } from "@/types/restaurant"
 
 type Params = Promise<{ id: string }>
@@ -167,9 +168,10 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
                     </h2>
                     <div className="grid gap-3 md:grid-cols-2">
                       {items.map((item) => (
-                        <article
+                        <Link
                           key={item.id}
-                          className={`flex gap-3 rounded-2xl p-3 ${design.card}`}
+                          href={`/${restaurant.delivery_slug}/${encodeId(item.id)}`}
+                          className={`flex gap-3 rounded-2xl p-3 transition hover:-translate-y-0.5 hover:shadow-lg ${design.card}`}
                         >
                       <div className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl ${design.cardImageBg}`}>
                         {item.product_image ? (
@@ -205,11 +207,11 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
                           </p>
                         )}
                       </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                ))}
           </div>
         )}
           </div>
