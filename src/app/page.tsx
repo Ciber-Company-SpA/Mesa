@@ -1,6 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
+
+export const revalidate = 30
 import { MENU_TEMPLATES } from "@/lib/menu/templates"
 import { PublicHeader } from "@/components/PublicHeader"
 import type { MenuTemplate } from "@/types/restaurant"
