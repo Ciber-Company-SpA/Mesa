@@ -108,11 +108,10 @@ export default async function PublicRestaurantPage({ params }: { params: Params 
   })).filter((g) => g.items.length > 0)
 
   return (
-    <main className="relative min-h-screen">
-      <div className={`fixed inset-0 -z-10 ${overlayBg}`} />
-      <div className={`pointer-events-none fixed inset-0 -z-10 ${overlayGradient}`} />
+    <main className={`relative min-h-screen ${overlayBg}`}>
+      <div className={`pointer-events-none absolute inset-0 ${overlayGradient}`} />
 
-      <div className="mx-auto max-w-3xl px-5 py-8">
+      <div className="relative mx-auto max-w-3xl px-5 py-8">
         <div className="mb-4 flex items-center justify-between">
           <Link
             href="/"
