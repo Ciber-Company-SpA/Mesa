@@ -11,6 +11,7 @@ import { useCartSync } from "@/hooks/useCartSync"
 import { BackButton } from "@/components/ui/BackButton"
 import { useLastOrder } from "@/hooks/useLastOrder"
 import { getTemplateDesign } from "@/lib/menu/templates"
+import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
@@ -229,6 +230,11 @@ export function ProductDetailClient({
         setTimeout(() => setUnavailableMsg(""), 3000)
         return
       }
+
+      const slides = sliderRef.current?.querySelectorAll<HTMLElement>("[data-option-slide]")
+      const activeSlide = slides?.[activeOptionIndex] ?? null
+      const sourceImg = activeSlide?.querySelector<HTMLImageElement>("img")
+      flyToCart(sourceImg ?? activeSlide)
 
       await addItem({
         productId: productIdForStatus,

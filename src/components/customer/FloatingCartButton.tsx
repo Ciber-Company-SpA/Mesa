@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { CartDrawer } from "@/components/customer/CartDrawer"
 import { useTableCart } from "@/hooks/useTableCart"
+import { getCartTargetId } from "@/lib/customer/fly-to-cart"
 
 type FloatingCartButtonProps = {
   tableId: number
@@ -18,6 +19,7 @@ export function FloatingCartButton({ tableId, restaurantId }: FloatingCartButton
   return (
     <>
       <button
+        id={getCartTargetId()}
         className="fixed bottom-5 right-5 z-10 flex items-center gap-3 rounded-full bg-orange-500 px-5 py-4 text-stone-950 shadow-2xl shadow-orange-500/30 ring-1 ring-orange-200/50 transition hover:bg-orange-400"
         type="button"
         aria-label="Abrir carrito"
