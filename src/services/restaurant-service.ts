@@ -109,6 +109,35 @@ const UpdateRestaurantNameSchema = z.object({
   name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
 })
 
+const UpdateRestaurantCitySchema = z.object({
+  city: z.string().trim().max(80, "Máximo 80 caracteres").nullable(),
+})
+
+export type UpdateRestaurantCityInput = z.infer<typeof UpdateRestaurantCitySchema>
+
+export async function updateRestaurantCity(
+  input: UpdateRestaurantCityInput
+): Promise<Result<null>> {
+  const parsed = UpdateRestaurantCitySchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ restaurant_city: parsed.data.city?.trim() || null })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  return ok(null)
+}
+
 const CompleteOnboardingSchema = z.object({
   restaurantName: z.string().trim().min(1, "El nombre del restaurante no puede estar vacío").max(60, "Máximo 60 caracteres"),
   adminName: z.string().trim().min(1, "Tu nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),

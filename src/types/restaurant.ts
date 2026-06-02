@@ -15,4 +15,5 @@ export type Restaurant = PublicRestaurant & {
   order_destination: OrderDestination
   output_mode: OutputMode
   printer_bluetooth_name: string | null
+  restaurant_city: string | null
 }
