@@ -101,9 +101,6 @@ export default async function Home() {
                   )}
                   <div className="mt-3 flex items-center gap-3 text-xs font-semibold text-stone-600">
                     <span className="rounded-full bg-stone-100 px-2.5 py-1">
-                      {r.category_count} {r.category_count === 1 ? "categoría" : "categorías"}
-                    </span>
-                    <span className="rounded-full bg-stone-100 px-2.5 py-1">
                       {r.product_count} {r.product_count === 1 ? "producto" : "productos"}
                     </span>
                   </div>
