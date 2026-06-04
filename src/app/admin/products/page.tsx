@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Pagination } from "@/components/ui/Pagination"
 import { useProductList } from "@/hooks/useProductList"
@@ -96,14 +97,25 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          aria-label="Crear producto"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
-        >
-          <span>+ Agregar Producto</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/products/import"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-bold text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:text-orange-600"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Importar carta
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            aria-label="Crear producto"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
+          >
+            <span>+ Agregar Producto</span>
+          </button>
+        </div>
       </div>
 
       {/* Panel Principal de Productos */}
