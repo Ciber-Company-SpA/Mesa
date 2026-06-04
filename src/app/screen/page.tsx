@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { logger } from "@/lib/logger"
 import { AdminGuard } from "@/app/admin/AdminGuard"
+import { advanceOrderStatusAction } from "@/app/actions/order-actions"
 
 type FetchedOrder = {
   id: number
@@ -28,6 +29,20 @@ function formatClock(date: Date) {
   return date.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
 }
 
+function rowToDisplay(data: FetchedOrder): DisplayOrder {
+  return {
+    id: data.id,
+    tableNumber: data.tables?.table_number ?? data.table_id,
+    receivedAt: new Date(data.created_at),
+    items: data.order_items.map((item) => ({
+      quantity: item.product_quantity,
+      name: item.variant_name
+        ? `${item.product_name ?? "Producto"} · ${item.variant_name}`
+        : item.product_name ?? "Producto",
+    })),
+  }
+}
+
 export default function ScreenPageWrapper() {
   return (
     <AdminGuard>
@@ -40,48 +55,85 @@ function ScreenPage() {
   const { restaurant, loading } = useRestaurant()
   const channelId = useId()
   const [orders, setOrders] = useState<DisplayOrder[]>([])
-  const seenIds = useRef<Set<number>>(new Set())
+  const [markingId, setMarkingId] = useState<number | null>(null)
   const restaurantRef = useRef(restaurant)
 
   useEffect(() => {
     restaurantRef.current = restaurant
   }, [restaurant])
 
-  const handleOrderEvent = useCallback(async (orderId: number) => {
-    const current = restaurantRef.current
-    if (current?.output_mode !== "screen") return
-    if (seenIds.current.has(orderId)) return
+  const fetchOrder = useCallback(async (orderId: number): Promise<FetchedOrder | null> => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(
+        "id, status_id, table_id, created_at, tables ( table_number ), order_items ( product_quantity, product_name, variant_name )"
+      )
+      .eq("id", orderId)
+      .maybeSingle<FetchedOrder>()
 
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, status_id, table_id, created_at, tables ( table_number ), order_items ( product_quantity, product_name, variant_name )")
-        .eq("id", orderId)
-        .maybeSingle<FetchedOrder>()
-
-      if (error || !data) return
-      if (data.status_id !== EN_PREPARACION_STATUS_ID) return
-
-      seenIds.current.add(orderId)
-
-      const display: DisplayOrder = {
-        id: data.id,
-        tableNumber: data.tables?.table_number ?? data.table_id,
-        receivedAt: new Date(),
-        items: data.order_items.map((item) => ({
-          quantity: item.product_quantity,
-          name: item.variant_name
-            ? `${item.product_name ?? "Producto"} · ${item.variant_name}`
-            : item.product_name ?? "Producto",
-        })),
-      }
-
-      setOrders((prev) => [display, ...prev].slice(0, 12))
-    } catch (err) {
-      logger.error("screen page error", { error: String(err) })
-    }
+    if (error || !data) return null
+    return data
   }, [])
 
+  const handleOrderEvent = useCallback(
+    async (orderId: number, newStatus: number | null) => {
+      const current = restaurantRef.current
+      if (current?.output_mode !== "screen") return
+
+      // Salió de "En preparación": quitar del listado si estaba.
+      if (newStatus !== null && newStatus !== EN_PREPARACION_STATUS_ID) {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId))
+        return
+      }
+
+      // Entró o sigue en "En preparación": cargar detalle y agregar/actualizar.
+      try {
+        const data = await fetchOrder(orderId)
+        if (!data || data.status_id !== EN_PREPARACION_STATUS_ID) return
+
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === data.id)) return prev
+          return [rowToDisplay(data), ...prev].slice(0, 12)
+        })
+      } catch (err) {
+        logger.error("screen page event", { error: String(err) })
+      }
+    },
+    [fetchOrder]
+  )
+
+  // Fetch inicial: trae los pedidos que YA están en "En preparación" al abrir.
+  useEffect(() => {
+    if (!restaurant?.id) return
+    if (restaurant.output_mode !== "screen") return
+
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          "id, status_id, table_id, created_at, tables ( table_number ), order_items ( product_quantity, product_name, variant_name )"
+        )
+        .eq("restaurant_id", restaurant.id)
+        .eq("status_id", EN_PREPARACION_STATUS_ID)
+        .order("created_at", { ascending: false })
+        .limit(12)
+
+      if (cancelled) return
+      if (error) {
+        logger.error("screen initial fetch", { error })
+        return
+      }
+      const rows = (data ?? []) as unknown as FetchedOrder[]
+      setOrders(rows.map(rowToDisplay))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [restaurant?.id, restaurant?.output_mode])
+
+  // Realtime: INSERT y UPDATE de orders.
   useEffect(() => {
     if (!restaurant?.id) return
 
@@ -96,8 +148,9 @@ function ScreenPage() {
           filter: `restaurant_id=eq.${restaurant.id}`,
         },
         (payload) => {
-          const id = (payload.new as { id?: number }).id
-          if (typeof id === "number") handleOrderEvent(id)
+          const row = payload.new as { id?: number; status_id?: number }
+          if (typeof row.id !== "number") return
+          handleOrderEvent(row.id, row.status_id ?? null)
         }
       )
       .on(
@@ -109,8 +162,9 @@ function ScreenPage() {
           filter: `restaurant_id=eq.${restaurant.id}`,
         },
         (payload) => {
-          const id = (payload.new as { id?: number }).id
-          if (typeof id === "number") handleOrderEvent(id)
+          const row = payload.new as { id?: number; status_id?: number }
+          if (typeof row.id !== "number") return
+          handleOrderEvent(row.id, row.status_id ?? null)
         }
       )
       .subscribe()
@@ -119,6 +173,29 @@ function ScreenPage() {
       supabase.removeChannel(channel)
     }
   }, [restaurant?.id, channelId, handleOrderEvent])
+
+  async function handleMarkReady(orderId: number) {
+    if (markingId) return
+    setMarkingId(orderId)
+    // Optimistic: quitar del listado de una vez.
+    setOrders((prev) => prev.filter((o) => o.id !== orderId))
+    try {
+      const result = await advanceOrderStatusAction(orderId)
+      if (!result.ok) {
+        // Si falla, refetchear para reflejar el estado real.
+        const data = await fetchOrder(orderId)
+        if (data && data.status_id === EN_PREPARACION_STATUS_ID) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === data.id)) return prev
+            return [rowToDisplay(data), ...prev].slice(0, 12)
+          })
+        }
+        logger.error("mark ready failed", { error: result.error })
+      }
+    } finally {
+      setMarkingId(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -196,6 +273,24 @@ function ScreenPage() {
                   </li>
                 ))}
               </ul>
+
+              <button
+                type="button"
+                onClick={() => handleMarkReady(order.id)}
+                disabled={markingId === order.id}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {markingId === order.id ? (
+                  "Marcando..."
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Marcar listo
+                  </>
+                )}
+              </button>
             </article>
           ))}
         </div>
