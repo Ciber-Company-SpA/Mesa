@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
     "10.46.41.101",   // Laptop de Benja
     "192.168.56.1",   // Laptop de Amaro
   ],
+  // Las Server Actions cargan imágenes (importar carta con Gemini, hasta 6 fotos en base64).
+  // Default es 1MB, lo subimos para que no rechace silenciosamente.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+  },
   async headers() {
     return [
       {

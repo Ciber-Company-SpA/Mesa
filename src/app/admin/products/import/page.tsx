@@ -16,15 +16,43 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString("es-CL")}`
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer()
+// Reduce la imagen a un JPEG de máximo 1600px de ancho y devuelve el base64 + mimeType.
+// Esto es crítico para que el body del Server Action no exceda el límite y para que
+// Gemini procese más rápido (menos tokens de imagen).
+async function fileToCompressedBase64(
+  file: File
+): Promise<{ base64: string; mimeType: string }> {
+  const MAX_WIDTH = 1600
+  const JPEG_QUALITY = 0.82
+
+  const bitmap = await createImageBitmap(file)
+  const ratio = Math.min(1, MAX_WIDTH / bitmap.width)
+  const width = Math.round(bitmap.width * ratio)
+  const height = Math.round(bitmap.height * ratio)
+
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("Canvas no disponible")
+  ctx.drawImage(bitmap, 0, 0, width, height)
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("toBlob falló"))),
+      "image/jpeg",
+      JPEG_QUALITY
+    )
+  })
+
+  const arrayBuffer = await blob.arrayBuffer()
   const bytes = new Uint8Array(arrayBuffer)
   let binary = ""
   const chunkSize = 0x8000
   for (let i = 0; i < bytes.length; i += chunkSize) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
   }
-  return btoa(binary)
+  return { base64: btoa(binary), mimeType: "image/jpeg" }
 }
 
 export default function ImportMenuPage() {
@@ -37,16 +65,21 @@ export default function ImportMenuPage() {
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList) return
+    setError(null)
     const incoming: UploadedImage[] = []
     for (const file of Array.from(fileList).slice(0, 6 - images.length)) {
       if (!file.type.startsWith("image/")) continue
-      const base64 = await fileToBase64(file)
-      incoming.push({
-        file,
-        mimeType: file.type,
-        base64,
-        previewUrl: URL.createObjectURL(file),
-      })
+      try {
+        const { base64, mimeType } = await fileToCompressedBase64(file)
+        incoming.push({
+          file,
+          mimeType,
+          base64,
+          previewUrl: URL.createObjectURL(file),
+        })
+      } catch (err) {
+        setError(`No se pudo procesar ${file.name}: ${err instanceof Error ? err.message : "error desconocido"}`)
+      }
     }
     setImages((prev) => [...prev, ...incoming].slice(0, 6))
   }
@@ -75,6 +108,12 @@ export default function ImportMenuPage() {
         return
       }
       setParsed(result.data)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Error inesperado: ${err.message}`
+          : "Error inesperado procesando la imagen"
+      )
     } finally {
       setParsing(false)
     }
@@ -93,6 +132,10 @@ export default function ImportMenuPage() {
       setSummary(result.data)
       invalidateCategoryCaches()
       invalidateProductCaches()
+    } catch (err) {
+      setError(
+        err instanceof Error ? `Error inesperado: ${err.message}` : "Error inesperado importando"
+      )
     } finally {
       setImporting(false)
     }
