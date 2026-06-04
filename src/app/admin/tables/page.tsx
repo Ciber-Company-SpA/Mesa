@@ -6,13 +6,45 @@ import { Pagination } from "@/components/ui/Pagination"
 import { useTableList } from "@/hooks/useTableList"
 import { CreateTableDialog } from "@/components/admin/CreateTableDialog"
 
-// Abre una ventana imprimible con el QR de la mesa a tamaño grande.
-// Usamos un endpoint público de QR para que el render funcione en la
-// ventana nueva sin depender del componente QRCodeSVG.
-function printTableQr(qrCode: string, tableNumber: number) {
+// Detecta si la app corre dentro del wrapper Electron. En ese caso el flujo
+// de window.open + window.print no funciona consistentemente (el sistema
+// puede no tener una app asociada para el print dialog), así que descargamos
+// el PNG directo. En navegador estándar dejamos el flujo de impresión.
+function isElectron(): boolean {
+  if (typeof navigator === "undefined") return false
+  return /electron/i.test(navigator.userAgent)
+}
+
+function buildQrUrl(qrCode: string): string {
+  const targetUrl = `${window.location.origin}/r/${qrCode}`
+  return `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(targetUrl)}`
+}
+
+async function downloadTableQr(qrCode: string, tableNumber: number) {
   if (typeof window === "undefined") return
-  const url = `${window.location.origin}/r/${qrCode}`
-  const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(url)}`
+  try {
+    const res = await fetch(buildQrUrl(qrCode))
+    if (!res.ok) throw new Error("No se pudo descargar el QR")
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = objectUrl
+    a.download = `mesa-${tableNumber}-qr.png`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+  } catch {
+    // Como último recurso, abrir la URL en una pestaña (works en browser).
+    window.open(buildQrUrl(qrCode), "_blank")
+  }
+}
+
+// Abre una ventana imprimible con el QR de la mesa a tamaño grande.
+// Solo funciona bien en navegador estándar. En Electron usar downloadTableQr.
+function printTableQrBrowser(qrCode: string, tableNumber: number) {
+  if (typeof window === "undefined") return
+  const qrImgSrc = buildQrUrl(qrCode)
   const w = window.open("", "_blank", "width=520,height=620")
   if (!w) return
   w.document.write(`<!doctype html>
@@ -32,6 +64,14 @@ function printTableQr(qrCode: string, tableNumber: number) {
 </body>
 </html>`)
   w.document.close()
+}
+
+function handleTableQr(qrCode: string, tableNumber: number) {
+  if (isElectron()) {
+    downloadTableQr(qrCode, tableNumber)
+  } else {
+    printTableQrBrowser(qrCode, tableNumber)
+  }
 }
 
 export default function TablesPage() {
@@ -157,7 +197,7 @@ export default function TablesPage() {
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => printTableQr(table.qr_codes.qr_code, table.table_number)}
+                    onClick={() => handleTableQr(table.qr_codes.qr_code, table.table_number)}
                     className="min-w-0 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-center text-xs font-bold text-stone-700 transition hover:bg-stone-100"
                   >
                     🖨️ Imprimir QR
