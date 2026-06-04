@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
 import { z } from "zod"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { ok, fail, type Result } from "@/services/result"
+import { cloudinary } from "@/lib/cloudinary/config"
 
 // ============ TYPES ============
 
@@ -18,6 +19,7 @@ const ParsedProductSchema = z.object({
   price: z.number().int().nonnegative(),
   category_name: z.string().trim().min(1).max(60),
   variants: z.array(ParsedVariantSchema).max(20).default([]),
+  image_url: z.string().url().nullable().optional().default(null),
 })
 
 const ParsedMenuSchema = z.object({
@@ -130,7 +132,21 @@ export async function parseMenuImage(input: ParseInput): Promise<Result<ParsedMe
       return fail("La IA devolvió un formato inesperado. Probá con otra imagen.")
     }
 
-    return ok(validated.data)
+    // Pre-fetch fotos stock de Pexels en paralelo. Si falla algún match queda en null.
+    const imageUrls = await Promise.all(
+      validated.data.products.map((p) =>
+        fetchPexelsImages(p.name, 1).then((arr) => arr[0] ?? null)
+      )
+    )
+    const withImages: ParsedMenu = {
+      ...validated.data,
+      products: validated.data.products.map((p, i) => ({
+        ...p,
+        image_url: imageUrls[i],
+      })),
+    }
+
+    return ok(withImages)
   } catch (err) {
     return fail(
       err instanceof Error
@@ -151,36 +167,106 @@ export type ImportSummary = {
   skipped: string[]
 }
 
-// Busca una foto stock en Pexels que matchee con el nombre del producto.
-// Devuelve null si no hay match, falla la red, o no hay API key configurada.
-async function fetchPexelsImage(query: string): Promise<string | null> {
+// Busca fotos stock en Pexels que matcheen con el nombre del producto.
+// Devuelve array vacío si no hay match, falla la red, o no hay API key configurada.
+async function fetchPexelsImages(query: string, perPage = 1): Promise<string[]> {
   const apiKey = process.env.PEXELS_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) return []
 
   const cleaned = query.trim().toLowerCase()
-  if (!cleaned) return null
+  if (!cleaned) return []
 
-  // "food" como hint para sesgar hacia fotos de comida y no fotos genéricas.
-  const searchQuery = `${cleaned} food`
+  // "close up" sesga a fotos con un solo producto en primer plano
+  // (en vez de mesas con varios platos como hacía "food").
+  const searchQuery = `${cleaned} close up`
 
   try {
     const res = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=1&orientation=square`,
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=${perPage}&orientation=square`,
       { headers: { Authorization: apiKey }, cache: "no-store" }
     )
-    if (!res.ok) return null
+    if (!res.ok) return []
     const data = (await res.json()) as {
       photos?: Array<{ src?: { medium?: string; large?: string } }>
     }
-    const photo = data.photos?.[0]
-    return photo?.src?.large ?? photo?.src?.medium ?? null
+    return (data.photos ?? [])
+      .map((p) => p.src?.large ?? p.src?.medium ?? null)
+      .filter((u): u is string => !!u)
+  } catch {
+    return []
+  }
+}
+
+// Descarga una imagen desde una URL pública, le quita el fondo con remove.bg
+// y sube el PNG resultante a Cloudinary. Devuelve null si cualquier paso falla
+// (caller debe usar la URL original como fallback).
+async function processWithRemoveBg(
+  imageUrl: string,
+  restaurantId: number
+): Promise<{ url: string; publicId: string } | null> {
+  const removeBgKey = process.env.REMOVEBG_API_KEY
+  if (!removeBgKey) return null
+
+  try {
+    // 1. Descargar la imagen original
+    const imageRes = await fetch(imageUrl, { cache: "no-store" })
+    if (!imageRes.ok) return null
+    const imageBlob = await imageRes.blob()
+
+    // 2. Mandar a remove.bg
+    const form = new FormData()
+    form.append("image_file", imageBlob)
+    form.append("size", "auto")
+
+    const removeBgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: { "X-Api-Key": removeBgKey },
+      body: form,
+    })
+    if (!removeBgRes.ok) return null
+    const pngBuffer = Buffer.from(await removeBgRes.arrayBuffer())
+
+    // 3. Subir el PNG a Cloudinary
+    const uploaded = await new Promise<{ secure_url: string; public_id: string } | null>(
+      (resolve) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: `mesa/${restaurantId}/imports`, resource_type: "image" },
+          (error, result) => {
+            if (error || !result) {
+              resolve(null)
+              return
+            }
+            resolve({ secure_url: result.secure_url, public_id: result.public_id })
+          }
+        )
+        stream.end(pngBuffer)
+      }
+    )
+
+    if (!uploaded) return null
+    return { url: uploaded.secure_url, publicId: uploaded.public_id }
   } catch {
     return null
   }
 }
 
-export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSummary>> {
-  const parsed = ParsedMenuSchema.safeParse(input)
+// Server action separada para que el cliente pueda pedir alternativas a una imagen.
+export async function searchPexelsImages(query: string): Promise<Result<string[]>> {
+  if (!query || query.trim().length < 2) return ok([])
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const urls = await fetchPexelsImages(query, 8)
+  return ok(urls)
+}
+
+const BulkImportInputSchema = ParsedMenuSchema.extend({
+  removeBackground: z.boolean().optional().default(false),
+})
+
+export type BulkImportInput = z.infer<typeof BulkImportInputSchema>
+
+export async function bulkImportMenu(input: BulkImportInput): Promise<Result<ImportSummary>> {
+  const parsed = BulkImportInputSchema.safeParse(input)
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
   }
@@ -189,6 +275,7 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
   if (!auth.ok) return fail(auth.error)
 
   const { supabase, restaurantId } = auth.data
+  const { removeBackground } = parsed.data
 
   const summary: ImportSummary = {
     categoriesCreated: 0,
@@ -199,11 +286,27 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
     skipped: [],
   }
 
-  // Buscar fotos de Pexels en paralelo para todos los productos antes del insert.
-  // Es más rápido que hacerlo dentro del loop secuencial y aprovecha el rate limit.
-  const productImages = await Promise.all(
-    parsed.data.products.map((p) => fetchPexelsImage(p.name))
-  )
+  // Si está activado "remove background", pre-procesamos en paralelo todas las
+  // imágenes ANTES del insert. Reemplazamos las URLs de Pexels por las de Cloudinary
+  // (PNG sin fondo). Si algún paso falla, dejamos la URL original como fallback.
+  const processedImages = new Map<number, { url: string; publicId: string | null }>()
+  if (removeBackground) {
+    await Promise.all(
+      parsed.data.products.map(async (p, i) => {
+        if (!p.image_url) return
+        const result = await processWithRemoveBg(p.image_url, restaurantId)
+        if (result) {
+          processedImages.set(i, { url: result.url, publicId: result.publicId })
+        } else {
+          // Fallback: mantener la URL original
+          processedImages.set(i, { url: p.image_url, publicId: null })
+        }
+      })
+    )
+  }
+
+  // Las imágenes ya vienen pre-cargadas (Pexels) y posiblemente editadas por el
+  // admin en el preview. Acá solo usamos `image_url` tal cual lo recibimos.
 
   // 1) Leer categorías existentes del restaurante (case-insensitive match por nombre).
   const { data: existingCategories, error: catError } = await supabase
@@ -253,7 +356,9 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
       continue
     }
 
-    const imageUrl = productImages[i]
+    const processed = processedImages.get(i)
+    const imageUrl = processed?.url ?? product.image_url ?? null
+    const imagePublicId = processed?.publicId ?? null
     if (imageUrl) summary.imagesFound += 1
 
     const { data: insertedProduct, error: productError } = await supabase
@@ -263,7 +368,7 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
         product_description: product.description ?? null,
         product_price: product.price,
         product_image: imageUrl,
-        product_image_public_id: null,
+        product_image_public_id: imagePublicId,
         category_id: categoryId,
         restaurant_id: restaurantId,
         status_id: 1,

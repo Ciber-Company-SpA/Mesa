@@ -5,6 +5,7 @@ import { useState } from "react"
 import {
   parseMenuImage,
   bulkImportMenu,
+  searchPexelsImages,
   type ParsedMenu,
   type ImportSummary,
 } from "@/services/menu-import-service"
@@ -62,6 +63,26 @@ export default function ImportMenuPage() {
   const [error, setError] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedMenu | null>(null)
   const [summary, setSummary] = useState<ImportSummary | null>(null)
+
+  // Picker de alternativas de Pexels por producto.
+  const [pickerOpenIdx, setPickerOpenIdx] = useState<number | null>(null)
+  const [pickerLoading, setPickerLoading] = useState(false)
+  const [pickerResults, setPickerResults] = useState<string[]>([])
+
+  // Toggle para procesar las fotos con remove.bg + Cloudinary al importar.
+  const [removeBackground, setRemoveBackground] = useState(false)
+
+  async function openPicker(idx: number, query: string) {
+    setPickerOpenIdx(idx)
+    setPickerLoading(true)
+    setPickerResults([])
+    try {
+      const result = await searchPexelsImages(query)
+      if (result.ok) setPickerResults(result.data)
+    } finally {
+      setPickerLoading(false)
+    }
+  }
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList) return
@@ -124,7 +145,7 @@ export default function ImportMenuPage() {
     setImporting(true)
     setError(null)
     try {
-      const result = await bulkImportMenu(parsed)
+      const result = await bulkImportMenu({ ...parsed, removeBackground })
       if (!result.ok) {
         setError(result.error)
         return
@@ -166,6 +187,13 @@ export default function ImportMenuPage() {
     if (!parsed) return
     const next = { ...parsed, products: [...parsed.products] }
     next.products.splice(idx, 1)
+    setParsed(next)
+  }
+
+  function updateProductImage(idx: number, image_url: string | null) {
+    if (!parsed) return
+    const next = { ...parsed, products: [...parsed.products] }
+    next.products[idx] = { ...next.products[idx], image_url }
     setParsed(next)
   }
 
@@ -266,55 +294,159 @@ export default function ImportMenuPage() {
             </button>
           </div>
 
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+            <input
+              type="checkbox"
+              checked={removeBackground}
+              onChange={(e) => setRemoveBackground(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-orange-500"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-stone-900">
+                Quitar el fondo de las fotos automáticamente
+              </p>
+              <p className="mt-0.5 text-[11px] leading-4 text-stone-500">
+                Cada foto pasa por remove.bg y se sube limpia a tu Cloudinary. Si una falla,
+                queda la original. Tarda más al importar y consume créditos de remove.bg.
+              </p>
+            </div>
+          </label>
+
           <div className="mt-5 space-y-3">
             {parsed.products.map((p, idx) => (
               <div
                 key={`${p.name}-${idx}`}
                 className="rounded-2xl border border-stone-200 bg-stone-50 p-4"
               >
-                <div className="grid gap-3 sm:grid-cols-[1fr_140px_180px_40px]">
-                  <input
-                    type="text"
-                    value={p.name}
-                    onChange={(e) => updateProductName(idx, e.target.value)}
-                    className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
-                  />
-                  <input
-                    type="number"
-                    value={p.price}
-                    onChange={(e) => updateProductPrice(idx, parseInt(e.target.value || "0", 10))}
-                    className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
-                  />
-                  <input
-                    type="text"
-                    value={p.category_name}
-                    onChange={(e) => updateProductCategory(idx, e.target.value)}
-                    className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeProduct(idx)}
-                    className="rounded-lg border border-stone-200 bg-white text-stone-500 transition hover:border-red-300 hover:text-red-500"
-                    aria-label="Quitar"
-                  >
-                    ×
-                  </button>
+                <div className="flex gap-4">
+                  {/* Thumb + acciones de imagen */}
+                  <div className="shrink-0">
+                    <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-stone-200 bg-white">
+                      {p.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-2xl text-stone-300">
+                          +
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-1.5 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openPicker(idx, p.name)}
+                        className="flex-1 rounded-md bg-white px-1.5 py-1 text-[10px] font-bold text-stone-600 ring-1 ring-stone-200 transition hover:text-orange-600"
+                      >
+                        Cambiar
+                      </button>
+                      {p.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => updateProductImage(idx, null)}
+                          className="rounded-md bg-white px-1.5 py-1 text-[10px] font-bold text-stone-400 ring-1 ring-stone-200 transition hover:text-red-500"
+                          aria-label="Quitar imagen"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Datos editables */}
+                  <div className="min-w-0 flex-1">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_120px_140px_36px]">
+                      <input
+                        type="text"
+                        value={p.name}
+                        onChange={(e) => updateProductName(idx, e.target.value)}
+                        className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+                      />
+                      <input
+                        type="number"
+                        value={p.price}
+                        onChange={(e) => updateProductPrice(idx, parseInt(e.target.value || "0", 10))}
+                        className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+                      />
+                      <input
+                        type="text"
+                        value={p.category_name}
+                        onChange={(e) => updateProductCategory(idx, e.target.value)}
+                        className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeProduct(idx)}
+                        className="rounded-lg border border-stone-200 bg-white text-stone-500 transition hover:border-red-300 hover:text-red-500"
+                        aria-label="Quitar producto"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {p.description && (
+                      <p className="mt-2 text-xs leading-5 text-stone-500">{p.description}</p>
+                    )}
+
+                    {p.variants.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {p.variants.map((v, vi) => (
+                          <span
+                            key={`${v.name}-${vi}`}
+                            className="rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-bold text-orange-700"
+                          >
+                            {v.name} · {formatPrice(v.price)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {p.description && (
-                  <p className="mt-2 text-xs leading-5 text-stone-500">{p.description}</p>
-                )}
-
-                {p.variants.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {p.variants.map((v, vi) => (
-                      <span
-                        key={`${v.name}-${vi}`}
-                        className="rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-bold text-orange-700"
+                {/* Picker de alternativas Pexels */}
+                {pickerOpenIdx === idx && (
+                  <div className="mt-4 rounded-xl border border-stone-200 bg-white p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                        Elegí otra foto · Pexels
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPickerOpenIdx(null)}
+                        className="text-[11px] font-semibold text-stone-500 hover:text-stone-900"
                       >
-                        {v.name} · {formatPrice(v.price)}
-                      </span>
-                    ))}
+                        Cerrar
+                      </button>
+                    </div>
+                    {pickerLoading ? (
+                      <p className="py-4 text-center text-xs text-stone-400 animate-pulse">
+                        Buscando alternativas...
+                      </p>
+                    ) : pickerResults.length === 0 ? (
+                      <p className="py-4 text-center text-xs text-stone-400">
+                        Sin resultados. Probá cambiar el nombre del producto y reabrir.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {pickerResults.map((url) => (
+                          <button
+                            key={url}
+                            type="button"
+                            onClick={() => {
+                              updateProductImage(idx, url)
+                              setPickerOpenIdx(null)
+                            }}
+                            className={`relative aspect-square overflow-hidden rounded-lg border-2 transition ${
+                              p.image_url === url
+                                ? "border-orange-500"
+                                : "border-transparent hover:border-stone-300"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
