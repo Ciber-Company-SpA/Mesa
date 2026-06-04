@@ -332,6 +332,7 @@ export default function ImportMenuPage() {
             <li>Categorías reusadas: {summary.categoriesReused}</li>
             <li>Productos creados: {summary.productsCreated}</li>
             <li>Variantes creadas: {summary.variantsCreated}</li>
+            <li>Imágenes encontradas: {summary.imagesFound}</li>
           </ul>
           {summary.skipped.length > 0 && (
             <div className="mt-4">

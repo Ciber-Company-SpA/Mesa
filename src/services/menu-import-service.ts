@@ -147,7 +147,36 @@ export type ImportSummary = {
   categoriesReused: number
   productsCreated: number
   variantsCreated: number
+  imagesFound: number
   skipped: string[]
+}
+
+// Busca una foto stock en Pexels que matchee con el nombre del producto.
+// Devuelve null si no hay match, falla la red, o no hay API key configurada.
+async function fetchPexelsImage(query: string): Promise<string | null> {
+  const apiKey = process.env.PEXELS_API_KEY
+  if (!apiKey) return null
+
+  const cleaned = query.trim().toLowerCase()
+  if (!cleaned) return null
+
+  // "food" como hint para sesgar hacia fotos de comida y no fotos genéricas.
+  const searchQuery = `${cleaned} food`
+
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=1&orientation=square`,
+      { headers: { Authorization: apiKey }, cache: "no-store" }
+    )
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      photos?: Array<{ src?: { medium?: string; large?: string } }>
+    }
+    const photo = data.photos?.[0]
+    return photo?.src?.large ?? photo?.src?.medium ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSummary>> {
@@ -166,8 +195,15 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
     categoriesReused: 0,
     productsCreated: 0,
     variantsCreated: 0,
+    imagesFound: 0,
     skipped: [],
   }
+
+  // Buscar fotos de Pexels en paralelo para todos los productos antes del insert.
+  // Es más rápido que hacerlo dentro del loop secuencial y aprovecha el rate limit.
+  const productImages = await Promise.all(
+    parsed.data.products.map((p) => fetchPexelsImage(p.name))
+  )
 
   // 1) Leer categorías existentes del restaurante (case-insensitive match por nombre).
   const { data: existingCategories, error: catError } = await supabase
@@ -209,12 +245,16 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
   }
 
   // 3) Insertar productos (status_id=1 disponible) y sus variantes.
-  for (const product of parsed.data.products) {
+  for (let i = 0; i < parsed.data.products.length; i += 1) {
+    const product = parsed.data.products[i]
     const categoryId = categoryByName.get(product.category_name.trim().toLowerCase())
     if (!categoryId) {
       summary.skipped.push(`Producto sin categoría válida: ${product.name}`)
       continue
     }
+
+    const imageUrl = productImages[i]
+    if (imageUrl) summary.imagesFound += 1
 
     const { data: insertedProduct, error: productError } = await supabase
       .from("products")
@@ -222,7 +262,7 @@ export async function bulkImportMenu(input: ParsedMenu): Promise<Result<ImportSu
         product_name: product.name,
         product_description: product.description ?? null,
         product_price: product.price,
-        product_image: null,
+        product_image: imageUrl,
         product_image_public_id: null,
         category_id: categoryId,
         restaurant_id: restaurantId,
