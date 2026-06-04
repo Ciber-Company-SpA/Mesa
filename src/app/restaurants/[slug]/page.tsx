@@ -6,7 +6,7 @@ import { getTemplateDesign } from "@/lib/menu/templates"
 import { encodeId } from "@/lib/hashids"
 import type { MenuTemplate } from "@/types/restaurant"
 
-type Params = Promise<{ id: string }>
+type Params = Promise<{ slug: string }>
 
 type Variant = {
   id: number
@@ -56,7 +56,7 @@ function formatPrice(price: number) {
 }
 
 export default async function DeliveryRestaurantPage({ params }: { params: Params }) {
-  const { id: slug } = await params
+  const { slug } = await params
 
   // Si llega un valor numérico es probable que el usuario haya entrado por el viejo
   // /restaurant/[id] o un link antiguo — no resolvemos por id desde el slug route.
@@ -170,7 +170,7 @@ export default async function DeliveryRestaurantPage({ params }: { params: Param
                       {items.map((item) => (
                         <Link
                           key={item.id}
-                          href={`/${restaurant.delivery_slug}/${encodeId(item.id)}`}
+                          href={`/restaurants/${restaurant.delivery_slug}/${encodeId(item.id)}`}
                           className={`flex gap-3 rounded-2xl p-3 transition hover:-translate-y-0.5 hover:shadow-lg ${design.card}`}
                         >
                       <div className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl ${design.cardImageBg}`}>

@@ -4,7 +4,7 @@ import { decodeId } from "@/lib/hashids"
 import { PublicProductDetailClient } from "./PublicProductDetailClient"
 import type { MenuTemplate } from "@/types/restaurant"
 
-type Params = Promise<{ id: string; productId: string }>
+type Params = Promise<{ slug: string; productId: string }>
 
 type Variant = {
   id: number
@@ -43,7 +43,7 @@ type RpcResult = {
 export const revalidate = 60
 
 export default async function PublicProductPage({ params }: { params: Params }) {
-  const { id: slug, productId } = await params
+  const { slug, productId } = await params
 
   const realProductId = decodeId(productId)
   if (!realProductId) notFound()

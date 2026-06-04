@@ -84,7 +84,7 @@ export function PublicProductDetailClient({ restaurant, product }: Props) {
 
       <section className="relative mx-auto max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
         <Link
-          href={`/${restaurant.delivery_slug}`}
+          href={`/restaurants/${restaurant.delivery_slug}`}
           className="mb-6 inline-flex items-center rounded-full bg-white/10 px-5 py-3 text-sm font-black text-orange-100 shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.14] hover:text-orange-200"
         >
           ← Volver al menú
