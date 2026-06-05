@@ -314,24 +314,13 @@ export function ProductDetailClient({
                 <div className="absolute inset-x-10 bottom-2 h-4 rounded-full bg-black/40 blur-lg" />
 
                 {option.image ? (
-                  <>
-                    {/* Backdrop borroso de la misma imagen → halo de color que integra la foto al template */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={option.image}
-                      alt=""
-                      aria-hidden
-                      className="absolute inset-0 z-0 h-full w-full scale-125 object-cover opacity-30 blur-3xl saturate-150"
-                    />
-                    {/* Imagen principal con máscara radial → bordes fundidos al fondo */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={option.image}
-                      alt={option.name}
-                      className="relative z-10 h-full max-h-[230px] w-full object-contain p-2 drop-shadow-2xl transition-transform duration-300 hover:scale-[1.03] [mask-image:radial-gradient(ellipse_at_center,black_55%,transparent_92%)] [-webkit-mask-image:radial-gradient(ellipse_at_center,black_55%,transparent_92%)]"
-                      loading="lazy"
-                    />
-                  </>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={option.image}
+                    alt={option.name}
+                    className="relative z-10 h-full max-h-[230px] w-full object-contain p-2 drop-shadow-2xl transition-transform duration-300 hover:scale-[1.03] [mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)]"
+                    loading="lazy"
+                  />
                 ) : (
                   <div className="relative z-10 flex flex-col items-center text-center text-orange-100/80">
                     <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-3xl ring-1 ring-white/10">
