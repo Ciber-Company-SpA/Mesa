@@ -1,13 +1,17 @@
 "use client"
 
 import Link from "next/link"
+import { useRef } from "react"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
+import { useTableCart } from "@/hooks/useTableCart"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
 import { getTemplateDesign } from "@/lib/menu/templates"
+import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
+import type { Product } from "@/types/product"
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
@@ -18,11 +22,13 @@ function ProductImage({
   alt,
   className,
   imageClassName,
+  imgRef,
 }: {
   src: string | null
   alt: string
   className: string
   imageClassName: string
+  imgRef?: React.RefObject<HTMLImageElement | null>
 }) {
   return (
     <div className={`relative flex items-center justify-center overflow-hidden ${className}`}>
@@ -31,6 +37,7 @@ function ProductImage({
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imgRef}
           src={src}
           alt={alt}
           className={`relative z-10 h-full w-full object-contain ${imageClassName}`}
@@ -45,6 +52,96 @@ function ProductImage({
         </div>
       )}
     </div>
+  )
+}
+
+type ProductCardProps = {
+  item: Product
+  qrCode: string
+  design: ReturnType<typeof getTemplateDesign>
+  tableId: number | null
+  restaurantId: number | null
+}
+
+function ProductCard({ item, qrCode, design, tableId, restaurantId }: ProductCardProps) {
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const { addItem } = useTableCart(tableId, restaurantId)
+  const variants = item.product_variants ?? []
+  const hasVariants = variants.length > 0
+  const isAgotado = item.status_id === 2
+
+  function handleAdd(e: React.MouseEvent, productId: number, variantId: number | null, price: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isAgotado || !tableId || !restaurantId) return
+    flyToCart(imgRef.current)
+    addItem({ productId, variantId, price, quantity: 1 })
+  }
+
+  return (
+    <Link
+      href={`/${qrCode}/menu/${encodeId(item.id)}`}
+      className={`relative flex flex-col gap-3 rounded-[1.75rem] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-0.5 ${
+        isAgotado ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${design.card}`}
+    >
+      {isAgotado && (
+        <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
+          Agotado
+        </span>
+      )}
+
+      <div className="flex gap-3">
+        <ProductImage
+          src={item.product_image}
+          alt={item.product_name}
+          className={`aspect-square h-20 shrink-0 rounded-[1.2rem] ${design.cardImageBg}`}
+          imageClassName="p-2 drop-shadow-xl"
+          imgRef={imgRef}
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className={`line-clamp-2 font-black leading-tight ${design.cardName}`}>
+            {item.product_name}
+          </h3>
+          {item.product_description && (
+            <p className={`mt-1 line-clamp-2 text-xs leading-5 ${design.cardDesc}`}>
+              {item.product_description}
+            </p>
+          )}
+          {!hasVariants && (
+            <p className={`mt-1 text-sm font-black ${design.cardPrice}`}>
+              {formatPrice(item.product_price)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {hasVariants ? (
+        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(variants.length, 3)}, minmax(0, 1fr))` }}>
+          {variants.map((variant) => (
+            <button
+              key={variant.id}
+              type="button"
+              disabled={isAgotado || !tableId}
+              onClick={(e) => handleAdd(e, item.id, variant.id, variant.variant_price)}
+              className={`min-w-0 rounded-xl px-2 py-2 text-center text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${design.pillInactive} hover:scale-[1.02] active:scale-95`}
+            >
+              <span className="block truncate">{variant.variant_name}</span>
+              <span className={`mt-0.5 block ${design.cardPrice}`}>{formatPrice(variant.variant_price)}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={isAgotado || !tableId}
+          onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
+          className={`mt-1 w-full rounded-xl px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${design.pillActive} hover:scale-[1.01] active:scale-95`}
+        >
+          Agregar
+        </button>
+      )}
+    </Link>
   )
 }
 
@@ -122,84 +219,21 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                       </h2>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-bold backdrop-blur-sm ${design.catCount}`}>
-                      {categoryProducts.length} {categoryProducts.length === 1 ? 'producto' : 'productos'}
+                      {categoryProducts.length} {categoryProducts.length === 1 ? "producto" : "productos"}
                     </span>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
-                    {categoryProducts.map((item) => {
-                      const isAgotado = item.status_id === 2
-
-                      return isAgotado ? (
-                        <div
-                          key={item.id}
-                          className={`relative flex cursor-not-allowed gap-4 rounded-[1.75rem] p-3 opacity-60 shadow-xl shadow-black/20 ${design.card}`}
-                        >
-                          <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500 px-3 py-1 text-xs font-black text-white shadow-lg">
-                            Agotado
-                          </span>
-                          <ProductImage
-                            src={item.product_image}
-                            alt={item.product_name}
-                            className={`aspect-square h-28 shrink-0 rounded-[1.4rem] ${design.cardImageBg}`}
-                            imageClassName="p-3 drop-shadow-xl"
-                          />
-                          <div className="min-w-0 flex-1 py-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className={`truncate text-xs font-bold ${design.cardCat}`}>
-                                  {item.categories?.category_name}
-                                </p>
-                                <h3 className={`mt-1 line-clamp-2 font-black leading-tight ${design.cardName}`}>
-                                  {item.product_name}
-                                </h3>
-                              </div>
-                              <p className={`shrink-0 text-sm font-black ${design.cardPrice}`}>
-                                {formatPrice(item.product_price)}
-                              </p>
-                            </div>
-                            {item.product_description && (
-                              <p className={`mt-2 line-clamp-2 text-xs leading-5 ${design.cardDesc}`}>
-                                {item.product_description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <Link
-                          key={item.id}
-                          href={`/${qrCode}/menu/${encodeId(item.id)}`}
-                          className={`flex cursor-pointer gap-4 rounded-[1.75rem] p-3 shadow-xl shadow-black/20 transition hover:-translate-y-0.5 ${design.card}`}
-                        >
-                          <ProductImage
-                            src={item.product_image}
-                            alt={item.product_name}
-                            className={`aspect-square h-28 shrink-0 rounded-[1.4rem] ${design.cardImageBg}`}
-                            imageClassName="p-3 drop-shadow-xl"
-                          />
-                          <div className="min-w-0 flex-1 py-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className={`truncate text-xs font-bold ${design.cardCat}`}>
-                                  {item.categories?.category_name}
-                                </p>
-                                <h3 className={`mt-1 line-clamp-2 font-black leading-tight ${design.cardName}`}>
-                                  {item.product_name}
-                                </h3>
-                              </div>
-                              <p className={`shrink-0 text-sm font-black ${design.cardPrice}`}>
-                                {formatPrice(item.product_price)}
-                              </p>
-                            </div>
-                            {item.product_description && (
-                              <p className={`mt-2 line-clamp-2 text-xs leading-5 ${design.cardDesc}`}>
-                                {item.product_description}
-                              </p>
-                            )}
-                          </div>
-                        </Link>
-                      )
-                    })}
+                    {categoryProducts.map((item) => (
+                      <ProductCard
+                        key={item.id}
+                        item={item}
+                        qrCode={qrCode}
+                        design={design}
+                        tableId={tableId ?? null}
+                        restaurantId={restaurant?.id ?? null}
+                      />
+                    ))}
                   </div>
                 </div>
               )
