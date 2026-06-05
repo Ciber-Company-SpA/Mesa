@@ -176,7 +176,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
         </header>
 
         <div className={`sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 ${design.stickyClass}`}>
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <button
               type="button"
               onClick={() => setSelectedCategory(null)}
