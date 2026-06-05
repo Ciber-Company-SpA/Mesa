@@ -318,7 +318,7 @@ export function ProductDetailClient({
                   <img
                     src={option.image}
                     alt={option.name}
-                    className="relative z-10 h-full max-h-[230px] w-full object-contain p-2 drop-shadow-2xl transition-transform duration-300 hover:scale-[1.03] [mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_at_center,black_70%,transparent_100%)]"
+                    className="relative z-10 h-full max-h-[230px] w-auto max-w-[85%] rounded-[2rem] object-cover p-0 shadow-2xl shadow-black/40 ring-1 ring-white/10 transition-transform duration-300 hover:scale-[1.03]"
                     loading="lazy"
                   />
                 ) : (
