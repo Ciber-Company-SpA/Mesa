@@ -9,6 +9,7 @@ import { useCartSync } from "@/hooks/useCartSync"
 import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableOrders } from "@/hooks/useTableOrders"
+import { supabase } from "@/lib/supabase"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
 import { getTemplateDesign } from "@/lib/menu/templates"
@@ -175,6 +176,21 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
       router.replace(`/${qrCode}/gracias`)
     }
   }, [tableOrders.length, hasHadOrders, router, qrCode])
+
+  // Broadcast realtime: cuando el trigger SQL emite 'table_paid' al cobrar
+  // la mesa entera, redirigimos al instante sin esperar al polling.
+  useEffect(() => {
+    if (!tableId) return
+    const channel = supabase
+      .channel(`table-paid-${tableId}`, { config: { private: false } })
+      .on("broadcast", { event: "table_paid" }, () => {
+        router.replace(`/${qrCode}/gracias`)
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tableId, router, qrCode])
 
   return (
     <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
