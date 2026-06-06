@@ -93,7 +93,15 @@ export default function OrdersPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {orders.map((order) => {
               const statusName = order.order_status?.status_name ?? "Desconocido"
-              const tableName = `Mesa ${order.tables?.[0]?.table_number ?? order.table_id}`
+              const tablesData = order.tables as
+                | { table_number: number | null }
+                | { table_number: number | null }[]
+                | null
+                | undefined
+              const tableNumber = Array.isArray(tablesData)
+                ? tablesData[0]?.table_number
+                : tablesData?.table_number
+              const tableName = `Mesa ${tableNumber ?? order.table_id}`
 
               return (
                 <article
