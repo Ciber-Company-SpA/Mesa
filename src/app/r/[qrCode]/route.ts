@@ -70,11 +70,10 @@ export async function GET(
         return res
       }
 
-      const sp = new URLSearchParams({
-        tableId: String(tableRow.id),
-        tableNumber: String(tableRow.table_number ?? ""),
-      })
-      const res = NextResponse.redirect(buildRedirect(`/waiter/control?${sp.toString()}`))
+      // No mandamos tableId/tableNumber como query para no auto-filtrar la
+      // vista a la última mesa escaneada. El reclamo ya quedó hecho en BD;
+      // el mesero ve todas sus mesas y puede filtrar haciendo click en un chip.
+      const res = NextResponse.redirect(buildRedirect(`/waiter/control`))
       res.headers.set("Cache-Control", "no-store, max-age=0")
       return res
     }

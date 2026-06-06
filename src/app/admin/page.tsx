@@ -92,6 +92,14 @@ export default function AdminPage() {
             {orders.map((order) => {
               const statusName = order.order_status?.status_name ?? ""
               const badgeClass = statusConfig[statusName] ?? "bg-stone-100 text-stone-700"
+              const tablesData = order.tables as
+                | { table_number: number | null }
+                | { table_number: number | null }[]
+                | null
+                | undefined
+              const tableNumber = Array.isArray(tablesData)
+                ? tablesData[0]?.table_number
+                : tablesData?.table_number
 
               return (
                 <Link
@@ -102,7 +110,7 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <h4 className="font-bold text-stone-900">
-                        {`Mesa ${order.tables?.[0]?.table_number ?? order.table_id}`}
+                        {`Mesa ${tableNumber ?? order.table_id}`}
                       </h4>
                       <p className="mt-1 text-xs font-medium text-stone-500 tabular-nums">
                         Pedido #{order.id} · ${order.total.toLocaleString("es-CL")}
