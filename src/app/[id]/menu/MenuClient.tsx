@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
 import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
+import { useTableOrders } from "@/hooks/useTableOrders"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
 import { getTemplateDesign } from "@/lib/menu/templates"
@@ -157,6 +159,22 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   useCartSync(restaurant?.id ?? null)
   const design = getTemplateDesign(restaurant?.menu_template)
   const { info: dinerInfo } = useDinerSlot(tableId ?? null)
+  const router = useRouter()
+  const { orders: tableOrders } = useTableOrders(tableId ?? null)
+  const [hasHadOrders, setHasHadOrders] = useState(false)
+
+  useEffect(() => {
+    if (tableOrders.length > 0 && !hasHadOrders) {
+      setHasHadOrders(true)
+      return
+    }
+    // Transición a 0 pedidos activos en la mesa = mesa cobrada en su totalidad.
+    // El RPC server-side ya borró los registros de table_diners, así que el
+    // próximo cliente arrancará como Comensal 1.
+    if (hasHadOrders && tableOrders.length === 0) {
+      router.replace(`/${qrCode}/gracias`)
+    }
+  }, [tableOrders.length, hasHadOrders, router, qrCode])
 
   return (
     <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
