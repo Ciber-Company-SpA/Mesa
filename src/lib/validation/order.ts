@@ -21,6 +21,7 @@ export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>
 
 export const CreateOrderSchema = z.object({
   tableId: z.number().int().positive(),
+  dinerToken: z.string().min(8).max(128).nullable().optional(),
   items: z
     .array(CreateOrderItemSchema)
     .min(1, "Debe haber al menos un item en el pedido")

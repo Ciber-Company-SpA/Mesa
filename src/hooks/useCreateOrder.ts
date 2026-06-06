@@ -6,6 +6,7 @@ import { useOfflineRetry } from "@/hooks/useOfflineRetry"
 import { handleMutationError } from "@/lib/hooks/handle-mutation-error"
 import { createOrderAction } from "@/app/actions/order-actions"
 import type { CreateOrderItemInput } from "@/lib/validation/order"
+import { getOrCreateDinerToken } from "@/lib/diner-token"
 
 type UseCreateOrderProps = {
   items: CartItem[]
@@ -27,8 +28,11 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
       notes: item.notes ?? null,
     }))
 
+    const dinerToken = getOrCreateDinerToken(tableId)
+
     const result = await createOrderAction({
       tableId,
+      dinerToken,
       items: orderItems,
     })
 

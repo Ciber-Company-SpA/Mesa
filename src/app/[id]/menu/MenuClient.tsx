@@ -5,6 +5,7 @@ import { useRef } from "react"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
+import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { encodeId } from "@/lib/hashids"
 import { useFilteredProducts } from "@/hooks/useFilteredProducts"
@@ -155,6 +156,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
   const design = getTemplateDesign(restaurant?.menu_template)
+  const { info: dinerInfo } = useDinerSlot(tableId ?? null)
 
   return (
     <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
@@ -165,7 +167,14 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className={`text-sm font-semibold ${design.mesaText}`}>Mesa {tableNumber}</p>
+            <p className={`text-sm font-semibold ${design.mesaText}`}>
+              Mesa {tableNumber}
+              {dinerInfo ? (
+                <span className={`ml-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${design.abiertoBadge}`}>
+                  {dinerInfo.label}
+                </span>
+              ) : null}
+            </p>
             <h1 className={`mt-1 truncate text-3xl font-black tracking-tight ${design.titleClass}`}>
               {restaurant?.restaurant_name}
             </h1>

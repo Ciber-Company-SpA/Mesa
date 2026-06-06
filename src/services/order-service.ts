@@ -28,6 +28,8 @@ export type WaiterOrder = {
   total: number
   statusId: number
   createdAt: string | null
+  dinerSlot: number | null
+  dinerLabel: string | null
   items: WaiterOrderItem[]
 }
 
@@ -38,6 +40,8 @@ type OrderRow = {
   status_id: number | null
   created_at: string | null
   ready_at: string | null
+  diner_slot: number | null
+  diner_label: string | null
   tables: { table_number: number | null } | null
   order_items: Array<{
     id: number
@@ -58,6 +62,8 @@ function mapOrderRow(row: OrderRow): WaiterOrder {
     statusId: row.status_id ?? ORDER_STATUS_NUEVO,
     createdAt: row.created_at,
     readyAt: row.ready_at,
+    dinerSlot: row.diner_slot,
+    dinerLabel: row.diner_label,
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
@@ -103,7 +109,7 @@ export async function listActiveOrdersForRestaurant(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, table_id, total, status_id, created_at, ready_at, tables(table_number), order_items(id, product_name, variant_name, product_price, product_quantity, notes)"
+      "id, table_id, total, status_id, created_at, ready_at, diner_slot, diner_label, tables(table_number), order_items(id, product_name, variant_name, product_price, product_quantity, notes)"
     )
     .eq("restaurant_id", restaurantId)
     .in("status_id", [ORDER_STATUS_NUEVO, ORDER_STATUS_PREPARANDO, ORDER_STATUS_LISTO, ORDER_STATUS_PAGADO])
@@ -289,7 +295,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
   }
 
-  const { tableId, items } = validation.data
+  const { tableId, items, dinerToken } = validation.data
 
   // Construir el array jsonb que espera la RPC (snake_case).
   const rpcItems = items.map((item) => ({
@@ -304,6 +310,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
   const { data, error } = await supabase.rpc("create_public_order", {
     p_table_id: tableId,
     p_items: rpcItems,
+    p_diner_token: dinerToken ?? null,
   })
 
   if (error) {

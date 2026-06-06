@@ -9,6 +9,7 @@ import {
   markOrderAsPaidAction,
   markTableOrdersAsPaidAction,
 } from "@/app/actions/order-actions"
+import { payDinerOrdersAction } from "@/app/actions/diner-actions"
 import type { WaiterOrder } from "@/services/order-service"
 
 /**
@@ -187,6 +188,42 @@ export function useWaiterOrders(restaurantId: number | null) {
     [advancingId]
   )
 
+  const [payingDinerKey, setPayingDinerKey] = useState<string | null>(null)
+  const markDinerPaid = useCallback(
+    async (tableId: number, dinerSlot: number): Promise<{ ok: boolean; paidCount: number; tableReleased: boolean }> => {
+      const key = `${tableId}:${dinerSlot}`
+      if (payingDinerKey != null) return { ok: false, paidCount: 0, tableReleased: false }
+      try {
+        setPayingDinerKey(key)
+        setError("")
+        const result = await payDinerOrdersAction(tableId, dinerSlot)
+        if (!result.ok) {
+          setError(result.error)
+          return { ok: false, paidCount: 0, tableReleased: false }
+        }
+        const paidSet = new Set(result.data.paidIds)
+        setOrders((prev) =>
+          prev.map((o) => (paidSet.has(o.id) ? { ...o, statusId: 4 } : o))
+        )
+        return {
+          ok: true,
+          paidCount: result.data.paidIds.length,
+          tableReleased: result.data.tableReleased,
+        }
+      } catch (err) {
+        handleMutationError(err, {
+          logTag: "Error pagando comensal",
+          fallback: "Error al cobrar al comensal",
+          setError,
+        })
+        return { ok: false, paidCount: 0, tableReleased: false }
+      } finally {
+        setPayingDinerKey(null)
+      }
+    },
+    [payingDinerKey]
+  )
+
   const [payingTableId, setPayingTableId] = useState<number | null>(null)
   const markTablePaid = useCallback(
     async (tableId: number): Promise<{ ok: boolean; paidCount: number }> => {
@@ -225,7 +262,9 @@ export function useWaiterOrders(restaurantId: number | null) {
     advance,
     markPaid,
     markTablePaid,
+    markDinerPaid,
     payingTableId,
+    payingDinerKey,
     advancingId,
     reload,
   }

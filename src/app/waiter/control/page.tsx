@@ -101,7 +101,9 @@ function WaiterControlSystem() {
     advance,
     markPaid,
     markTablePaid,
+    markDinerPaid,
     payingTableId,
+    payingDinerKey,
     advancingId,
   } = useWaiterOrders(restaurantId)
   const { tables: allTables } = useRestaurantTables(restaurantId)
@@ -439,7 +441,9 @@ function WaiterControlSystem() {
         <PayTableSection
           orders={ownOrders}
           payingTableId={payingTableId}
+          payingDinerKey={payingDinerKey}
           onPayTable={markTablePaid}
+          onPayDiner={markDinerPaid}
           onSuccess={(label, count) =>
             triggerToast(`${label} cobrada · ${count} pedido${count === 1 ? "" : "s"} 💸`)
           }
@@ -522,6 +526,7 @@ function WaiterControlSystem() {
                 <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Detalles del pedido</span>
                 <h2 className="text-xl font-bold tracking-tight text-stone-950 mt-1">
                   Pedido #{selectedOrder.id} • {tableLabel(selectedOrder)}
+                  {selectedOrder.dinerLabel ? ` · ${selectedOrder.dinerLabel}` : ""}
                 </h2>
               </div>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${STATUS_STYLE[selectedOrder.statusId].bg}`}>
@@ -650,6 +655,11 @@ function OrderCard({
         <div>
           <span className="text-[10px] font-bold text-stone-400 uppercase">Orden #{order.id}</span>
           <h4 className="text-sm font-bold text-stone-900 mt-0.5">{tableLabel(order)}</h4>
+          {order.dinerLabel && (
+            <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-700 ring-1 ring-violet-200/60">
+              {order.dinerLabel}
+            </span>
+          )}
         </div>
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${config.bg}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />

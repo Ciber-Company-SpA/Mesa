@@ -10,8 +10,21 @@ const STATUS_LISTO = 3
 type Props = {
   orders: WaiterOrder[]
   payingTableId: number | null
+  payingDinerKey?: string | null
   onPayTable: (tableId: number) => Promise<{ ok: boolean; paidCount: number }>
+  onPayDiner?: (
+    tableId: number,
+    dinerSlot: number
+  ) => Promise<{ ok: boolean; paidCount: number; tableReleased: boolean }>
   onSuccess?: (tableNumber: string, paidCount: number) => void
+}
+
+type DinerSummary = {
+  slot: number
+  label: string
+  ordersCount: number
+  total: number
+  unreadyCount: number
 }
 
 type TableSummary = {
@@ -22,6 +35,7 @@ type TableSummary = {
   hasUnready: boolean
   unreadyCount: number
   unreadyStatuses: number[]
+  diners: DinerSummary[]
 }
 
 /**
@@ -29,11 +43,19 @@ type TableSummary = {
  * muestra una card con total + cantidad y un botón único que paga todos los
  * pedidos de la mesa en una sola operación.
  *
- * Si alguna orden no está en estado Listo, abre un modal de confirmación
- * advirtiendo cuáles aún están en cocina, para evitar cobrar por error
- * pedidos que no se sirvieron.
+ * Si la mesa tiene varios comensales identificados (Comensal 1, 2, ...), se
+ * listan abajo con su subtotal y un botón "Cobrar Comensal N" para cobrar de
+ * a uno. Al cobrar el último comensal, los registros de comensales de la mesa
+ * se limpian automáticamente (server-side).
  */
-export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }: Props) {
+export function PayTableSection({
+  orders,
+  payingTableId,
+  payingDinerKey,
+  onPayTable,
+  onPayDiner,
+  onSuccess,
+}: Props) {
   const [confirmTable, setConfirmTable] = useState<TableSummary | null>(null)
 
   const summaries = useMemo<TableSummary[]>(() => {
@@ -51,6 +73,7 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
         hasUnready: false,
         unreadyCount: 0,
         unreadyStatuses: [] as number[],
+        diners: [] as DinerSummary[],
       }
       existing.ordersCount += 1
       existing.total += o.total
@@ -61,9 +84,29 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
           existing.unreadyStatuses.push(o.statusId)
         }
       }
+
+      if (o.dinerSlot != null) {
+        let diner = existing.diners.find((d) => d.slot === o.dinerSlot)
+        if (!diner) {
+          diner = {
+            slot: o.dinerSlot,
+            label: o.dinerLabel ?? `Comensal ${o.dinerSlot}`,
+            ordersCount: 0,
+            total: 0,
+            unreadyCount: 0,
+          }
+          existing.diners.push(diner)
+        }
+        diner.ordersCount += 1
+        diner.total += o.total
+        if (o.statusId !== STATUS_LISTO) diner.unreadyCount += 1
+      }
+
       map.set(o.tableId, existing)
     }
-    return Array.from(map.values()).sort((a, b) => a.tableId - b.tableId)
+    const result = Array.from(map.values())
+    result.forEach((s) => s.diners.sort((a, b) => a.slot - b.slot))
+    return result.sort((a, b) => a.tableId - b.tableId)
   }, [orders])
 
   async function handleConfirmedPay(summary: TableSummary) {
@@ -82,6 +125,14 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
     await handleConfirmedPay(summary)
   }
 
+  async function handlePayDiner(summary: TableSummary, diner: DinerSummary) {
+    if (!onPayDiner) return
+    const res = await onPayDiner(summary.tableId, diner.slot)
+    if (res.ok) {
+      onSuccess?.(`${summary.tableLabel} · ${diner.label}`, res.paidCount)
+    }
+  }
+
   if (summaries.length === 0) return null
 
   return (
@@ -98,10 +149,11 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
           {summaries.map((s) => {
             const isPaying = payingTableId === s.tableId
             const allReady = !s.hasUnready
+            const hasMultipleDiners = s.diners.length >= 2
             return (
               <article
                 key={s.tableId}
-                className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm"
+                className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm flex flex-col"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -109,6 +161,7 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
                     <p className="text-[11px] text-stone-500">
                       {s.ordersCount} pedido{s.ordersCount === 1 ? "" : "s"} activo
                       {s.ordersCount === 1 ? "" : "s"}
+                      {hasMultipleDiners && ` · ${s.diners.length} comensales`}
                     </p>
                   </div>
                   <span
@@ -126,10 +179,48 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
                   ${s.total.toLocaleString("es-CL")}
                 </p>
 
+                {hasMultipleDiners && onPayDiner && (
+                  <div className="mt-3 space-y-1.5 rounded-xl bg-stone-50 p-2.5 ring-1 ring-stone-100">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-stone-500">
+                      División por comensal
+                    </p>
+                    {s.diners.map((d) => {
+                      const dinerKey = `${s.tableId}:${d.slot}`
+                      const isPayingThisDiner = payingDinerKey === dinerKey
+                      return (
+                        <div
+                          key={d.slot}
+                          className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-stone-100"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-stone-800 truncate">
+                              {d.label}
+                            </p>
+                            <p className="text-[10px] text-stone-500 tabular-nums">
+                              {d.ordersCount} pedido{d.ordersCount === 1 ? "" : "s"} · $
+                              {d.total.toLocaleString("es-CL")}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handlePayDiner(s, d)}
+                            disabled={
+                              payingDinerKey != null || payingTableId != null
+                            }
+                            className="shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white shadow transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isPayingThisDiner ? "..." : "Cobrar 💸"}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleClick(s)}
-                  disabled={isPaying || payingTableId != null}
+                  disabled={isPaying || payingTableId != null || payingDinerKey != null}
                   className={`mt-3 w-full rounded-full px-4 py-2.5 text-xs font-bold text-white shadow transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     allReady
                       ? "bg-emerald-600 hover:bg-emerald-700"
@@ -139,7 +230,7 @@ export function PayTableSection({ orders, payingTableId, onPayTable, onSuccess }
                   {isPaying
                     ? "Cobrando…"
                     : allReady
-                      ? `Cobrar ${s.tableLabel} (${s.ordersCount} pedido${s.ordersCount === 1 ? "" : "s"})`
+                      ? `Cobrar ${hasMultipleDiners ? "mesa completa" : s.tableLabel} (${s.ordersCount} pedido${s.ordersCount === 1 ? "" : "s"})`
                       : `Cobrar ${s.tableLabel} con advertencia`}
                 </button>
               </article>
