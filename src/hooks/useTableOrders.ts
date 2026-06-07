@@ -124,7 +124,7 @@ export function useTableOrders(tableId: number | null) {
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return
       fetchOrders()
-    }, 15_000)
+    }, 3_000)
     return () => window.clearInterval(id)
   }, [tableId, fetchOrders])
 

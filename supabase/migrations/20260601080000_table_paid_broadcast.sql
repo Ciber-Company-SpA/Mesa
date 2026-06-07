@@ -1,8 +1,8 @@
--- Cuando se cobra completamente una mesa, emitimos un broadcast de Supabase
--- Realtime para que los dispositivos del menú público redirijan al instante
--- a /gracias sin tener que esperar al polling de useTableOrders.
---
--- Topic: 'table:<id>'   Evento: 'table_paid'   private = false (anon escucha)
+-- Rollback del intento de broadcast desde SQL: la función realtime.send no
+-- existe en todas las versiones de Supabase Realtime y, si no existe, el
+-- trigger lanza error y revierte el UPDATE del cobro entero. Volvemos a la
+-- versión segura del trigger (solo limpieza de diners) y dejamos que el
+-- polling del cliente -- ya acortado a 3 s -- detecte la mesa vacía.
 
 CREATE OR REPLACE FUNCTION public.cleanup_diners_on_payment()
   RETURNS trigger
@@ -10,25 +10,14 @@ CREATE OR REPLACE FUNCTION public.cleanup_diners_on_payment()
   SECURITY DEFINER
   SET search_path = public
 AS $$
-DECLARE
-  v_remaining int;
 BEGIN
   IF NEW.status_id = 4 AND (OLD.status_id IS DISTINCT FROM 4) AND NEW.table_id IS NOT NULL THEN
-    SELECT COUNT(*) INTO v_remaining
-    FROM public.orders
-    WHERE table_id = NEW.table_id
-      AND status_id IN (1, 2, 3);
-
-    IF v_remaining = 0 THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.orders
+      WHERE table_id = NEW.table_id
+        AND status_id IN (1, 2, 3)
+    ) THEN
       DELETE FROM public.table_diners WHERE table_id = NEW.table_id;
-
-      -- Broadcast a los dispositivos suscritos al topic de la mesa.
-      PERFORM realtime.send(
-        jsonb_build_object('table_id', NEW.table_id),
-        'table_paid',
-        'table:' || NEW.table_id::text,
-        false
-      );
     END IF;
   END IF;
   RETURN NEW;
