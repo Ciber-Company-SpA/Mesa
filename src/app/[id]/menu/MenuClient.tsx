@@ -4,7 +4,10 @@ import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
+import { RecommendationsModal } from "@/components/customer/RecommendationsModal"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
+import { getTopProductsTodayAction } from "@/app/actions/recommendation-actions"
+import type { RecommendedProduct } from "@/services/recommendation-service"
 import { useCartSync } from "@/hooks/useCartSync"
 import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
@@ -162,6 +165,52 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const router = useRouter()
   const { orders: tableOrders } = useTableOrders(tableId ?? null)
   const [hasHadOrders, setHasHadOrders] = useState(false)
+  const { addItem } = useTableCart(tableId ?? null, restaurant?.id ?? null)
+  const [showReco, setShowReco] = useState(false)
+  const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([])
+
+  useEffect(() => {
+    const restaurantId = restaurant?.id
+    if (!restaurantId) return
+    const today = new Date().toISOString().slice(0, 10)
+    const key = `reco-seen-${restaurantId}-${today}`
+    if (typeof window === "undefined") return
+    try {
+      if (window.localStorage.getItem(key)) return
+    } catch {
+      return
+    }
+
+    let cancelled = false
+    getTopProductsTodayAction(restaurantId, 3)
+      .then((res) => {
+        if (cancelled || !res.ok || res.data.length === 0) return
+        setRecommendations(res.data)
+        setShowReco(true)
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [restaurant?.id])
+
+  function dismissReco() {
+    setShowReco(false)
+    const restaurantId = restaurant?.id
+    if (!restaurantId) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      window.localStorage.setItem(`reco-seen-${restaurantId}-${today}`, "1")
+    } catch {
+      // ignore
+    }
+  }
+
+  function handleRecoAdd(productId: number, variantId: number | null, price: number) {
+    if (!tableId || !restaurant?.id) return
+    addItem({ productId, variantId, price, quantity: 1 })
+  }
 
   useEffect(() => {
     if (tableOrders.length > 0 && !hasHadOrders) {
@@ -276,6 +325,17 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
       {restaurant && tableId ? (
         <FloatingCartButton tableId={tableId} restaurantId={restaurant.id} />
       ) : null}
+
+      <RecommendationsModal
+        isOpen={showReco}
+        onClose={dismissReco}
+        recommendations={recommendations}
+        products={products}
+        qrCode={qrCode}
+        design={design}
+        onAdd={handleRecoAdd}
+        canAdd={!!tableId && !!restaurant?.id}
+      />
     </main>
   )
 }
