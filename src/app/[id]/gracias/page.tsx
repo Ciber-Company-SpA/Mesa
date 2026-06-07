@@ -42,15 +42,6 @@ export default async function GraciasPage({
           Vuelve pronto.
         </p>
 
-        <div className={`mt-10 rounded-3xl px-6 py-5 shadow-xl shadow-black/20 ${design.card}`}>
-          <p className={`text-xs font-bold uppercase tracking-widest ${design.mesaText}`}>
-            Mesa cerrada
-          </p>
-          <p className={`mt-2 text-sm ${design.cardDesc}`}>
-            Tu cuenta ha sido cobrada. La mesa quedó liberada para los próximos comensales.
-          </p>
-        </div>
-
       </section>
     </main>
   )

@@ -18,6 +18,10 @@ BEGIN
         AND status_id IN (1, 2, 3)
     ) THEN
       DELETE FROM public.table_diners WHERE table_id = NEW.table_id;
+      -- Vaciar el carrito compartido de la mesa: si quedan items sin enviar
+      -- de los comensales que se fueron, el próximo cliente que escanee no
+      -- debería verlos.
+      DELETE FROM public.table_cart_items WHERE table_id = NEW.table_id;
     END IF;
   END IF;
   RETURN NEW;
