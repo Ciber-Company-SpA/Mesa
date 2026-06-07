@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getMenuData } from "@/lib/menu/get-menu-data"
 import { getTemplateDesign } from "@/lib/menu/templates"
@@ -52,12 +51,6 @@ export default async function GraciasPage({
           </p>
         </div>
 
-        <Link
-          href={`/${id}/menu`}
-          className={`mt-10 rounded-full px-6 py-3 text-sm font-black shadow-lg transition hover:scale-[1.02] active:scale-95 ${design.pillActive}`}
-        >
-          Volver al menú
-        </Link>
       </section>
     </main>
   )
