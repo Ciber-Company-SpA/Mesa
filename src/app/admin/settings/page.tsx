@@ -25,12 +25,59 @@ function formatPrice(price: number) {
 type PreviewBodyProps = {
   template: MenuTemplate
   restaurantName: string | undefined
+  restaurantLogo: string | null | undefined
   previewCategories: Category[]
   previewProducts: Product[]
 }
 
-function PreviewBody({ template, restaurantName, previewCategories, previewProducts }: PreviewBodyProps) {
+function getCategoryPlaceholder(categoryName: string) {
+  const name = (categoryName ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  if (name.includes("bebida") || name.includes("trago") || name.includes("jugo") || name.includes("coctel") || name.includes("cerv") || name.includes("alcohol") || name.includes("vino") || name.includes("bebestible")) {
+    return {
+      emoji: "🍹",
+      bg: "bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500",
+    }
+  }
+  if (name.includes("postre") || name.includes("dulce") || name.includes("helado") || name.includes("torta") || name.includes("pastela") || name.includes("cafe") || name.includes("infusion") || name.includes("te")) {
+    return {
+      emoji: "🍰",
+      bg: "bg-gradient-to-br from-pink-400 via-fuchsia-500 to-purple-600",
+    }
+  }
+  if (name.includes("hamburg") || name.includes("burger") || name.includes("sandwich") || name.includes("completo") || name.includes("churrasco") || name.includes("entrad") || name.includes("picoteo") || name.includes("papa")) {
+    return {
+      emoji: "🍔",
+      bg: "bg-gradient-to-br from-yellow-400 via-amber-500 to-red-600",
+    }
+  }
+  if (name.includes("piz") || name.includes("pasta") || name.includes("italiana")) {
+    return {
+      emoji: "🍕",
+      bg: "bg-gradient-to-br from-red-400 via-orange-500 to-yellow-500",
+    }
+  }
+  if (name.includes("ensalada") || name.includes("sana") || name.includes("vege") || name.includes("vegan")) {
+    return {
+      emoji: "🥗",
+      bg: "bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600",
+    }
+  }
+  if (name.includes("carne") || name.includes("parrilla") || name.includes("asado") || name.includes("pollo") || name.includes("lomo") || name.includes("bife") || name.includes("pescado")) {
+    return {
+      emoji: "🍖",
+      bg: "bg-gradient-to-br from-red-500 via-red-700 to-stone-800",
+    }
+  }
+  return {
+    emoji: "🍽️",
+    bg: "bg-gradient-to-br from-orange-400 via-amber-500 to-stone-700",
+  }
+}
+
+function PreviewBody({ template, restaurantName, restaurantLogo, previewCategories, previewProducts }: PreviewBodyProps) {
   const design = getTemplateDesign(template)
+
+  const isLight = template === "nordic-minimal"
 
   const overlayBg =
     template === "aurora" ? "bg-[#090d16]"
@@ -58,16 +105,66 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
       <div className={`pointer-events-none absolute inset-0 ${overlayGradient}`} />
 
       <div className="relative h-full overflow-y-auto p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className={`text-[10px] font-semibold ${design.mesaText}`}>Mesa 1</p>
-            <h4 className={`mt-0.5 truncate text-base font-black tracking-tight ${design.titleClass}`}>
-              {restaurantName ?? "Mi Restaurante"}
-            </h4>
+        {/* Header Premium del Restaurante Preview */}
+        <div className={`flex items-center justify-between gap-2 p-2 rounded-2xl ${design.card}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative shrink-0 flex items-center justify-center">
+              {/* Glowing halo behind logo */}
+              <div className={`absolute inset-0 -m-0.5 rounded-full opacity-60 blur-xs animate-pulse-glow ${
+                isLight ? "bg-gradient-to-tr from-slate-400 to-slate-500" : "bg-gradient-to-tr from-orange-500 to-amber-400"
+              }`} />
+              {restaurantLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={restaurantLogo}
+                  alt={restaurantName ?? "Logo"}
+                  className={`relative z-10 h-7 w-7 rounded-full border object-cover shadow-sm ${
+                    isLight ? "border-slate-300" : "border-white/20"
+                  }`}
+                />
+              ) : (
+                <div className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border text-[9px] font-black shadow-sm ${
+                  isLight ? "border-slate-300 bg-gradient-to-tr from-slate-200 to-slate-100 text-slate-800" : "border-white/20 bg-gradient-to-tr from-stone-800 to-stone-900 text-orange-200"
+                }`}>
+                  {(restaurantName ?? "MR").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <h4 className={`truncate text-xs font-black tracking-tight leading-none ${design.titleClass}`}>
+                {restaurantName ?? "Mi Restaurante"}
+              </h4>
+              <p className={`text-[8px] font-semibold mt-0.5 ${design.mesaText}`}>Mesa 1</p>
+            </div>
           </div>
-          <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${design.abiertoBadge}`}>
+
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold ${design.abiertoBadge} flex items-center gap-1`}>
+            <span className="relative flex h-1 w-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1 w-1 bg-emerald-500"></span>
+            </span>
             Abierto
           </span>
+        </div>
+
+        {/* Buscador Mock */}
+        <div className="mt-2.5 relative">
+          <div className={`absolute inset-y-0 left-2.5 flex items-center pointer-events-none ${isLight ? "text-slate-400" : "text-white/40"}`}>
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            disabled
+            placeholder="Buscar..."
+            className={`w-full pl-7 pr-3 py-1.5 text-[10px] rounded-xl outline-none ring-1 opacity-80 cursor-not-allowed ${
+              design.card
+            } ${
+              isLight ? "placeholder:text-slate-400 text-slate-800" : "placeholder:text-white/30 text-white"
+            }`}
+          />
         </div>
 
         <div className="mt-3 flex gap-1.5 overflow-hidden">
@@ -90,32 +187,37 @@ function PreviewBody({ template, restaurantName, previewCategories, previewProdu
               Cargá productos y categorías para verlos acá.
             </p>
           ) : (
-            previewProducts.map((item) => (
-              <div
-                key={item.id}
-                className={`flex gap-2 rounded-2xl p-2 ${design.card}`}
-              >
-                <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${design.cardImageBg}`}>
-                  {item.product_image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.product_image} alt={item.product_name} className="h-full w-full object-contain p-1.5" />
-                  ) : (
-                    <span className={`text-xs ${design.cardCat}`}>+</span>
-                  )}
+            previewProducts.map((item) => {
+              const placeholder = getCategoryPlaceholder(item.categories?.category_name ?? "")
+              return (
+                <div
+                  key={item.id}
+                  className={`flex gap-2 rounded-2xl p-2 ${design.card}`}
+                >
+                  <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${
+                    item.product_image ? design.cardImageBg : placeholder.bg
+                  }`}>
+                    {item.product_image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.product_image} alt={item.product_name} className="h-full w-full object-contain p-1.5" />
+                    ) : (
+                      <span className="text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">{placeholder.emoji}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate text-[9px] font-bold ${design.cardCat}`}>
+                      {item.categories?.category_name}
+                    </p>
+                    <p className={`mt-0.5 line-clamp-1 text-xs font-black leading-tight ${design.cardName}`}>
+                      {item.product_name}
+                    </p>
+                    <p className={`mt-1 text-[10px] font-black ${design.cardPrice}`}>
+                      {formatPrice(item.product_price)}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className={`truncate text-[9px] font-bold ${design.cardCat}`}>
-                    {item.categories?.category_name}
-                  </p>
-                  <p className={`mt-0.5 line-clamp-1 text-xs font-black leading-tight ${design.cardName}`}>
-                    {item.product_name}
-                  </p>
-                  <p className={`mt-1 text-[10px] font-black ${design.cardPrice}`}>
-                    {formatPrice(item.product_price)}
-                  </p>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
@@ -886,6 +988,7 @@ export default function AdminSettingsPage() {
             <PreviewBody
               template={selected}
               restaurantName={restaurant?.restaurant_name}
+              restaurantLogo={restaurant?.restaurant_logo}
               previewCategories={previewCategories}
               previewProducts={previewProducts}
             />
