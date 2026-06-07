@@ -3,14 +3,12 @@
 import { useRef } from "react"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
 import { getTemplateDesign } from "@/lib/menu/templates"
-import type { Product } from "@/types/product"
 import type { RecommendedProduct } from "@/services/recommendation-service"
 
 type Props = {
   isOpen: boolean
   onClose: () => void
   recommendations: RecommendedProduct[]
-  products: Product[]
   design: ReturnType<typeof getTemplateDesign>
   onAdd: (productId: number, variantId: number | null, price: number) => void
   canAdd: boolean
@@ -24,7 +22,6 @@ export function RecommendationsModal({
   isOpen,
   onClose,
   recommendations,
-  products,
   design,
   onAdd,
   canAdd,
@@ -60,23 +57,16 @@ export function RecommendationsModal({
         </div>
 
         <ul className="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {recommendations.map((reco, idx) => {
-            const product = products.find((p) => p.id === reco.id)
-            const firstVariant = product?.product_variants?.[0] ?? null
-            return (
-              <RecommendedRow
-                key={reco.id}
-                rank={idx + 1}
-                reco={reco}
-                defaultVariantId={firstVariant?.id ?? null}
-                defaultVariantPrice={firstVariant?.variant_price ?? reco.productPrice}
-                defaultVariantName={firstVariant?.variant_name ?? null}
-                design={design}
-                canAdd={canAdd}
-                onAdd={onAdd}
-              />
-            )
-          })}
+          {recommendations.map((reco, idx) => (
+            <RecommendedRow
+              key={`${reco.id}-${reco.variantId ?? "base"}`}
+              rank={idx + 1}
+              reco={reco}
+              design={design}
+              canAdd={canAdd}
+              onAdd={onAdd}
+            />
+          ))}
         </ul>
       </section>
     </div>
@@ -86,18 +76,12 @@ export function RecommendationsModal({
 function RecommendedRow({
   rank,
   reco,
-  defaultVariantId,
-  defaultVariantPrice,
-  defaultVariantName,
   design,
   canAdd,
   onAdd,
 }: {
   rank: number
   reco: RecommendedProduct
-  defaultVariantId: number | null
-  defaultVariantPrice: number
-  defaultVariantName: string | null
   design: ReturnType<typeof getTemplateDesign>
   canAdd: boolean
   onAdd: (productId: number, variantId: number | null, price: number) => void
@@ -109,7 +93,7 @@ function RecommendedRow({
     e.stopPropagation()
     if (!canAdd) return
     flyToCart(imgRef.current)
-    onAdd(reco.id, defaultVariantId, defaultVariantPrice)
+    onAdd(reco.id, reco.variantId, reco.unitPrice)
   }
 
   return (
@@ -138,15 +122,15 @@ function RecommendedRow({
       <div className="min-w-0 flex-1">
         <p className={`line-clamp-1 text-sm font-black ${design.cardName}`}>
           {reco.productName}
-          {defaultVariantName ? (
-            <span className={`ml-1 text-xs font-bold ${design.cardDesc}`}>· {defaultVariantName}</span>
+          {reco.variantName ? (
+            <span className={`ml-1 text-xs font-bold ${design.cardDesc}`}>· {reco.variantName}</span>
           ) : null}
         </p>
         <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${design.mesaText}`}>
           {reco.unitsSold} vendido{reco.unitsSold === 1 ? "" : "s"} hoy
         </p>
         <p className={`mt-1 text-sm font-black ${design.cardPrice}`}>
-          {formatPrice(defaultVariantPrice)}
+          {formatPrice(reco.unitPrice)}
         </p>
       </div>
 

@@ -338,7 +338,6 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
         isOpen={showReco}
         onClose={dismissReco}
         recommendations={recommendations}
-        products={products}
         design={design}
         onAdd={handleRecoAdd}
         canAdd={!!tableId && !!restaurant?.id}

@@ -5,8 +5,9 @@ export type RecommendedProduct = {
   id: number
   productName: string
   productImage: string | null
-  productPrice: number
-  statusId: number
+  variantId: number | null
+  variantName: string | null
+  unitPrice: number
   unitsSold: number
 }
 
@@ -14,8 +15,9 @@ type RpcRow = {
   id: number
   product_name: string
   product_image: string | null
-  product_price: number
-  status_id: number
+  variant_id: number | null
+  variant_name: string | null
+  unit_price: number
   units_sold: number
 }
 
@@ -38,8 +40,9 @@ export async function getTopProductsToday(
       id: r.id,
       productName: r.product_name,
       productImage: r.product_image,
-      productPrice: r.product_price,
-      statusId: r.status_id,
+      variantId: r.variant_id,
+      variantName: r.variant_name,
+      unitPrice: Number(r.unit_price),
       unitsSold: r.units_sold,
     }))
   )

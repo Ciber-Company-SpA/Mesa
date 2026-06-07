@@ -10,8 +10,7 @@ export async function GET(
 ) {
   const { qrCode } = await params
 
-  // El request interno del proxy puede apuntar a localhost en produccion.
-  // La URL publica configurada debe ser el origen de los redirects del QR.
+
   const buildRedirect = (path: string) => {
     const url = new URL(path, process.env.NEXT_PUBLIC_APP_URL ?? req.url)
     return url.toString()
@@ -47,21 +46,18 @@ export async function GET(
       .eq("auth_user_id", user.id)
       .maybeSingle()
 
-    // Mesero solo puede atender mesas de SU restaurante. Si escanea un QR de
-    // otro restaurante, cae al fallback de menú (igual que sin sesión).
+  
     const sameRestaurant =
       profile?.restaurant_id != null && profile.restaurant_id === tableRow.restaurant_id
 
     if (profile?.role_id === 1 && profile.id && sameRestaurant) {
-      // Si la mesa está libre, este mesero la reclama. Si ya la atiende él
-      // mismo, sigue de largo. Si la atiende otro, lo mandamos a la pantalla
-      // de "mesa ocupada".
+
       if (tableRow.current_waiter_id == null) {
         await supabase
           .from("tables")
           .update({ current_waiter_id: profile.id })
           .eq("id", tableRow.id)
-          .is("current_waiter_id", null) // evita race condition con otro escaneo simultáneo
+          .is("current_waiter_id", null) 
       } else if (tableRow.current_waiter_id !== profile.id) {
         const res = NextResponse.redirect(
           buildRedirect(`/waiter/busy?tableNumber=${tableRow.table_number ?? ""}`)
@@ -70,18 +66,14 @@ export async function GET(
         return res
       }
 
-      // No mandamos tableId/tableNumber como query para no auto-filtrar la
-      // vista a la última mesa escaneada. El reclamo ya quedó hecho en BD;
-      // el mesero ve todas sus mesas y puede filtrar haciendo click en un chip.
+     
       const res = NextResponse.redirect(buildRedirect(`/waiter/control`))
       res.headers.set("Cache-Control", "no-store, max-age=0")
       return res
     }
   }
 
-  // `from=scan` indica al MenuClient que viene de un escaneo de QR y debe
-  // mostrar nuevamente las recomendaciones del día (resetea el flag de "ya
-  // visto" en localStorage).
+ 
   const res = NextResponse.redirect(buildRedirect(`/${qrCode}/menu?from=scan`))
   res.headers.set("Cache-Control", "no-store, max-age=0")
   return res
