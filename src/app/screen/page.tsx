@@ -6,6 +6,7 @@ import { useRestaurant } from "@/hooks/useRestaurant"
 import { logger } from "@/lib/logger"
 import { AdminGuard } from "@/app/admin/AdminGuard"
 import { advanceOrderStatusAction } from "@/app/actions/order-actions"
+import { playNewOrderSound } from "@/lib/notification-sound"
 
 type FetchedOrder = {
   id: number
@@ -57,6 +58,8 @@ function ScreenPage() {
   const [orders, setOrders] = useState<DisplayOrder[]>([])
   const [markingId, setMarkingId] = useState<number | null>(null)
   const restaurantRef = useRef(restaurant)
+  const knownOrderIdsRef = useRef<Set<number>>(new Set())
+  const initialLoadDoneRef = useRef(false)
 
   useEffect(() => {
     restaurantRef.current = restaurant
@@ -93,6 +96,11 @@ function ScreenPage() {
 
         setOrders((prev) => {
           if (prev.some((o) => o.id === data.id)) return prev
+          // Solo suena si es realmente nuevo (no en la lista inicial).
+          if (initialLoadDoneRef.current && !knownOrderIdsRef.current.has(data.id)) {
+            playNewOrderSound()
+          }
+          knownOrderIdsRef.current.add(data.id)
           return [rowToDisplay(data), ...prev].slice(0, 12)
         })
       } catch (err) {
@@ -126,6 +134,9 @@ function ScreenPage() {
       }
       const rows = (data ?? []) as unknown as FetchedOrder[]
       setOrders(rows.map(rowToDisplay))
+      // Sembramos el set con los IDs iniciales para no hacer "ding" por ellos.
+      knownOrderIdsRef.current = new Set(rows.map((r) => r.id))
+      initialLoadDoneRef.current = true
     })()
 
     return () => {

@@ -10,6 +10,7 @@ import {
   markTableOrdersAsPaidAction,
 } from "@/app/actions/order-actions"
 import { payDinerOrdersAction } from "@/app/actions/diner-actions"
+import { playNewOrderSound } from "@/lib/notification-sound"
 import type { WaiterOrder } from "@/services/order-service"
 
 /**
@@ -28,6 +29,12 @@ export function useWaiterOrders(restaurantId: number | null) {
     restaurantIdRef.current = restaurantId
   }, [restaurantId])
 
+  // Set de IDs ya vistos para detectar pedidos verdaderamente nuevos y
+  // disparar el beep solo en ese caso (no en el fetch inicial ni cuando
+  // re-fetcheamos por un cambio de status).
+  const knownOrderIdsRef = useRef<Set<number>>(new Set())
+  const initialLoadDoneRef = useRef(false)
+
   const fetchOrders = useCallback(async () => {
     const rid = restaurantIdRef.current
     if (!rid) return
@@ -36,7 +43,21 @@ export function useWaiterOrders(restaurantId: number | null) {
       setError(result.error)
       return
     }
-    setOrders(result.data)
+
+    const incoming = result.data
+    if (initialLoadDoneRef.current) {
+      // Solo IDs nuevos que NO estaban antes y siguen en estado activo (1-3).
+      const newlyArrived = incoming.filter(
+        (o) => !knownOrderIdsRef.current.has(o.id) && o.statusId >= 1 && o.statusId <= 3
+      )
+      if (newlyArrived.length > 0) {
+        playNewOrderSound()
+      }
+    }
+    knownOrderIdsRef.current = new Set(incoming.map((o) => o.id))
+    initialLoadDoneRef.current = true
+
+    setOrders(incoming)
     setError("")
   }, [])
 
