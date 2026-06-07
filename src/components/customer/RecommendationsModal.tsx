@@ -1,8 +1,6 @@
 "use client"
 
-import Link from "next/link"
 import { useRef } from "react"
-import { encodeId } from "@/lib/hashids"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
 import { getTemplateDesign } from "@/lib/menu/templates"
 import type { Product } from "@/types/product"
@@ -13,7 +11,6 @@ type Props = {
   onClose: () => void
   recommendations: RecommendedProduct[]
   products: Product[]
-  qrCode: string
   design: ReturnType<typeof getTemplateDesign>
   onAdd: (productId: number, variantId: number | null, price: number) => void
   canAdd: boolean
@@ -28,7 +25,6 @@ export function RecommendationsModal({
   onClose,
   recommendations,
   products,
-  qrCode,
   design,
   onAdd,
   canAdd,
@@ -66,18 +62,17 @@ export function RecommendationsModal({
         <ul className="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {recommendations.map((reco, idx) => {
             const product = products.find((p) => p.id === reco.id)
-            const hasVariants = (product?.product_variants?.length ?? 0) > 0
+            const firstVariant = product?.product_variants?.[0] ?? null
             return (
               <RecommendedRow
                 key={reco.id}
                 rank={idx + 1}
                 reco={reco}
-                product={product}
-                qrCode={qrCode}
+                defaultVariantId={firstVariant?.id ?? null}
+                defaultVariantPrice={firstVariant?.variant_price ?? reco.productPrice}
+                defaultVariantName={firstVariant?.variant_name ?? null}
                 design={design}
-                hasVariants={hasVariants}
                 canAdd={canAdd}
-                onClose={onClose}
                 onAdd={onAdd}
               />
             )
@@ -91,22 +86,20 @@ export function RecommendationsModal({
 function RecommendedRow({
   rank,
   reco,
-  product,
-  qrCode,
+  defaultVariantId,
+  defaultVariantPrice,
+  defaultVariantName,
   design,
-  hasVariants,
   canAdd,
-  onClose,
   onAdd,
 }: {
   rank: number
   reco: RecommendedProduct
-  product: Product | undefined
-  qrCode: string
+  defaultVariantId: number | null
+  defaultVariantPrice: number
+  defaultVariantName: string | null
   design: ReturnType<typeof getTemplateDesign>
-  hasVariants: boolean
   canAdd: boolean
-  onClose: () => void
   onAdd: (productId: number, variantId: number | null, price: number) => void
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -116,11 +109,11 @@ function RecommendedRow({
     e.stopPropagation()
     if (!canAdd) return
     flyToCart(imgRef.current)
-    onAdd(reco.id, null, reco.productPrice)
+    onAdd(reco.id, defaultVariantId, defaultVariantPrice)
   }
 
-  const inner = (
-    <>
+  return (
+    <li className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ring-white/10 ${design.cardImageBg}`}>
       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ring-1 ${design.pillActive}`}>
         {rank}
       </span>
@@ -143,49 +136,28 @@ function RecommendedRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className={`line-clamp-1 text-sm font-black ${design.cardName}`}>{reco.productName}</p>
+        <p className={`line-clamp-1 text-sm font-black ${design.cardName}`}>
+          {reco.productName}
+          {defaultVariantName ? (
+            <span className={`ml-1 text-xs font-bold ${design.cardDesc}`}>· {defaultVariantName}</span>
+          ) : null}
+        </p>
         <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${design.mesaText}`}>
           {reco.unitsSold} vendido{reco.unitsSold === 1 ? "" : "s"} hoy
         </p>
         <p className={`mt-1 text-sm font-black ${design.cardPrice}`}>
-          {formatPrice(reco.productPrice)}
+          {formatPrice(defaultVariantPrice)}
         </p>
       </div>
 
-      {hasVariants ? (
-        <span className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black ring-1 ${design.pillInactive}`}>
-          Elegir →
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={!canAdd}
-          className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black transition disabled:opacity-50 ${design.pillActive}`}
-        >
-          + Agregar
-        </button>
-      )}
-    </>
-  )
-
-  if (hasVariants && product) {
-    return (
-      <li>
-        <Link
-          href={`/${qrCode}/menu/${encodeId(product.id)}`}
-          onClick={onClose}
-          className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ring-white/10 transition hover:scale-[1.01] ${design.cardImageBg}`}
-        >
-          {inner}
-        </Link>
-      </li>
-    )
-  }
-
-  return (
-    <li className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ring-white/10 ${design.cardImageBg}`}>
-      {inner}
+      <button
+        type="button"
+        onClick={handleAdd}
+        disabled={!canAdd}
+        className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black transition disabled:opacity-50 ${design.pillActive}`}
+      >
+        + Agregar
+      </button>
     </li>
   )
 }
