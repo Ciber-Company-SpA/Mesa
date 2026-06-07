@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { RecommendationsModal } from "@/components/customer/RecommendationsModal"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
@@ -169,6 +169,9 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const [showReco, setShowReco] = useState(false)
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([])
 
+  const searchParams = useSearchParams()
+  const cameFromScan = searchParams.get("from") === "scan"
+
   useEffect(() => {
     const restaurantId = restaurant?.id
     if (!restaurantId) return
@@ -176,7 +179,12 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     const key = `reco-seen-${restaurantId}-${today}`
     if (typeof window === "undefined") return
     try {
-      if (window.localStorage.getItem(key)) return
+      // Si vienen de escanear el QR, ignoramos el flag previo del día.
+      if (cameFromScan) {
+        window.localStorage.removeItem(key)
+      } else if (window.localStorage.getItem(key)) {
+        return
+      }
     } catch {
       return
     }
@@ -193,7 +201,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     return () => {
       cancelled = true
     }
-  }, [restaurant?.id])
+  }, [restaurant?.id, cameFromScan])
 
   function dismissReco() {
     setShowReco(false)

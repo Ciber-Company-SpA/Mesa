@@ -79,7 +79,10 @@ export async function GET(
     }
   }
 
-  const res = NextResponse.redirect(buildRedirect(`/${qrCode}/menu`))
+  // `from=scan` indica al MenuClient que viene de un escaneo de QR y debe
+  // mostrar nuevamente las recomendaciones del día (resetea el flag de "ya
+  // visto" en localStorage).
+  const res = NextResponse.redirect(buildRedirect(`/${qrCode}/menu?from=scan`))
   res.headers.set("Cache-Control", "no-store, max-age=0")
   return res
 }
