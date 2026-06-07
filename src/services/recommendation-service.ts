@@ -23,7 +23,8 @@ type RpcRow = {
 
 export async function getTopProductsToday(
   restaurantId: number,
-  limit = 3
+  limit = 3,
+  fromIso?: string | null
 ): Promise<Result<RecommendedProduct[]>> {
   if (!restaurantId || restaurantId <= 0) return fail("Restaurante inválido")
 
@@ -31,6 +32,7 @@ export async function getTopProductsToday(
   const { data, error } = await supabase.rpc("get_top_products_today", {
     p_restaurant_id: restaurantId,
     p_limit: limit,
+    p_from: fromIso ?? null,
   })
   if (error) return fail(error.message ?? "No se pudo cargar recomendaciones")
 

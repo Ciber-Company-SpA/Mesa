@@ -190,7 +190,11 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     }
 
     let cancelled = false
-    getTopProductsTodayAction(restaurantId, 3)
+    // Inicio del día en la zona horaria del navegador, así calza con
+    // el reporte (que usa hora local del admin).
+    const localMidnight = new Date()
+    localMidnight.setHours(0, 0, 0, 0)
+    getTopProductsTodayAction(restaurantId, 3, localMidnight.toISOString())
       .then((res) => {
         if (cancelled || !res.ok || res.data.length === 0) return
         setRecommendations(res.data)
