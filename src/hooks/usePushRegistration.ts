@@ -47,6 +47,25 @@ export function usePushRegistration(enabled: boolean) {
         }
         if (perm.receive !== "granted") return
 
+        // Creamos el canal con IMPORTANCE_HIGH para que las notificaciones
+        // aparezcan como banner flotante (heads-up) y no solo en el cajón.
+        // El channel_id "new-orders" coincide con el que la Edge Function
+        // envía en android.notification.channel_id.
+        try {
+          await PushNotifications.createChannel({
+            id: "new-orders",
+            name: "Pedidos nuevos",
+            description: "Avisos en tiempo real cuando llega un pedido a tus mesas",
+            importance: 5, // IMPORTANCE_HIGH → heads-up + sonido + vibración
+            visibility: 1,
+            sound: "default",
+            vibration: true,
+            lights: true,
+          })
+        } catch (err) {
+          logger.warn("No se pudo crear el canal de push", { error: String(err) })
+        }
+
         registrationListener = await PushNotifications.addListener(
           "registration",
           async (token) => {
