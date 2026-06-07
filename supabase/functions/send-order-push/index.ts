@@ -175,7 +175,7 @@ async function sendFcm(
             priority: "HIGH",
             notification: {
               sound: "default",
-              channel_id: "new-orders",
+              channel_id: "new-orders-v2",
             },
           },
           data: {

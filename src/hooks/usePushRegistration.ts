@@ -51,9 +51,19 @@ export function usePushRegistration(enabled: boolean) {
         // aparezcan como banner flotante (heads-up) y no solo en el cajón.
         // El channel_id "new-orders" coincide con el que la Edge Function
         // envía en android.notification.channel_id.
+        // Borramos el canal viejo creado con IMPORTANCE_DEFAULT en versiones
+        // anteriores (Android no permite subir importancia in-place). Luego
+        // creamos uno nuevo con id versionado para que clientes existentes
+        // también reciban heads-up.
+        try {
+          await PushNotifications.deleteChannel({ id: "new-orders" })
+        } catch {
+          // no existía → ignoramos
+        }
+
         try {
           await PushNotifications.createChannel({
-            id: "new-orders",
+            id: "new-orders-v2",
             name: "Pedidos nuevos",
             description: "Avisos en tiempo real cuando llega un pedido a tus mesas",
             importance: 5, // IMPORTANCE_HIGH → heads-up + sonido + vibración
