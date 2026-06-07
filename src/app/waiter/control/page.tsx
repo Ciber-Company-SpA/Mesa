@@ -97,7 +97,7 @@ function WaiterControlSystem() {
   const staffId = loggedInStaff?.id ?? null
 
   // Registra el token FCM del dispositivo una vez que el mesero está logueado.
-  const pushDiag = usePushRegistration(staffId != null)
+  usePushRegistration(staffId != null)
   const {
     orders,
     loading: ordersLoading,
@@ -300,9 +300,6 @@ function WaiterControlSystem() {
       </header>
 
       <div className="mx-auto max-w-7xl px-6 mt-8">
-        <div className="mb-4 rounded-2xl border border-stone-200 bg-white/80 px-4 py-2 text-xs font-mono text-stone-700 shadow-sm">
-          <strong>PUSH DIAG:</strong> {pushDiag.status} — {pushDiag.message ?? "—"}
-        </div>
         <DeepLinkSetupNotice />
 
         {ordersError && (
