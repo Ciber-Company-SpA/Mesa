@@ -11,6 +11,10 @@ import {
 } from "@/app/actions/order-actions"
 import { payDinerOrdersAction } from "@/app/actions/diner-actions"
 import { playNewOrderSound } from "@/lib/notification-sound"
+import {
+  requestNotificationPermission,
+  showOrderNotification,
+} from "@/lib/order-notifications"
 import type { WaiterOrder } from "@/services/order-service"
 
 /**
@@ -35,6 +39,13 @@ export function useWaiterOrders(restaurantId: number | null) {
   const knownOrderIdsRef = useRef<Set<number>>(new Set())
   const initialLoadDoneRef = useRef(false)
 
+  // Pedir permiso de notificaciones del sistema al montar. Si el usuario
+  // lo rechaza, las notificaciones simplemente no aparecen — el sonido
+  // sigue siendo el canal principal.
+  useEffect(() => {
+    requestNotificationPermission().catch(() => undefined)
+  }, [])
+
   const fetchOrders = useCallback(async () => {
     const rid = restaurantIdRef.current
     if (!rid) return
@@ -52,6 +63,18 @@ export function useWaiterOrders(restaurantId: number | null) {
       )
       if (newlyArrived.length > 0) {
         playNewOrderSound()
+        for (const o of newlyArrived) {
+          const tableLabel = o.tableNumber != null ? `Mesa ${o.tableNumber}` : `Mesa #${o.tableId ?? "?"}`
+          const itemsSummary = o.items
+            .slice(0, 3)
+            .map((it) => `${it.productQuantity}x ${it.productName}`)
+            .join(", ")
+          showOrderNotification({
+            title: `Nuevo pedido — ${tableLabel}`,
+            body: itemsSummary || `Pedido #${o.id}`,
+            tag: `order-${o.id}`,
+          })
+        }
       }
     }
     knownOrderIdsRef.current = new Set(incoming.map((o) => o.id))
