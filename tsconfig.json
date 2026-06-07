@@ -37,6 +37,7 @@
     "**/*.mts"
 , ".claude/electron/main.js"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "supabase/functions"
   ]
 }
