@@ -10,7 +10,7 @@ export type CreatedQRCode = {
 export async function createTableQR(): Promise<Result<CreatedQRCode>> {
   const supabase = await createSupabaseServerClient()
 
-  const qrCode = nanoid(8)
+  const qrCode = nanoid(32)
 
   const { data, error } = await supabase
     .from("table_qr_codes")

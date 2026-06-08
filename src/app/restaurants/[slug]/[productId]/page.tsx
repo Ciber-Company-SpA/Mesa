@@ -42,7 +42,12 @@ type RpcResult = {
 
 export const revalidate = 60
 
+// Cuando se reactive delivery, cambiar a true.
+const DELIVERY_ENABLED = false
+
 export default async function PublicProductPage({ params }: { params: Params }) {
+  if (!DELIVERY_ENABLED) notFound()
+
   const { slug, productId } = await params
 
   const realProductId = decodeId(productId)

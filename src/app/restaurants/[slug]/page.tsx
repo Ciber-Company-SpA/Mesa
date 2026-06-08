@@ -55,7 +55,12 @@ function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
 }
 
+// Cuando se reactive delivery, cambiar a true.
+const DELIVERY_ENABLED = false
+
 export default async function DeliveryRestaurantPage({ params }: { params: Params }) {
+  if (!DELIVERY_ENABLED) notFound()
+
   const { slug } = await params
 
   // Si llega un valor numérico es probable que el usuario haya entrado por el viejo
