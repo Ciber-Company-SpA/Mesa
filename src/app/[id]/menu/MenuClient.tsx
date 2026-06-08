@@ -18,6 +18,8 @@ import { getTemplateDesign } from "@/lib/menu/templates"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
 import type { Product } from "@/types/product"
+import { useTableCartStore } from "@/store/tableCartStore"
+
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
@@ -214,6 +216,10 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { restaurant, categories, products, tableId, tableNumber } = menu
   const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
   useCartSync(restaurant?.id ?? null)
+  const setTable = useTableCartStore((s) => s.setTable)
+  useEffect(() => {
+    setTable(tableId ?? null, restaurant?.id ?? null, qrCode)
+  }, [tableId, restaurant?.id, qrCode, setTable])
   const design = getTemplateDesign(restaurant?.menu_template)
   const { info: dinerInfo } = useDinerSlot(tableId ?? null)
   const router = useRouter()

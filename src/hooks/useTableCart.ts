@@ -18,7 +18,7 @@ export function useTableCart(tableId: number | null, restaurantId: number | null
   useEffect(() => {
     if (!tableId || !restaurantId) return
 
-    setTable(tableId, restaurantId)
+    setTable(tableId, restaurantId, useTableCartStore.getState().qrCode)
     fetchItems()
     subscribeToTableCart(tableId)
 

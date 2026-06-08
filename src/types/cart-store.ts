@@ -22,8 +22,9 @@ export interface TableCartStore {
   items: CartItem[]
   tableId: number | null
   restaurantId: number | null
+  qrCode: string | null
   isLoading: boolean
-  setTable: (tableId: number | null, restaurantId: number | null) => void
+  setTable: (tableId: number | null, restaurantId: number | null, qrCode: string | null) => void
   fetchItems: () => Promise<void>
   addItem: (input: AddCartItemInput) => Promise<void>
   updateQuantity: (rowId: string, quantity: number) => Promise<void>

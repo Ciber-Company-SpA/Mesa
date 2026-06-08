@@ -53,10 +53,10 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
   items: [],
   tableId: null,
   restaurantId: null,
+  qrCode: null,
   isLoading: false,
 
-  setTable: (tableId, restaurantId) => set({ tableId, restaurantId }),
-
+setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode }),
   // LECTURA: sin cambios. Se mantiene directa (RLS permite leer mesas activas).
   fetchItems: async () => {
     const { tableId } = get()
