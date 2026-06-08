@@ -892,6 +892,8 @@ export default function AdminSettingsPage() {
         }}
       />
 
+      {/* Delivery temporalmente oculto: el feature está incompleto y se va a
+          retomar más adelante. Para reactivarlo, descomentar este bloque.
       <DeliverySection
         restaurant={restaurant ?? null}
         onSaved={() => {
@@ -899,6 +901,7 @@ export default function AdminSettingsPage() {
           refresh()
         }}
       />
+      */}
 
       <OrderDestinationSection
         restaurant={restaurant ?? null}
