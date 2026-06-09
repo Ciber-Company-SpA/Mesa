@@ -40,6 +40,8 @@ export function useEditProduct(productId: number | null) {
   const successRef = useRef(false)
   const processingPromises = useRef<Map<string, Promise<File | null>>>(new Map())
   const processingTokens = useRef<Map<string, number>>(new Map())
+  // localIds cuya imagen local fue descargada desde una URL existente (para poder revertir al apagar "quitar fondo").
+  const derivedFromUrlRef = useRef<Set<string>>(new Set())
 
   const [productName, setProductName] = useState("")
   const [productDescription, setProductDescription] = useState("")
@@ -181,6 +183,8 @@ export function useEditProduct(productId: number | null) {
   }
 
   function setOptionImage(localId: string, file: File | null) {
+    // Cambio explícito del usuario: ya no es una imagen derivada de la URL existente.
+    derivedFromUrlRef.current.delete(localId)
     updateOption(localId, { imageFile: file, processedFile: null })
     if (!file) {
       processingTokens.current.set(localId, (processingTokens.current.get(localId) ?? 0) + 1)
@@ -192,12 +196,63 @@ export function useEditProduct(productId: number | null) {
     startProcessing(localId, file, current?.removeBg ?? false)
   }
 
+  // Edición sin archivo nuevo: descarga la imagen actual desde su URL, la convierte en File
+  // y la procesa (quitar fondo + comprimir) para resubirla al guardar.
+  function startProcessingFromUrl(localId: string, url: string, removeBg: boolean) {
+    const nextToken = (processingTokens.current.get(localId) ?? 0) + 1
+    processingTokens.current.set(localId, nextToken)
+
+    updateOption(localId, { processing: true, processedFile: null })
+
+    const promise = (async () => {
+      const response = await fetch(url, { mode: "cors" })
+      if (!response.ok) throw new Error("No se pudo descargar la imagen")
+      const blob = await response.blob()
+      const file = new File([blob], "imagen.png", { type: blob.type || "image/png" })
+
+      if (processingTokens.current.get(localId) !== nextToken) return null
+      // Fijar el archivo como imagen local para que prepareOptions lo vuelva a subir.
+      updateOption(localId, { imageFile: file })
+
+      const processed = await processImage(file, { removeBg })
+      if (processingTokens.current.get(localId) !== nextToken) return null
+      updateOption(localId, { processedFile: processed, processing: false })
+      return processed
+    })().catch(() => {
+      if (processingTokens.current.get(localId) !== nextToken) return null
+      derivedFromUrlRef.current.delete(localId)
+      updateOption(localId, { processing: false })
+      return null
+    })
+
+    processingPromises.current.set(localId, promise)
+  }
+
   function setOptionRemoveBg(localId: string, value: boolean) {
     writeRemoveBgPreference(value)
     updateOption(localId, { removeBg: value })
+
     const current = options.find((o) => o.localId === localId)
-    if (!current?.imageFile) return
-    startProcessing(localId, current.imageFile, value)
+    if (!current) return
+
+    if (current.imageFile) {
+      // Si se apaga y el archivo venía de una URL existente, revertir a la imagen original sin resubir.
+      if (!value && derivedFromUrlRef.current.has(localId)) {
+        derivedFromUrlRef.current.delete(localId)
+        processingTokens.current.set(localId, (processingTokens.current.get(localId) ?? 0) + 1)
+        processingPromises.current.delete(localId)
+        updateOption(localId, { imageFile: null, processedFile: null, processing: false })
+        return
+      }
+      startProcessing(localId, current.imageFile, value)
+      return
+    }
+
+    // No hay archivo local pero sí una imagen ya guardada: solo tiene sentido al activar.
+    if (value && current.imageUrl) {
+      derivedFromUrlRef.current.add(localId)
+      startProcessingFromUrl(localId, current.imageUrl, value)
+    }
   }
 
   function addOption() {
@@ -228,14 +283,21 @@ export function useEditProduct(productId: number | null) {
   async function prepareOptions(): Promise<UpdateProductOptionInput[]> {
     const uploadResults = await Promise.all(
       options.map(async (option) => {
-        if (!option.imageFile) {
+        const pending = processingPromises.current.get(option.localId)
+
+        // Sin archivo local ni procesado en curso: conservar la imagen existente.
+        if (!option.imageFile && !pending) {
           return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
         }
 
-        const pending = processingPromises.current.get(option.localId)
         const processed = pending ? await pending : option.processedFile
 
         const fileToUpload = processed ?? option.imageFile
+
+        // El procesado/descarga falló y no hay archivo local: conservar la imagen existente.
+        if (!fileToUpload) {
+          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+        }
 
         const result = await uploadImage(
           fileToUpload,
