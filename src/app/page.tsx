@@ -168,6 +168,10 @@ const css = `
 .mesa-landing .plan .range{font-size:13px;color:var(--muted);margin-top:3px}
 .mesa-landing .plan .price{font-family:var(--disp);font-weight:700;font-size:30px;margin-top:18px;letter-spacing:-.02em}
 .mesa-landing .plan .price small{display:block;font-family:var(--sans);font-weight:600;font-size:12px;color:var(--muted);letter-spacing:0;margin-top:3px}
+.mesa-landing .plan .off{display:inline-flex;align-items:center;gap:6px;background:var(--orange-soft);color:var(--orange-d);font-family:var(--sans);font-weight:800;font-size:11.5px;letter-spacing:.04em;padding:5px 11px;border-radius:999px;margin-top:16px}
+.mesa-landing .plan .was{display:block;font-family:var(--sans);font-weight:600;font-size:16px;color:var(--muted);text-decoration:line-through;letter-spacing:0;margin-top:12px}
+.mesa-landing .plan .off + .price,.mesa-landing .plan .was + .price{margin-top:4px}
+.mesa-landing .plan .price .now{color:var(--orange-d)}
 .mesa-landing .plan .sup{margin-top:14px;padding:12px;background:var(--panel);border-radius:12px;border:1px solid var(--line)}
 .mesa-landing .plan .sup b{font-size:14px;font-family:var(--disp)}
 .mesa-landing .plan .sup span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
@@ -306,9 +310,11 @@ export default function Home() {
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalSent, setModalSent] = useState(false)
+  const [modalMesas, setModalMesas] = useState("1 – 15 mesas")
 
-  const openModal = () => {
+  const openModal = (mesas?: string) => {
     setModalSent(false)
+    if (mesas) setModalMesas(mesas)
     setModalOpen(true)
   }
 
@@ -361,7 +367,7 @@ export default function Home() {
             </nav>
             <div className="nav-cta">
               <Link href="/login" className="btn btn-ghost">Iniciar sesión</Link>
-              <button className="btn btn-primary" onClick={openModal}>Contacta a un ejecutivo</button>
+              <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo</button>
               <button className="nav-toggle" aria-label="Menú" onClick={() => setNavOpen((v) => !v)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
               </button>
@@ -377,7 +383,7 @@ export default function Home() {
               <h1 className="hero-title">Menos caos en el local. <span className="hl">Más mesas atendidas.</span></h1>
               <p className="lead">MESA digitaliza el pedido completo: tus clientes escanean el QR de su mesa, piden desde el navegador y todo llega en tiempo real a cocina. Sin pedidos perdidos, sin errores, sin contratar más personal.</p>
               <div className="hero-cta">
-                <button className="btn btn-primary" onClick={openModal}>Contacta a un ejecutivo
+                <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                 </button>
                 <a href="#funcionalidades" className="btn btn-ghost">Ver funcionalidades</a>
@@ -608,39 +614,45 @@ export default function Home() {
               <div className="plan reveal">
                 <div className="pn">Plan 15</div>
                 <div className="range">1 – 15 mesas</div>
-                <div className="price">$2.500.000 + IVA<small>Acceso a la plataforma</small></div>
+                <div className="off">★ 50% OFF lanzamiento</div>
+                <span className="was">$2.500.000 + IVA</span>
+                <div className="price"><span className="now">$1.250.000 + IVA</span><small>Acceso a la plataforma</small></div>
                 <div className="sup"><b>+ $150.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
                 <ul className="feats">
                   <li><Check />Menú QR + upload con IA</li>
                   <li><Check />Vistas Cliente, Cocina, Mesero y Admin</li>
                   <li><Check />Reportes básicos</li>
                 </ul>
-                <button className="btn btn-ghost" onClick={openModal}>Contactar</button>
+                <button className="btn btn-ghost" onClick={() => openModal("1 – 15 mesas")}>Contactar</button>
               </div>
               <div className="plan feat reveal">
                 <div className="ribbon">Más elegido</div>
                 <div className="pn">Plan 50</div>
                 <div className="range">16 – 50 mesas</div>
-                <div className="price">$6.000.000 + IVA<small>Acceso a la plataforma</small></div>
+                <div className="off">★ 50% OFF lanzamiento</div>
+                <span className="was">$6.000.000 + IVA</span>
+                <div className="price"><span className="now">$3.000.000 + IVA</span><small>Acceso a la plataforma</small></div>
                 <div className="sup"><b>+ $300.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
                 <ul className="feats">
                   <li><Check />Todo lo del Plan 15</li>
                   <li><Check />Reportes avanzados y horas peak</li>
                   <li><Check />Gestión completa de meseros</li>
                 </ul>
-                <button className="btn btn-primary" onClick={openModal}>Contactar</button>
+                <button className="btn btn-primary" onClick={() => openModal("16 – 50 mesas")}>Contactar</button>
               </div>
               <div className="plan reveal">
                 <div className="pn">Plan 100</div>
                 <div className="range">50 – 100 mesas</div>
-                <div className="price">$10.000.000 + IVA<small>Acceso a la plataforma</small></div>
+                <div className="off">★ 50% OFF lanzamiento</div>
+                <span className="was">$10.000.000 + IVA</span>
+                <div className="price"><span className="now">$5.000.000 + IVA</span><small>Acceso a la plataforma</small></div>
                 <div className="sup"><b>+ $450.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
                 <ul className="feats">
                   <li><Check />Todo lo del Plan 50</li>
                   <li><Check />Operación de alto volumen</li>
                   <li><Check />Prioridad en soporte</li>
                 </ul>
-                <button className="btn btn-ghost" onClick={openModal}>Contactar</button>
+                <button className="btn btn-ghost" onClick={() => openModal("50 – 100 mesas")}>Contactar</button>
               </div>
               <div className="plan reveal">
                 <div className="pn">Personalizado</div>
@@ -652,10 +664,10 @@ export default function Home() {
                   <li><Check />Reportes consolidados</li>
                   <li><Check />Integraciones a medida</li>
                 </ul>
-                <button className="btn btn-dark" onClick={openModal}>Contactar</button>
+                <button className="btn btn-dark" onClick={() => openModal("100+ o varias sucursales")}>Contactar</button>
               </div>
             </div>
-            <p className="plan-note">Los valores son referenciales en pesos chilenos (CLP). El costo de procesamiento de menú con IA se absorbe en el setup. <a onClick={openModal} style={{ color: "var(--orange)", fontWeight: 700, cursor: "pointer" }}>Habla con un ejecutivo</a> para una propuesta a tu medida.</p>
+            <p className="plan-note">Los valores son referenciales en pesos chilenos (CLP). El costo de procesamiento de menú con IA se absorbe en el setup. <a onClick={() => openModal()} style={{ color: "var(--orange)", fontWeight: 700, cursor: "pointer" }}>Habla con un ejecutivo</a> para una propuesta a tu medida.</p>
           </div>
         </section>
 
@@ -690,7 +702,7 @@ export default function Home() {
                   <li><div className="sn">3</div><div><b>Conecta tu cocina</b><span>Pantalla en tiempo real o impresión de boleta.</span></div></li>
                   <li><div className="sn">4</div><div><b>Invita a tus meseros</b><span>Reciben sus credenciales por correo automáticamente.</span></div></li>
                 </ul>
-                <button className="btn btn-primary" onClick={openModal} style={{ width: "100%", justifyContent: "center", marginTop: 22 }}>Contacta a un ejecutivo</button>
+                <button className="btn btn-primary" onClick={() => openModal()} style={{ width: "100%", justifyContent: "center", marginTop: 22 }}>Contacta a un ejecutivo</button>
               </div>
             </div>
           </div>
@@ -702,7 +714,7 @@ export default function Home() {
               <h2>Más mesas atendidas, menos errores, menos estrés.</h2>
               <p>Sin contratar más personal. Hablemos de cómo MESA se adapta a tu local.</p>
               <div className="hero-cta">
-                <button className="btn btn-primary" onClick={openModal}>Contacta a un ejecutivo
+                <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                 </button>
                 <a href="#planes" className="btn" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}>Ver planes</a>
@@ -729,11 +741,11 @@ export default function Home() {
               <div><h5>Ayuda</h5>
                 <a href="#ayuda">Preguntas frecuentes</a>
                 <a href="#ayuda">Guía de onboarding</a>
-                <a onClick={openModal}>Contacto</a>
+                <a onClick={() => openModal()}>Contacto</a>
               </div>
               <div><h5>Empieza</h5>
                 <Link href="/login">Iniciar sesión</Link>
-                <a onClick={openModal}>Contacta a un ejecutivo</a>
+                <a onClick={() => openModal()}>Contacta a un ejecutivo</a>
               </div>
             </div>
             <div className="foot-bot">
@@ -762,7 +774,7 @@ export default function Home() {
               <div className="field"><label>Tu nombre</label><input type="text" placeholder="Nombre y apellido" /></div>
               <div className="field"><label>Correo o teléfono</label><input type="text" placeholder="hola@local.cl / +56 9 ..." /></div>
               <div className="field"><label>¿Cuántas mesas tiene tu local?</label>
-                <select><option>1 – 15 mesas</option><option>16 – 50 mesas</option><option>50 – 100 mesas</option><option>100+ o varias sucursales</option></select>
+                <select value={modalMesas} onChange={(e) => setModalMesas(e.target.value)}><option>1 – 15 mesas</option><option>16 – 50 mesas</option><option>50 – 100 mesas</option><option>100+ o varias sucursales</option></select>
               </div>
               <button className="btn" onClick={() => setModalSent(true)}>Enviar solicitud</button>
             </div>
