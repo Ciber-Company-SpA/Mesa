@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useOrderList } from "@/hooks/useOrderList"
+import { OrderDetailModal } from "@/components/admin/OrderDetailModal"
 
 const statusStyles: Record<string, string> = {
   Nuevo: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/50",
@@ -19,6 +21,7 @@ function formatTime(createdAt: string) {
 
 export default function OrdersPage() {
   const { orders, loading, error } = useOrderList()
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
 
   const summary = [
     {
@@ -140,6 +143,7 @@ export default function OrdersPage() {
                   <div className="mt-auto">
                     <button
                       type="button"
+                      onClick={() => setSelectedOrderId(order.id)}
                       className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-stone-700 transition hover:bg-stone-100"
                     >
                       Ver detalle
@@ -151,6 +155,11 @@ export default function OrdersPage() {
           </div>
         )}
       </section>
+
+      <OrderDetailModal
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+      />
     </div>
   )
 }
