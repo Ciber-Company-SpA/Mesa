@@ -24,6 +24,15 @@ function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
 }
 
+const NEW_PRODUCT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
+function isNewProduct(createdAt: string | null | undefined) {
+  if (!createdAt) return false
+  const created = new Date(createdAt).getTime()
+  if (Number.isNaN(created)) return false
+  return Date.now() - created < NEW_PRODUCT_WINDOW_MS
+}
+
 function getCategoryPlaceholder(categoryName: string) {
   const name = (categoryName ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
   if (name.includes("bebida") || name.includes("trago") || name.includes("jugo") || name.includes("coctel") || name.includes("cerv") || name.includes("alcohol") || name.includes("vino") || name.includes("bebestible")) {
@@ -186,11 +195,11 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
                 <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold text-white">
                   Agotado
                 </span>
-              ) : (
+              ) : isNewProduct(item.created_at) ? (
                 <span className="rounded-full bg-[#ff5b16] px-2.5 py-1 text-[10px] font-extrabold text-[#17110d]">
                   Nuevo
                 </span>
-              )}
+              ) : null}
               {isPopular && !isAgotado ? (
                 <span className="rounded-full border border-[#86683f] bg-[#3a2e20]/90 px-2.5 py-1 text-[10px] font-extrabold text-[#ffc46f]">
                   Recomendado

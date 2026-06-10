@@ -12,6 +12,7 @@ export type Product = {
   category_id: number
   restaurant_id: number
   status_id: number
+  created_at: string
   categories: Category
   product_status?: ProductStatus
   product_variants?: ProductVariant[]
