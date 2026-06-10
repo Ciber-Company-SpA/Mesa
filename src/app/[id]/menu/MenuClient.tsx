@@ -89,10 +89,10 @@ function ProductImage({
     <div
       aria-label={!src ? `Foto del plato ${placeholder.emoji}` : undefined}
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
-      style={!src ? {
+      style={{
         backgroundColor: "#241e18",
         backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 11px, transparent 11px 23px)",
-      } : undefined}
+      }}
     >
       {src ? (
         <>
@@ -101,7 +101,7 @@ function ProductImage({
             ref={imgRef}
             src={src}
             alt={alt}
-            className={`relative z-10 h-full w-full object-cover ${imageClassName}`}
+            className={`relative z-10 h-full w-full object-contain ${imageClassName}`}
             loading="lazy"
           />
         </>
@@ -178,7 +178,7 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
               src={item.product_image}
               alt={item.product_name}
               className="h-[140px] w-full bg-[#241e18]"
-              imageClassName="object-cover transition duration-300 group-hover:scale-[1.02]"
+              imageClassName="p-2 transition duration-300 group-hover:scale-[1.02]"
               imgRef={imgRef}
               categoryName={item.categories?.category_name}
             />
@@ -425,25 +425,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   return (
     <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
       <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
-        <div className="flex h-11 items-center justify-between bg-[#15110d] px-6 text-[14px] font-extrabold text-white">
-          <span>9:41</span>
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <svg className="h-3 w-4" viewBox="0 0 16 12" fill="currentColor">
-              <rect x="0" y="8" width="2.5" height="4" rx="0.7" />
-              <rect x="4.5" y="5.5" width="2.5" height="6.5" rx="0.7" />
-              <rect x="9" y="3" width="2.5" height="9" rx="0.7" />
-              <rect x="13.5" y="0" width="2.5" height="12" rx="0.7" />
-            </svg>
-            <svg className="h-3.5 w-4" viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M1 4.5C3 2.5 5.3 1.5 8 1.5s5 1 7 3M3.2 7c1.3-1.2 3-1.9 4.8-1.9s3.5.7 4.8 1.9M6 9.5c.6-.5 1.3-.7 2-.7s1.4.2 2 .7" strokeLinecap="round" />
-            </svg>
-            <span className="h-2.5 w-5 rounded-[3px] border border-white/70 p-[1px]">
-              <span className="block h-full w-3.5 rounded-[1px] bg-white" />
-            </span>
-          </div>
-        </div>
-
-        <div className="px-3.5 pb-6 pt-4">
+        <div className="px-3.5 pb-6 pt-5">
         <header className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="relative flex shrink-0 items-center justify-center">
