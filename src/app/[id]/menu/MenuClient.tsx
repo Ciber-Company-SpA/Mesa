@@ -426,6 +426,14 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     [products]
   )
 
+  // Solo categorías con al menos un producto disponible; la barra completa
+  // se oculta si el menú tiene 1 producto o menos (no hay nada que filtrar).
+  const visibleCategories = useMemo(
+    () => categories.filter((cat) => availableProducts.some((product) => product.category_id === cat.id)),
+    [categories, availableProducts]
+  )
+  const showCategoryBar = availableProducts.length > 1 && visibleCategories.length > 0
+
   const searchedProducts = useMemo(() => {
     if (!searchQuery.trim()) return availableProducts
     const query = searchQuery.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -446,7 +454,8 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
   return (
     <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
-      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+      {/* overflow-clip (no -hidden): hidden crea un scroll container y rompe el position:sticky de los hijos */}
+      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-clip bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
         <div className="px-3.5 pb-6 pt-5">
         <header className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -490,50 +499,52 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           </div>
         </header>
 
-        <div className="relative mt-4">
-          <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#6f675c]">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-[#2a231d] bg-[#110e0b]/95 px-3.5 pb-2.5 pt-3 backdrop-blur-xl">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#6f675c]">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar platos, bebidas, postres..."
+              className="h-[50px] w-full rounded-2xl border border-[#ffecd6]/[0.08] bg-[#211b15] pl-12 pr-10 text-[14px] font-medium text-[#f7f1e9] outline-none transition placeholder:text-[#6f675c] focus:border-[#ff6a1a]/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-3 flex items-center px-2 text-[#6f675c] transition hover:text-white"
+                type="button"
+              >
+                x
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar platos, bebidas, postres..."
-            className="h-[50px] w-full rounded-2xl border border-[#ffecd6]/[0.08] bg-[#211b15] pl-12 pr-10 text-[14px] font-medium text-[#f7f1e9] outline-none transition placeholder:text-[#6f675c] focus:border-[#ff6a1a]/50"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute inset-y-0 right-3 flex items-center px-2 text-[#6f675c] transition hover:text-white"
-              type="button"
-            >
-              x
-            </button>
-          )}
+
+          {showCategoryBar ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {visibleCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => scrollToCategory(cat.id)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
+                    selectedCategory === cat.id
+                      ? "bg-[#ff5b16] text-[#15110d] shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
+                      : "border border-[#332a23] bg-[#1d1814] text-[#a99f92]"
+                  }`}
+                >
+                  {cat.category_name}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <TableOrdersHeader tableId={tableId ?? null} />
-
-        <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-[#2a231d] bg-[#110e0b]/95 px-3.5 py-2.5 backdrop-blur-xl">
-          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => scrollToCategory(cat.id)}
-                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                  selectedCategory === cat.id
-                    ? "bg-[#ff5b16] text-[#15110d] shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
-                    : "border border-[#332a23] bg-[#1d1814] text-[#a99f92]"
-                }`}
-              >
-                {cat.category_name}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Listado de Productos */}
         {searchedProducts.length > 0 ? (
@@ -550,7 +561,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                   ref={(element) => {
                     categoryRefs.current[cat.id] = element
                   }}
-                  className="scroll-mt-16 animate-card-entrance"
+                  className="scroll-mt-32 animate-card-entrance"
                 >
                   <div className="mb-3 mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">

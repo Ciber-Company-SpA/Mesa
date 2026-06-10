@@ -57,7 +57,7 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
 
   return (
     <>
-      <div className="sticky top-3 z-30 mb-6 rounded-3xl border border-white/10 bg-stone-950/80 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300">
+      <div className="mb-6 mt-4 rounded-3xl border border-white/10 bg-stone-950/80 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 pl-1">
             <span className="relative flex h-2 w-2">
