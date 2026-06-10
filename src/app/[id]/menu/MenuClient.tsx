@@ -118,12 +118,16 @@ type ProductCardProps = {
   isPopular?: boolean
 }
 
-function ProductCard({ item, qrCode, design, tableId, restaurantId, isPopular }: ProductCardProps) {
+function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: ProductCardProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
-  const { addItem } = useTableCart(tableId, restaurantId)
+  const { items, addItem, updateQuantity, removeItem } = useTableCart(tableId, restaurantId)
   const variants = item.product_variants ?? []
   const hasVariants = variants.length > 0
   const isAgotado = item.status_id === 2
+  const cartItem = !hasVariants
+    ? items.find((entry) => entry.productId === item.id && entry.variantId === null)
+    : null
+  const quantity = cartItem?.quantity ?? 0
 
   function handleAdd(e: React.MouseEvent, productId: number, variantId: number | null, price: number) {
     e.preventDefault()
@@ -133,76 +137,112 @@ function ProductCard({ item, qrCode, design, tableId, restaurantId, isPopular }:
     addItem({ productId, variantId, price, quantity: 1 })
   }
 
+  function handleSubtract(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!cartItem) return
+    if (cartItem.quantity === 1) {
+      removeItem(cartItem.id)
+      return
+    }
+    updateQuantity(cartItem.id, cartItem.quantity - 1)
+  }
+
   return (
     <Link
       href={`/${qrCode}/menu/${encodeId(item.id)}`}
-      className={`relative flex flex-col gap-3 rounded-[1.75rem] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-0.5 ${
+      className={`group relative block overflow-hidden rounded-[1.4rem] border border-[#ffecd6]/[0.08] bg-[#211b15] shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition hover:-translate-y-0.5 ${
         isAgotado ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-      } ${design.card}`}
+      }`}
     >
       {isAgotado ? (
-        <span className="absolute left-4 top-4 z-20 rounded-full bg-red-500/90 border border-red-400/20 px-3 py-1 text-xs font-black text-white shadow-lg">
+        <span className="absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">
           Agotado
         </span>
       ) : isPopular ? (
-        <span className="absolute left-4 top-4 z-20 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-lg animate-pulse-glow">
-          🔥 Popular
+        <span className="absolute left-3 top-3 z-20 rounded-full bg-[#ff6a1a] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#15110d]">
+          Popular
         </span>
       ) : null}
 
-      <div className="flex gap-3.5">
-        <ProductImage
-          src={item.product_image}
-          alt={item.product_name}
-          className={`aspect-square h-20 shrink-0 rounded-[1.2rem] ${design.cardImageBg}`}
-          imageClassName="p-2 drop-shadow-xl"
-          imgRef={imgRef}
-          categoryName={item.categories?.category_name}
-        />
-        <div className="min-w-0 flex-1 flex flex-col justify-between">
-          <div>
-            <h3 className={`line-clamp-2 font-black leading-tight text-sm tracking-tight ${design.cardName}`}>
-              {item.product_name}
-            </h3>
-            {item.product_description && (
-              <p className={`mt-1 line-clamp-2 text-[11px] leading-relaxed ${design.cardDesc}`}>
-                {item.product_description}
-              </p>
-            )}
+      <ProductImage
+        src={item.product_image}
+        alt={item.product_name}
+        className="h-44 w-full bg-gradient-to-br from-[#2c241c] via-[#211b15] to-[#3a2113]"
+        imageClassName="p-3 drop-shadow-2xl transition duration-300 group-hover:scale-[1.03]"
+        imgRef={imgRef}
+        categoryName={item.categories?.category_name}
+      />
+
+      <div className="p-[13px_15px_15px]">
+        <h3 className="font-[family-name:var(--font-grotesk)] text-lg font-bold leading-tight tracking-[-0.03em] text-[#f7f1e9]">
+          {item.product_name}
+        </h3>
+        {item.product_description && (
+          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.4] text-[#a99f92]">
+            {item.product_description}
+          </p>
+        )}
+
+        {hasVariants ? (
+          <div
+            className="mt-3 grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${Math.min(variants.length, 3)}, minmax(0, 1fr))` }}
+          >
+            {variants.map((variant) => (
+              <button
+                key={variant.id}
+                type="button"
+                disabled={isAgotado || !tableId}
+                onClick={(e) => handleAdd(e, item.id, variant.id, variant.variant_price)}
+                className="min-w-0 rounded-xl border border-[#ffecd6]/[0.08] bg-[#2c241c] px-2 py-2 text-center text-xs font-extrabold text-[#cdbfae] transition hover:border-[#ff6a1a]/40 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="block truncate">{variant.variant_name}</span>
+                <span className="mt-0.5 block text-[10px] text-[#f0c690]">
+                  {formatPrice(variant.variant_price)}
+                </span>
+              </button>
+            ))}
           </div>
-          {!hasVariants && (
-            <p className={`mt-2 text-sm font-black ${design.cardPrice}`}>
+        ) : (
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="font-[family-name:var(--font-grotesk)] text-[19px] font-bold text-[#f0c690]">
               {formatPrice(item.product_price)}
             </p>
-          )}
-        </div>
+            {quantity > 0 ? (
+              <div className="flex items-center gap-1 rounded-full bg-[#2c241c] p-1 ring-1 ring-[#ffecd6]/[0.08]">
+                <button
+                  type="button"
+                  onClick={handleSubtract}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-[#cdbfae] hover:bg-white/5"
+                  aria-label={`Quitar ${item.product_name}`}
+                >
+                  -
+                </button>
+                <span className="min-w-6 text-center text-sm font-extrabold text-white">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6a1a] text-lg font-bold text-[#15110d] hover:bg-[#ff7b35]"
+                  aria-label={`Agregar otro ${item.product_name}`}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isAgotado || !tableId}
+                onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff6a1a] text-2xl font-semibold text-[#15110d] shadow-[0_8px_18px_rgba(255,106,26,0.35)] hover:bg-[#ff7b35] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Agregar ${item.product_name}`}
+              >
+                +
+              </button>
+            )}
+          </div>
+        )}
       </div>
-
-      {hasVariants ? (
-        <div className="grid gap-2 mt-1" style={{ gridTemplateColumns: `repeat(${Math.min(variants.length, 3)}, minmax(0, 1fr))` }}>
-          {variants.map((variant) => (
-            <button
-              key={variant.id}
-              type="button"
-              disabled={isAgotado || !tableId}
-              onClick={(e) => handleAdd(e, item.id, variant.id, variant.variant_price)}
-              className={`min-w-0 rounded-xl px-2 py-2 text-center text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${design.pillInactive} hover:scale-[1.02] active:scale-95`}
-            >
-              <span className="block truncate">{variant.variant_name}</span>
-              <span className={`mt-0.5 block text-[10px] ${design.cardPrice}`}>{formatPrice(variant.variant_price)}</span>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <button
-          type="button"
-          disabled={isAgotado || !tableId}
-          onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
-          className={`mt-1.5 w-full rounded-xl px-4 py-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${design.pillActive} hover:scale-[1.01] active:scale-95`}
-        >
-          Agregar al pedido
-        </button>
-      )}
     </Link>
   )
 }
@@ -232,8 +272,6 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
   const searchParams = useSearchParams()
   const cameFromScan = searchParams.get("from") === "scan"
-
-  const isLight = restaurant?.menu_template === "nordic-minimal"
 
   useEffect(() => {
     const restaurantId = restaurant?.id
@@ -311,48 +349,39 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   }, [filteredProducts, searchQuery])
 
   return (
-    <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
-      <div className={`pointer-events-none fixed inset-0 ${design.overlayClass}`} />
+    <main className="min-h-screen overflow-hidden bg-[#15110d] pb-28 font-[family-name:var(--font-manrope)] text-[#f7f1e9]">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(120%_70%_at_50%_-10%,#2a1c10_0%,#15110d_55%)]" />
 
-      <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
+      <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-4">
         <TableOrdersHeader tableId={tableId ?? null} />
 
-        {/* Header Premium del Restaurante */}
-        <header className={`flex items-center justify-between gap-4 p-4 rounded-3xl ${design.card}`}>
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="relative shrink-0 flex items-center justify-center">
-              {/* Glowing halo behind logo */}
-              <div className={`absolute inset-0 -m-1 rounded-full opacity-60 blur-md animate-pulse-glow ${
-                isLight ? "bg-gradient-to-tr from-slate-400 to-slate-500" : "bg-gradient-to-tr from-orange-500 to-amber-400"
-              }`} />
+        <header className="flex items-center gap-3 px-0.5 pt-1">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="relative flex shrink-0 items-center justify-center">
               {restaurant?.restaurant_logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={restaurant.restaurant_logo}
                   alt={restaurant.restaurant_name}
-                  className={`relative z-10 h-14 w-14 rounded-full border-2 object-cover shadow-lg ${
-                    isLight ? "border-slate-300" : "border-white/20"
-                  }`}
+                  className="h-[54px] w-[54px] rounded-full border-[2.5px] border-[#ff6a1a] object-cover"
                 />
               ) : (
-                <div className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full border-2 text-lg font-black shadow-lg ${
-                  isLight ? "border-slate-300 bg-gradient-to-tr from-slate-200 to-slate-100 text-slate-800" : "border-white/20 bg-gradient-to-tr from-stone-800 to-stone-900 text-orange-200"
-                }`}>
+                <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full border-[2.5px] border-[#ff6a1a] bg-[#2c241c] font-[family-name:var(--font-grotesk)] text-lg font-bold text-[#f7f1e9]">
                   {restaurant?.restaurant_name?.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
 
             <div className="min-w-0">
-              <h1 className={`truncate text-2xl font-black tracking-tight leading-tight ${design.titleClass}`}>
+              <h1 className="truncate font-[family-name:var(--font-grotesk)] text-xl font-bold leading-tight tracking-[-0.03em] text-[#f7f1e9]">
                 {restaurant?.restaurant_name}
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${design.abiertoBadge}`}>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="rounded-full bg-[#2c241c] px-2.5 py-1 text-[11px] font-bold text-[#cdbfae]">
                   Mesa {tableNumber}
                 </span>
                 {dinerInfo && (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${design.abiertoBadge}`}>
+                  <span className="rounded-full bg-[#2c241c] px-2.5 py-1 text-[11px] font-bold text-[#cdbfae]">
                     {dinerInfo.label}
                   </span>
                 )}
@@ -360,20 +389,16 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black uppercase tracking-wider ${design.abiertoBadge}`}>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
+          <div className="shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-[#5fd08a]">
+              <span className="h-2 w-2 rounded-full bg-[#5fd08a]" />
               Abierto
             </span>
           </div>
         </header>
 
-        {/* Buscador Interactivo */}
-        <div className="mt-6 relative">
-          <div className={`absolute inset-y-0 left-4 flex items-center pointer-events-none ${isLight ? "text-slate-400" : "text-white/40"}`}>
+        <div className="relative mt-4">
+          <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#6f675c]">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -383,33 +408,28 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar platos, bebidas, postres..."
-            className={`w-full pl-12 pr-10 py-3.5 text-sm font-semibold rounded-2xl outline-none transition-all duration-300 ring-1 backdrop-blur-xl ${
-              design.card
-            } ${
-              isLight
-                ? "placeholder:text-slate-400 text-slate-800 focus:ring-slate-800/40 focus:border-slate-400"
-                : "placeholder:text-white/30 text-white focus:ring-orange-400/50"
-            }`}
+            className="h-[50px] w-full rounded-2xl border border-[#ffecd6]/[0.08] bg-[#211b15] pl-12 pr-10 text-[14px] font-medium text-[#f7f1e9] outline-none transition placeholder:text-[#6f675c] focus:border-[#ff6a1a]/50"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className={`absolute inset-y-0 right-3 flex items-center px-2 transition ${isLight ? "text-slate-400 hover:text-slate-600" : "text-white/40 hover:text-white"}`}
+              className="absolute inset-y-0 right-3 flex items-center px-2 text-[#6f675c] transition hover:text-white"
               type="button"
             >
-              ✕
+              x
             </button>
           )}
         </div>
 
-        {/* Categorías */}
-        <div className={`sticky top-0 z-30 -mx-4 mt-6 px-4 py-3 ${design.stickyClass}`}>
+        <div className="sticky top-0 z-30 -mx-4 mt-3 border-b border-[#ffecd6]/[0.08] bg-[#15110d]/90 px-4 py-2.5 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <button
               type="button"
               onClick={() => setSelectedCategory(null)}
-              className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
-                selectedCategory === null ? design.pillActive : design.pillInactive
+              className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
+                selectedCategory === null
+                  ? "bg-[#ff6a1a] text-[#15110d] shadow-[0_6px_14px_rgba(255,106,26,0.27)]"
+                  : "border border-[#ffecd6]/[0.08] bg-[#211b15] text-[#a99f92]"
               }`}
             >
               Todo
@@ -419,8 +439,10 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-black shadow-lg transition ${
-                  selectedCategory === cat.id ? design.pillActive : design.pillInactive
+                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
+                  selectedCategory === cat.id
+                    ? "bg-[#ff6a1a] text-[#15110d] shadow-[0_6px_14px_rgba(255,106,26,0.27)]"
+                    : "border border-[#ffecd6]/[0.08] bg-[#211b15] text-[#a99f92]"
                 }`}
               >
                 {cat.category_name}
@@ -431,7 +453,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
         {/* Listado de Productos */}
         {searchedProducts.length > 0 ? (
-          <section className="mt-8 space-y-10">
+          <section className="space-y-8">
             {categories.map((cat) => {
               const categoryProducts = searchedProducts.filter(
                 (item) => item.category_id === cat.id
@@ -440,19 +462,19 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
               return (
                 <div key={cat.id} className="animate-card-entrance">
-                  <div className={`mb-5 flex items-center justify-between border-b pb-2 ${design.catDivider}`}>
+                  <div className="mb-3 mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className={`h-5 w-1 rounded-full ${design.catAccentBar}`} />
-                      <h2 className={`text-xl font-black tracking-tight uppercase sm:text-2xl ${design.catTitle}`}>
+                      <span className="h-5 w-1 rounded-full bg-[#ff6a1a]" />
+                      <h2 className="font-[family-name:var(--font-grotesk)] text-xl font-bold tracking-[-0.03em] text-[#f7f1e9]">
                         {cat.category_name}
                       </h2>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold backdrop-blur-sm ${design.catCount}`}>
-                      {categoryProducts.length} {categoryProducts.length === 1 ? "producto" : "productos"}
+                    <span className="rounded-full bg-[#2c241c] px-3 py-1 text-xs font-bold text-[#a99f92]">
+                      {categoryProducts.length}
                     </span>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3">
                     {categoryProducts.map((item) => (
                       <ProductCard
                         key={item.id}
@@ -470,20 +492,20 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             })}
           </section>
         ) : (
-          <div className={`mt-8 rounded-[2rem] px-6 py-12 text-center shadow-2xl shadow-black/30 ${design.emptyCard}`}>
-            <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-2xl ${isLight ? "bg-slate-200 text-slate-500" : "bg-white/10 text-orange-200"}`}>
-              🔍
+          <div className="mt-8 rounded-[1.5rem] border border-[#ffecd6]/[0.08] bg-[#211b15] px-6 py-12 text-center shadow-2xl shadow-black/30">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#2c241c] text-2xl text-[#f0c690]">
+              ?
             </div>
-            <h2 className={`mt-5 text-xl font-black tracking-tight ${design.emptyTitle}`}>
-              {searchQuery ? "Sin resultados para tu búsqueda" : "Aún no hay productos disponibles"}
+            <h2 className="mt-5 text-xl font-bold tracking-tight text-[#f7f1e9]">
+              {searchQuery ? "Sin resultados para tu busqueda" : "Aun no hay productos disponibles"}
             </h2>
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className={`mt-4 rounded-xl px-4 py-2 text-xs font-black transition ${design.pillActive}`}
+                className="mt-4 rounded-xl bg-[#ff6a1a] px-4 py-2 text-xs font-extrabold text-[#15110d] transition hover:bg-[#ff7b35]"
               >
-                Limpiar búsqueda
+                Limpiar busqueda
               </button>
             )}
           </div>

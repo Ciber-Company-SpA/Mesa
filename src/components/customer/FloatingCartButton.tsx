@@ -16,20 +16,23 @@ export function FloatingCartButton({ tableId, restaurantId }: FloatingCartButton
 
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0)
 
+  if (itemCount === 0) return null
+
   return (
     <>
       <button
         id={getCartTargetId()}
-        className="fixed bottom-5 right-5 z-10 flex items-center gap-3 rounded-full bg-orange-500 px-5 py-4 text-stone-950 shadow-2xl shadow-orange-500/30 ring-1 ring-orange-200/50 transition hover:bg-orange-400"
+        className="fixed bottom-4 left-1/2 z-30 flex h-[60px] w-[calc(100%-28px)] max-w-[420px] -translate-x-1/2 items-center gap-3 rounded-full bg-[#ff6a1a] px-2.5 text-[#15110d] shadow-[0_14px_32px_rgba(255,106,26,0.4)] transition hover:bg-[#ff7b35]"
         type="button"
         aria-label="Abrir carrito"
         onClick={() => setIsCartOpen(true)}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-950 text-sm font-black text-orange-200">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-base font-extrabold">
           {itemCount}
         </span>
-        <span className="text-sm font-black">Carrito</span>
-        <span className="text-sm font-black">${total}</span>
+        <span className="flex-1 text-left text-base font-extrabold">Ver carrito</span>
+        <span className="mr-1 text-base font-extrabold">${total.toLocaleString("es-CL")}</span>
+        <span className="mr-2 text-xl" aria-hidden="true">&gt;</span>
       </button>
 
       <CartDrawer

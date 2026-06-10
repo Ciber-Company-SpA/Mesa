@@ -77,7 +77,7 @@ app.whenReady().then(() => {
         'Content-Security-Policy': [
           [
             "default-src 'self' " + BASE_URL,
-            "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co",
+            "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://images.pexels.com",
             "connect-src 'self' " + BASE_URL +
               " https://api.cloudinary.com https://*.supabase.co wss://*.supabase.co",
             "style-src 'self' 'unsafe-inline'",
