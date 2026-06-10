@@ -1,21 +1,27 @@
 "use client"
 
-import { useTableCart } from "@/hooks/useTableCart"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { decodeId } from "@/lib/hashids"
 import { useProductDetail } from "@/hooks/useProductDetail"
 import { useProductVariants } from "@/hooks/useProductVariants"
-import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
-import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { useCartSync } from "@/hooks/useCartSync"
+import { useTableCart } from "@/hooks/useTableCart"
 import { BackButton } from "@/components/ui/BackButton"
-import { useLastOrder } from "@/hooks/useLastOrder"
-import { getTemplateDesign } from "@/lib/menu/templates"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
 
 function formatPrice(price: number) {
-  return `$${price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+  return `$${price.toLocaleString("es-CL")}`
+}
+
+function DetailMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#110e0b] px-4 text-white">
+      <div className="rounded-2xl border border-white/10 bg-[#211b15] px-6 py-5 text-center text-sm font-bold">
+        {children}
+      </div>
+    </main>
+  )
 }
 
 export function ProductDetailClient({
@@ -25,403 +31,193 @@ export function ProductDetailClient({
   productId: string
   menu: MenuData
 }) {
-  const [activeOptionIndex, setActiveOptionIndex] = useState(0)
-  const [unavailableMsg, setUnavailableMsg] = useState("")
-  const [realtimeStatus, setRealtimeStatus] = useState<number | null>(null)
-  const [isSliding, setIsSliding] = useState(false)
-  const [isAddingToCart, setIsAddingToCart] = useState(false)
-
-  const sliderRef = useRef<HTMLDivElement | null>(null)
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isProgrammaticScrollRef = useRef(false)
-
   const realProductId = decodeId(productId)
   const { restaurant, tableId, products } = menu
-  const design = getTemplateDesign(restaurant?.menu_template)
   const menuProduct = products.find((item) => item.id === realProductId)
   const { product, loading, error } = useProductDetail(realProductId, menuProduct)
-  const { activeOrder, syncOrder } = useLastOrder()
-
-  const {
-    variants,
-    loading: loadingVariants,
-    error: variantsError,
-  } = useProductVariants(realProductId, product?.product_variants ?? menuProduct?.product_variants)
+  const { variants, loading: loadingVariants, error: variantsError } = useProductVariants(
+    realProductId,
+    product?.product_variants ?? menuProduct?.product_variants
+  )
+  const [activeVariantIndex, setActiveVariantIndex] = useState(0)
+  const [realtimeStatus, setRealtimeStatus] = useState<number | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
+  const [message, setMessage] = useState("")
+  const imageRef = useRef<HTMLImageElement | null>(null)
 
   const { syncCart } = useCartSync(product?.restaurant_id ?? null)
   const { addItem } = useTableCart(tableId ?? null, product?.restaurant_id ?? null)
 
-  useEffect(() => {
-    if (!activeOrder) return
-    syncOrder(activeOrder)
-  }, [activeOrder, syncOrder])
-
-  if (!realProductId) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-950 px-4 text-white">
-        <div className="rounded-[2rem] bg-red-500/10 px-6 py-5 text-center shadow-2xl shadow-black/30 ring-1 ring-red-300/20 backdrop-blur">
-          <p className="text-sm font-semibold text-red-100">
-            Producto no encontrado
-          </p>
-        </div>
-      </main>
-    )
-  }
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-950 text-white">
-        <div className="rounded-[2rem] bg-white/10 px-6 py-5 text-center shadow-2xl shadow-black/30 ring-1 ring-white/10 backdrop-blur">
-          <p className="text-sm font-semibold text-orange-100">
-            Cargando producto...
-          </p>
-        </div>
-      </main>
-    )
-  }
-
-  if (error || !product) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-950 px-4 text-white">
-        <div className="rounded-[2rem] bg-red-500/10 px-6 py-5 text-center shadow-2xl shadow-black/30 ring-1 ring-red-300/20 backdrop-blur">
-          <p className="text-sm font-semibold text-red-100">
-            {error || "Producto no encontrado"}
-          </p>
-        </div>
-      </main>
-    )
-  }
-
-  // Seguridad: el producto debe pertenecer al mismo restaurante que el menu
-  // escaneado. Sin esto, un QR de un restaurante mostraría productos de otro
-  // si se manipula el hashid del producto en la URL.
+  if (!realProductId) return <DetailMessage>Producto no encontrado</DetailMessage>
+  if (loading) return <DetailMessage>Cargando producto...</DetailMessage>
+  if (error || !product) return <DetailMessage>{error || "Producto no encontrado"}</DetailMessage>
   if (restaurant && product.restaurant_id !== restaurant.id) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-stone-950 px-4 text-white">
-        <div className="rounded-[2rem] bg-red-500/10 px-6 py-5 text-center shadow-2xl shadow-black/30 ring-1 ring-red-300/20 backdrop-blur">
-          <p className="text-sm font-semibold text-red-100">
-            Producto no encontrado
-          </p>
-        </div>
-      </main>
-    )
+    return <DetailMessage>Producto no encontrado</DetailMessage>
   }
 
+  const activeVariant = variants[Math.min(activeVariantIndex, variants.length - 1)] ?? null
+  const activePrice = activeVariant?.variant_price ?? product.product_price
+  const activeImage = activeVariant?.variant_image ?? product.product_image
   const currentStatus = realtimeStatus ?? product.status_id
-  const isAgotado = currentStatus === 2
-  const isDeshabilitado = currentStatus === 3
-
-  const productOptions =
-    variants.length > 0
-      ? variants.map((variant) => ({
-          id: variant.id,
-          name: variant.variant_name,
-          price: variant.variant_price,
-          image: variant.variant_image,
-        }))
-      : [
-          {
-            id: product.id,
-            name: product.product_name,
-            price: product.product_price,
-            image: product.product_image,
-          },
-        ]
-
-  const activeOption =
-    productOptions[Math.min(activeOptionIndex, productOptions.length - 1)]
-
-  const activeTitle =
-    variants.length > 0
-      ? `${product.product_name} · ${activeOption.name}`
-      : product.product_name
-
-  const productIdForStatus = product.id
-  const productNameForStatus = product.product_name
-  const hasMultipleOptions = productOptions.length > 1
-
-  function scrollToOption(index: number) {
-    const slider = sliderRef.current
-    if (!slider) return
-
-    const safeIndex = Math.max(0, Math.min(productOptions.length - 1, index))
-    const slide = slider.querySelector<HTMLElement>("[data-option-slide]")
-    if (!slide) return
-
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current)
-    }
-
-    isProgrammaticScrollRef.current = true
-    setIsSliding(true)
-
-    slider.scrollTo({
-      left: slide.offsetWidth * safeIndex,
-      behavior: "smooth",
-    })
-
-    scrollTimeoutRef.current = setTimeout(() => {
-      setActiveOptionIndex(safeIndex)
-      isProgrammaticScrollRef.current = false
-      setIsSliding(false)
-    }, 420)
-  }
-
-  function handlePreviousOption() {
-    scrollToOption(activeOptionIndex - 1)
-  }
-
-  function handleNextOption() {
-    scrollToOption(activeOptionIndex + 1)
-  }
-
-  function handleOptionsScroll(event: React.UIEvent<HTMLDivElement>) {
-    if (isProgrammaticScrollRef.current) return
-
-    const scrollContainer = event.currentTarget
-    const firstSlide =
-      scrollContainer.querySelector<HTMLElement>("[data-option-slide]")
-
-    if (!firstSlide) return
-
-    const slideWidth = firstSlide.offsetWidth
-
-    const nextIndex = Math.max(
-      0,
-      Math.min(
-        productOptions.length - 1,
-        Math.round(scrollContainer.scrollLeft / slideWidth)
-      )
-    )
-
-    if (nextIndex !== activeOptionIndex) {
-      setActiveOptionIndex(nextIndex)
-    }
-  }
+  const unavailable = currentStatus === 2 || currentStatus === 3
+  const currentProductId = product.id
 
   async function handleAddToCart() {
-    if (isAgotado || isDeshabilitado) {
-      setUnavailableMsg(
-        isDeshabilitado
-          ? `${productNameForStatus} no disponible`
-          : `${productNameForStatus} agotado`
-      )
+    if (unavailable || !tableId) return
 
-      setTimeout(() => setUnavailableMsg(""), 3000)
-      return
-    }
-
-    setIsAddingToCart(true)
+    setIsAdding(true)
     try {
       await syncCart()
+      const response = await fetch(`/api/product-status?id=${currentProductId}`)
+      const status = await response.json()
 
-      const res = await fetch(`/api/product-status?id=${productIdForStatus}`)
-      const data = await res.json()
-
-      if (!data || data.status_id === 2 || data.status_id === 3) {
-        setRealtimeStatus(data.status_id)
-
-        setUnavailableMsg(
-          data?.status_id === 3
-            ? `${productNameForStatus} no disponible`
-            : `${productNameForStatus} agotado`
-        )
-
-        setTimeout(() => setUnavailableMsg(""), 3000)
+      if (!status || status.status_id === 2 || status.status_id === 3) {
+        setRealtimeStatus(status?.status_id ?? 2)
+        setMessage(status?.status_id === 3 ? "Producto no disponible" : "Producto agotado")
+        window.setTimeout(() => setMessage(""), 3000)
         return
       }
 
-      const slides = sliderRef.current?.querySelectorAll<HTMLElement>("[data-option-slide]")
-      const activeSlide = slides?.[activeOptionIndex] ?? null
-      const sourceImg = activeSlide?.querySelector<HTMLImageElement>("img")
-      flyToCart(sourceImg ?? activeSlide)
-
+      flyToCart(imageRef.current)
       await addItem({
-        productId: productIdForStatus,
-        variantId: variants.length > 0 ? activeOption.id : null,
-        price: activeOption.price,
+        productId: currentProductId,
+        variantId: activeVariant?.id ?? null,
+        price: activePrice,
         quantity: 1,
       })
     } finally {
-      setIsAddingToCart(false)
+      setIsAdding(false)
     }
   }
 
   return (
-    <main className={`min-h-screen overflow-hidden pb-28 ${design.mainClass}`}>
-      <div className={`pointer-events-none fixed inset-0 ${design.overlayClass}`} />
+    <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-white sm:py-4">
+      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+        <div
+          className="relative h-[320px] bg-[#241e18]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 11px, transparent 11px 23px)",
+          }}
+        >
+          <BackButton
+            label="‹"
+            className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-3xl font-light text-white backdrop-blur"
+          />
 
-      <div
-        className={`fixed bottom-28 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 ${
-          unavailableMsg
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-4 opacity-0"
-        }`}
-      >
-        <div className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-black text-red-300 shadow-2xl ring-1 ring-white/10">
-          {unavailableMsg}
-        </div>
-      </div>
-
-      <section className="relative mx-auto max-w-md px-4 pb-6 pt-5 md:max-w-2xl md:px-6 lg:max-w-3xl">
-        <TableOrdersHeader tableId={tableId ?? null} />
-
-        <BackButton
-          label="Volver al menú"
-          className="mb-6 inline-flex items-center rounded-full bg-white/10 px-5 py-3 text-sm font-black text-orange-100 shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.14] hover:text-orange-200"
-        />
-
-        <div className="relative">
-          {hasMultipleOptions && (
-            <>
-              <button
-                type="button"
-                onClick={handlePreviousOption}
-                disabled={activeOptionIndex === 0 || isSliding}
-                className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/5 border border-white/10 text-stone-300 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white/15 hover:text-white active:scale-90 disabled:pointer-events-none disabled:opacity-0"
-                aria-label="Ver opción anterior"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextOption}
-                disabled={activeOptionIndex === productOptions.length - 1 || isSliding}
-                className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/5 border border-white/10 text-stone-300 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white/15 hover:text-white active:scale-90 disabled:pointer-events-none disabled:opacity-0"
-                aria-label="Ver siguiente opción"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </>
-          )}
-
-          <div
-            ref={sliderRef}
-            className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-            onScroll={handleOptionsScroll}
-          >
-            {productOptions.map((option) => (
-              <div
-                key={option.id}
-                data-option-slide
-                className="relative flex aspect-[1.6] max-h-[250px] w-full shrink-0 snap-center items-center justify-center overflow-hidden rounded-[2.25rem] md:aspect-[4/3]"
-              >
-                <div className="absolute inset-x-10 bottom-2 h-4 rounded-full bg-black/40 blur-lg" />
-
-                {option.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={option.image}
-                    alt={option.name}
-                    className="relative z-10 h-full max-h-[230px] w-auto max-w-[85%] rounded-[2rem] object-cover p-0 shadow-2xl shadow-black/40 ring-1 ring-white/10 transition-transform duration-300 hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="relative z-10 flex flex-col items-center text-center text-orange-100/80">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-3xl ring-1 ring-white/10">
-                      +
-                    </div>
-                    <p className="mt-3 text-xs font-bold">Sin imagen</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {hasMultipleOptions && (
-          <div className="mt-3 flex flex-col items-center gap-3">
-            <p className="text-xs font-bold text-white/40">
-              Desliza para ver más opciones
-            </p>
-
-            <div className="flex justify-center gap-2">
-              {productOptions.map((option, index) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => scrollToOption(index)}
-                  disabled={isSliding}
-                  className={`h-2 rounded-full transition-all ${
-                    index === activeOptionIndex
-                      ? "w-8 bg-orange-300"
-                      : "w-2 bg-white/25 hover:bg-white/40"
-                  } disabled:pointer-events-none disabled:opacity-60`}
-                  aria-label={`Ver opción ${index + 1}`}
-                />
-              ))}
+          {activeImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              ref={imageRef}
+              src={activeImage}
+              alt={activeVariant?.variant_name ?? product.product_name}
+              className="h-full w-full object-contain p-5"
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center text-[#77695c]">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 15-5-5L5 21" />
+              </svg>
+              <span className="mt-2 text-xs">Foto del plato</span>
             </div>
+          )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#110e0b] to-transparent" />
+        </div>
+
+        <div className="-mt-3 px-5 pb-8">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-[#5c5045] bg-[#211b15] px-3 py-1 text-[11px] font-bold text-[#cdbfae]">
+              {product.categories?.category_name ?? "Producto"}
+            </span>
+            <span className="rounded-full border border-[#86683f] bg-[#3a2e20] px-3 py-1 text-[11px] font-bold text-[#ffc46f]">
+              Recomendado
+            </span>
           </div>
-        )}
 
-        <div className="mt-6 px-1">
-          <p className="text-xs font-bold text-orange-200/80">
-            {product.categories?.category_name}
-          </p>
-
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-white">
-            {activeTitle}
+          <h1 className="mt-4 font-[family-name:var(--font-grotesk)] text-[29px] font-bold leading-[1.05] tracking-[-0.04em]">
+            {product.product_name}
           </h1>
 
-          {product.product_description && (
-            <p className="mt-4 text-sm leading-6 text-stone-300">
+          {product.product_description ? (
+            <p className="mt-4 text-[14px] leading-6 text-[#c1b1a4]">
               {product.product_description}
             </p>
-          )}
+          ) : null}
 
-          <div className="mt-7 flex justify-center">
-            <div className="w-full rounded-[2.25rem] bg-white/5 p-6 text-center shadow-2xl shadow-black/40 border border-white/10 backdrop-blur-md ring-1 ring-white/5 transition-all hover:border-white/15">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-300 border border-orange-500/20 shadow-sm">
-                Precio del Producto
-              </div>
-
-              <p className="mt-3.5 text-4xl font-black tracking-tight text-orange-200 drop-shadow-[0_0_15px_rgba(251,146,60,0.3)] tabular-nums leading-none">
-                {formatPrice(activeOption.price)}
+          {variants.length > 0 ? (
+            <div className="mt-5">
+              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8f8174]">
+                Elige una opcion
               </p>
-
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={isAgotado || isDeshabilitado || isAddingToCart}
-                className={`mt-6 flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black ring-1 transition duration-300 ease-out ${
-                  isAgotado || isDeshabilitado || isAddingToCart
-                    ? "cursor-not-allowed bg-stone-700 text-stone-400 ring-white/10 shadow-none"
-                    : "bg-orange-500 text-stone-950 shadow-[0_8px_25px_rgba(249,115,22,0.3)] ring-orange-300/40 hover:bg-orange-400 hover:scale-[1.01] active:scale-[0.99] hover:shadow-[0_12px_30px_rgba(249,115,22,0.45)]"
-                }`}
-              >
-                {isAddingToCart
-                  ? "Agregando..."
-                  : isAgotado
-                  ? "Agotado"
-                  : isDeshabilitado
-                    ? "No disponible"
-                    : "Añadir al carrito"}
-              </button>
+              <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+                {variants.map((variant, index) => (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    onClick={() => setActiveVariantIndex(index)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition ${
+                      index === activeVariantIndex
+                        ? "bg-[#ff5b16] text-[#17110d]"
+                        : "border border-[#3a3028] bg-[#211b15] text-[#cdbfae]"
+                    }`}
+                  >
+                    {variant.variant_name}
+                  </button>
+                ))}
+              </div>
             </div>
+          ) : null}
+
+          <div className="mt-7 flex items-center justify-between rounded-[22px] border border-[#3a3028] bg-[#211b15] p-5">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#8f8174]">
+                Precio
+              </p>
+              <p className="mt-1 font-[family-name:var(--font-grotesk)] text-[28px] font-bold text-[#ffbe73]">
+                {formatPrice(activePrice)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={unavailable || isAdding}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ff5b16] text-3xl font-light text-[#17110d] shadow-[0_8px_18px_rgba(255,91,22,0.35)] disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400"
+              aria-label={`Agregar ${product.product_name}`}
+            >
+              +
+            </button>
           </div>
 
-          {loadingVariants && variants.length === 0 && (
-            <p className="mt-4 text-center text-sm font-semibold text-stone-300">
-              Cargando opciones...
-            </p>
-          )}
+          {loadingVariants ? (
+            <p className="mt-4 text-center text-xs font-bold text-[#8f8174]">Cargando opciones...</p>
+          ) : null}
+          {variantsError ? (
+            <p className="mt-4 text-center text-xs font-bold text-red-300">{variantsError}</p>
+          ) : null}
+          {message ? (
+            <p className="mt-4 text-center text-xs font-bold text-red-300">{message}</p>
+          ) : null}
+        </div>
 
-          {variantsError && (
-            <p className="mt-4 text-center text-sm font-semibold text-red-300">
-              {variantsError}
-            </p>
-          )}
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[384px] bg-gradient-to-t from-[#110e0b] via-[#110e0b] to-transparent px-5 pb-4 pt-10 sm:bottom-4">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={unavailable || isAdding}
+            className="h-[54px] w-full rounded-[15px] bg-[#ff5b16] text-[15px] font-extrabold text-[#17110d] shadow-[0_12px_28px_rgba(255,91,22,0.28)] disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400"
+          >
+            {isAdding
+              ? "Agregando..."
+              : currentStatus === 2
+                ? "Agotado"
+                : currentStatus === 3
+                  ? "No disponible"
+                  : "Anadir al carrito"}
+          </button>
         </div>
       </section>
-
-      {restaurant && tableId ? (
-        <FloatingCartButton tableId={tableId} restaurantId={restaurant.id} />
-      ) : null}
     </main>
   )
 }

@@ -13,7 +13,6 @@ import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableOrders } from "@/hooks/useTableOrders"
 import { encodeId } from "@/lib/hashids"
-import { useFilteredProducts } from "@/hooks/useFilteredProducts"
 import { getTemplateDesign } from "@/lib/menu/templates"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
@@ -328,7 +327,8 @@ type MenuClientProps = {
 
 export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { restaurant, categories, products, tableId, tableNumber } = menu
-  const { filteredProducts, selectedCategory, setSelectedCategory } = useFilteredProducts(products)
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(categories[0]?.id ?? null)
+  const categoryRefs = useRef<Record<number, HTMLDivElement | null>>({})
   useCartSync(restaurant?.id ?? null)
   const setTable = useTableCartStore((s) => s.setTable)
   useEffect(() => {
@@ -412,15 +412,28 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     }
   }, [tableOrders.length, router, qrCode])
 
+  const availableProducts = useMemo(
+    () => products.filter((product) => product.status_id !== 3),
+    [products]
+  )
+
   const searchedProducts = useMemo(() => {
-    if (!searchQuery.trim()) return filteredProducts
+    if (!searchQuery.trim()) return availableProducts
     const query = searchQuery.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-    return filteredProducts.filter((p) => {
+    return availableProducts.filter((p) => {
       const name = p.product_name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
       const desc = (p.product_description ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
       return name.includes(query) || desc.includes(query)
     })
-  }, [filteredProducts, searchQuery])
+  }, [availableProducts, searchQuery])
+
+  function scrollToCategory(categoryId: number) {
+    setSelectedCategory(categoryId)
+    categoryRefs.current[categoryId]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    })
+  }
 
   return (
     <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
@@ -496,13 +509,13 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
         <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-[#2a231d] bg-[#110e0b]/95 px-3.5 py-2.5 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {categories.map((cat, index) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => scrollToCategory(cat.id)}
                 className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                  selectedCategory === cat.id || (selectedCategory === null && index === 0)
+                  selectedCategory === cat.id
                     ? "bg-[#ff5b16] text-[#15110d] shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
                     : "border border-[#332a23] bg-[#1d1814] text-[#a99f92]"
                 }`}
@@ -523,7 +536,13 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
               if (categoryProducts.length === 0) return null
 
               return (
-                <div key={cat.id} className="animate-card-entrance">
+                <div
+                  key={cat.id}
+                  ref={(element) => {
+                    categoryRefs.current[cat.id] = element
+                  }}
+                  className="scroll-mt-16 animate-card-entrance"
+                >
                   <div className="mb-3 mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <span className="h-5 w-1 rounded-full bg-[#ff5b16]" />
