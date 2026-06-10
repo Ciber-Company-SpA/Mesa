@@ -86,23 +86,33 @@ function ProductImage({
 }) {
   const placeholder = getCategoryPlaceholder(categoryName ?? "")
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden ${className} ${!src ? placeholder.bg : ""}`}>
+    <div
+      aria-label={!src ? `Foto del plato ${placeholder.emoji}` : undefined}
+      className={`relative flex items-center justify-center overflow-hidden ${className}`}
+      style={!src ? {
+        backgroundColor: "#241e18",
+        backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 11px, transparent 11px 23px)",
+      } : undefined}
+    >
       {src ? (
         <>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(251,146,60,0.22),_transparent_58%)]" />
-          <div className="absolute inset-x-8 bottom-4 h-8 rounded-full bg-black/30 blur-xl" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             ref={imgRef}
             src={src}
             alt={alt}
-            className={`relative z-10 h-full w-full object-contain ${imageClassName}`}
+            className={`relative z-10 h-full w-full object-cover ${imageClassName}`}
             loading="lazy"
           />
         </>
       ) : (
-        <div className="relative z-10 flex flex-col items-center text-center">
-          <span className="text-3xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] animate-float-card">{placeholder.emoji}</span>
+        <div className="relative z-10 flex flex-col items-center text-center text-[#77695c]">
+          <svg className="h-6 w-6 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 15-5-5L5 21" />
+          </svg>
+          <span className="mt-1 text-[11px] font-medium">Foto del plato</span>
         </div>
       )}
     </div>
@@ -112,7 +122,6 @@ function ProductImage({
 type ProductCardProps = {
   item: Product
   qrCode: string
-  design: ReturnType<typeof getTemplateDesign>
   tableId: number | null
   restaurantId: number | null
   isPopular?: boolean
@@ -120,21 +129,29 @@ type ProductCardProps = {
 
 function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: ProductCardProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const [showVariants, setShowVariants] = useState(false)
   const { items, addItem, updateQuantity, removeItem } = useTableCart(tableId, restaurantId)
   const variants = item.product_variants ?? []
   const hasVariants = variants.length > 0
   const isAgotado = item.status_id === 2
-  const cartItem = !hasVariants
-    ? items.find((entry) => entry.productId === item.id && entry.variantId === null)
-    : null
-  const quantity = cartItem?.quantity ?? 0
+  const productItems = items.filter((entry) => entry.productId === item.id)
+  const cartItem = productItems.find((entry) => entry.variantId === null) ?? null
+  const quantity = productItems.reduce((total, entry) => total + entry.quantity, 0)
 
-  function handleAdd(e: React.MouseEvent, productId: number, variantId: number | null, price: number) {
-    e.preventDefault()
-    e.stopPropagation()
+  function addProduct(productId: number, variantId: number | null, price: number) {
     if (isAgotado || !tableId || !restaurantId) return
     flyToCart(imgRef.current)
     addItem({ productId, variantId, price, quantity: 1 })
+  }
+
+  function handleAdd(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (hasVariants) {
+      setShowVariants(true)
+      return
+    }
+    addProduct(item.id, null, item.product_price)
   }
 
   function handleSubtract(e: React.MouseEvent) {
@@ -149,101 +166,158 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
   }
 
   return (
-    <Link
-      href={`/${qrCode}/menu/${encodeId(item.id)}`}
-      className={`group relative block overflow-hidden rounded-[1.4rem] border border-[#ffecd6]/[0.08] bg-[#211b15] shadow-[0_18px_40px_rgba(0,0,0,0.45)] transition hover:-translate-y-0.5 ${
-        isAgotado ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-      }`}
-    >
-      {isAgotado ? (
-        <span className="absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">
-          Agotado
-        </span>
-      ) : isPopular ? (
-        <span className="absolute left-3 top-3 z-20 rounded-full bg-[#ff6a1a] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#15110d]">
-          Popular
-        </span>
-      ) : null}
-
-      <ProductImage
-        src={item.product_image}
-        alt={item.product_name}
-        className="h-44 w-full bg-gradient-to-br from-[#2c241c] via-[#211b15] to-[#3a2113]"
-        imageClassName="p-3 drop-shadow-2xl transition duration-300 group-hover:scale-[1.03]"
-        imgRef={imgRef}
-        categoryName={item.categories?.category_name}
-      />
-
-      <div className="p-[13px_15px_15px]">
-        <h3 className="font-[family-name:var(--font-grotesk)] text-lg font-bold leading-tight tracking-[-0.03em] text-[#f7f1e9]">
-          {item.product_name}
-        </h3>
-        {item.product_description && (
-          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.4] text-[#a99f92]">
-            {item.product_description}
-          </p>
-        )}
-
-        {hasVariants ? (
-          <div
-            className="mt-3 grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${Math.min(variants.length, 3)}, minmax(0, 1fr))` }}
-          >
-            {variants.map((variant) => (
-              <button
-                key={variant.id}
-                type="button"
-                disabled={isAgotado || !tableId}
-                onClick={(e) => handleAdd(e, item.id, variant.id, variant.variant_price)}
-                className="min-w-0 rounded-xl border border-[#ffecd6]/[0.08] bg-[#2c241c] px-2 py-2 text-center text-xs font-extrabold text-[#cdbfae] transition hover:border-[#ff6a1a]/40 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="block truncate">{variant.variant_name}</span>
-                <span className="mt-0.5 block text-[10px] text-[#f0c690]">
-                  {formatPrice(variant.variant_price)}
+    <>
+      <article
+        className={`group relative overflow-hidden rounded-[20px] border border-[#3a3028] bg-[#1d1814] shadow-[0_12px_30px_rgba(0,0,0,0.28)] ${
+          isAgotado ? "opacity-55" : ""
+        }`}
+      >
+        <Link href={`/${qrCode}/menu/${encodeId(item.id)}`} className="block">
+          <div className="relative">
+            <ProductImage
+              src={item.product_image}
+              alt={item.product_name}
+              className="h-[140px] w-full bg-[#241e18]"
+              imageClassName="object-cover transition duration-300 group-hover:scale-[1.02]"
+              imgRef={imgRef}
+              categoryName={item.categories?.category_name}
+            />
+            <div className="absolute left-2.5 top-2.5 z-20 flex gap-1.5">
+              {isAgotado ? (
+                <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold text-white">
+                  Agotado
                 </span>
-              </button>
-            ))}
+              ) : (
+                <span className="rounded-full bg-[#ff5b16] px-2.5 py-1 text-[10px] font-extrabold text-[#17110d]">
+                  Nuevo
+                </span>
+              )}
+              {isPopular && !isAgotado ? (
+                <span className="rounded-full border border-[#86683f] bg-[#3a2e20]/90 px-2.5 py-1 text-[10px] font-extrabold text-[#ffc46f]">
+                  Recomendado
+                </span>
+              ) : null}
+            </div>
           </div>
-        ) : (
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p className="font-[family-name:var(--font-grotesk)] text-[19px] font-bold text-[#f0c690]">
-              {formatPrice(item.product_price)}
+
+          <div className="min-h-[126px] px-3.5 pb-4 pt-3">
+            <h3 className="font-[family-name:var(--font-grotesk)] text-[17px] font-bold leading-tight tracking-[-0.03em] text-white">
+              {item.product_name}
+            </h3>
+            {item.product_description ? (
+              <p className="mt-1 line-clamp-2 pr-12 text-[12px] leading-[1.45] text-[#b8a99c]">
+                {item.product_description}
+              </p>
+            ) : null}
+            <p className="mt-3 font-[family-name:var(--font-grotesk)] text-[19px] font-bold text-[#ffbe73]">
+              {hasVariants
+                ? `Desde ${formatPrice(Math.min(...variants.map((variant) => variant.variant_price)))}`
+                : formatPrice(item.product_price)}
             </p>
-            {quantity > 0 ? (
-              <div className="flex items-center gap-1 rounded-full bg-[#2c241c] p-1 ring-1 ring-[#ffecd6]/[0.08]">
-                <button
-                  type="button"
-                  onClick={handleSubtract}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-[#cdbfae] hover:bg-white/5"
-                  aria-label={`Quitar ${item.product_name}`}
-                >
-                  -
-                </button>
-                <span className="min-w-6 text-center text-sm font-extrabold text-white">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6a1a] text-lg font-bold text-[#15110d] hover:bg-[#ff7b35]"
-                  aria-label={`Agregar otro ${item.product_name}`}
-                >
-                  +
-                </button>
-              </div>
-            ) : (
+          </div>
+        </Link>
+
+        <div className="absolute bottom-4 right-3.5 z-20">
+          {!hasVariants && quantity > 0 ? (
+            <div className="flex items-center gap-1 rounded-full bg-[#2c241c] p-1 ring-1 ring-white/10">
               <button
                 type="button"
-                disabled={isAgotado || !tableId}
-                onClick={(e) => handleAdd(e, item.id, null, item.product_price)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff6a1a] text-2xl font-semibold text-[#15110d] shadow-[0_8px_18px_rgba(255,106,26,0.35)] hover:bg-[#ff7b35] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Agregar ${item.product_name}`}
+                onClick={handleSubtract}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-[#cdbfae]"
+                aria-label={`Quitar ${item.product_name}`}
+              >
+                -
+              </button>
+              <span className="min-w-5 text-center text-sm font-extrabold text-white">{quantity}</span>
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5b16] text-lg font-bold text-[#17110d]"
+                aria-label={`Agregar otro ${item.product_name}`}
               >
                 +
               </button>
-            )}
-          </div>
-        )}
-      </div>
-    </Link>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={isAgotado || !tableId}
+              onClick={handleAdd}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff5b16] text-[27px] font-light leading-none text-[#17110d] shadow-[0_8px_18px_rgba(255,91,22,0.35)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={hasVariants ? `Elegir variante de ${item.product_name}` : `Agregar ${item.product_name}`}
+            >
+              +
+            </button>
+          )}
+        </div>
+      </article>
+
+      {showVariants ? (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 px-3 pb-3 backdrop-blur-sm sm:items-center sm:pb-0">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`variant-title-${item.id}`}
+            className="relative w-full max-w-sm overflow-hidden rounded-[24px] border border-[#3a3028] bg-[#18130f] p-5 text-white shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setShowVariants(false)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#2c241c] text-xl text-[#cdbfae] ring-1 ring-white/10"
+              aria-label="Cerrar selector de variantes"
+            >
+              x
+            </button>
+
+            <div className="pr-12">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#ff7a32]">
+                Elige una opcion
+              </p>
+              <h2
+                id={`variant-title-${item.id}`}
+                className="mt-1 font-[family-name:var(--font-grotesk)] text-2xl font-bold tracking-tight"
+              >
+                {item.product_name}
+              </h2>
+            </div>
+
+            <div className="mt-5 space-y-2.5">
+              {variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  onClick={() => {
+                    addProduct(item.id, variant.id, variant.variant_price)
+                    setShowVariants(false)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-[#3a3028] bg-[#211b15] p-3 text-left transition hover:border-[#ff5b16]/60"
+                >
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#2c241c]">
+                    {variant.variant_image || item.product_image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={variant.variant_image ?? item.product_image ?? ""}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-extrabold">{variant.variant_name}</span>
+                    <span className="mt-1 block text-sm font-bold text-[#ffbe73]">
+                      {formatPrice(variant.variant_price)}
+                    </span>
+                  </span>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b16] text-xl text-[#17110d]">
+                    +
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </>
   )
 }
 
@@ -264,7 +338,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const { info: dinerInfo } = useDinerSlot(tableId ?? null)
   const router = useRouter()
   const { orders: tableOrders } = useTableOrders(tableId ?? null)
-  const [hasHadOrders, setHasHadOrders] = useState(false)
+  const hasHadOrdersRef = useRef(false)
   const { addItem } = useTableCart(tableId ?? null, restaurant?.id ?? null)
   const [showReco, setShowReco] = useState(false)
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([])
@@ -326,17 +400,17 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   }
 
   useEffect(() => {
-    if (tableOrders.length > 0 && !hasHadOrders) {
-      setHasHadOrders(true)
+    if (tableOrders.length > 0) {
+      hasHadOrdersRef.current = true
       return
     }
     // Transición a 0 pedidos activos en la mesa = mesa cobrada en su totalidad.
     // El RPC server-side ya borró los registros de table_diners, así que el
     // próximo cliente arrancará como Comensal 1.
-    if (hasHadOrders && tableOrders.length === 0) {
+    if (hasHadOrdersRef.current) {
       router.replace(`/${qrCode}/gracias`)
     }
-  }, [tableOrders.length, hasHadOrders, router, qrCode])
+  }, [tableOrders.length, router, qrCode])
 
   const searchedProducts = useMemo(() => {
     if (!searchQuery.trim()) return filteredProducts
@@ -349,13 +423,28 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   }, [filteredProducts, searchQuery])
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#15110d] pb-28 font-[family-name:var(--font-manrope)] text-[#f7f1e9]">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(120%_70%_at_50%_-10%,#2a1c10_0%,#15110d_55%)]" />
+    <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
+      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+        <div className="flex h-11 items-center justify-between bg-[#15110d] px-6 text-[14px] font-extrabold text-white">
+          <span>9:41</span>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            <svg className="h-3 w-4" viewBox="0 0 16 12" fill="currentColor">
+              <rect x="0" y="8" width="2.5" height="4" rx="0.7" />
+              <rect x="4.5" y="5.5" width="2.5" height="6.5" rx="0.7" />
+              <rect x="9" y="3" width="2.5" height="9" rx="0.7" />
+              <rect x="13.5" y="0" width="2.5" height="12" rx="0.7" />
+            </svg>
+            <svg className="h-3.5 w-4" viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M1 4.5C3 2.5 5.3 1.5 8 1.5s5 1 7 3M3.2 7c1.3-1.2 3-1.9 4.8-1.9s3.5.7 4.8 1.9M6 9.5c.6-.5 1.3-.7 2-.7s1.4.2 2 .7" strokeLinecap="round" />
+            </svg>
+            <span className="h-2.5 w-5 rounded-[3px] border border-white/70 p-[1px]">
+              <span className="block h-full w-3.5 rounded-[1px] bg-white" />
+            </span>
+          </div>
+        </div>
 
-      <section className="relative mx-auto min-h-screen max-w-md px-4 pb-6 pt-4">
-        <TableOrdersHeader tableId={tableId ?? null} />
-
-        <header className="flex items-center gap-3 px-0.5 pt-1">
+        <div className="px-3.5 pb-6 pt-4">
+        <header className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="relative flex shrink-0 items-center justify-center">
               {restaurant?.restaurant_logo ? (
@@ -421,28 +510,19 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           )}
         </div>
 
-        <div className="sticky top-0 z-30 -mx-4 mt-3 border-b border-[#ffecd6]/[0.08] bg-[#15110d]/90 px-4 py-2.5 backdrop-blur-xl">
+        <TableOrdersHeader tableId={tableId ?? null} />
+
+        <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-[#2a231d] bg-[#110e0b]/95 px-3.5 py-2.5 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory(null)}
-              className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                selectedCategory === null
-                  ? "bg-[#ff6a1a] text-[#15110d] shadow-[0_6px_14px_rgba(255,106,26,0.27)]"
-                  : "border border-[#ffecd6]/[0.08] bg-[#211b15] text-[#a99f92]"
-              }`}
-            >
-              Todo
-            </button>
-            {categories.map((cat) => (
+            {categories.map((cat, index) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                  selectedCategory === cat.id
-                    ? "bg-[#ff6a1a] text-[#15110d] shadow-[0_6px_14px_rgba(255,106,26,0.27)]"
-                    : "border border-[#ffecd6]/[0.08] bg-[#211b15] text-[#a99f92]"
+                  selectedCategory === cat.id || (selectedCategory === null && index === 0)
+                    ? "bg-[#ff5b16] text-[#15110d] shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
+                    : "border border-[#332a23] bg-[#1d1814] text-[#a99f92]"
                 }`}
               >
                 {cat.category_name}
@@ -464,12 +544,12 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                 <div key={cat.id} className="animate-card-entrance">
                   <div className="mb-3 mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="h-5 w-1 rounded-full bg-[#ff6a1a]" />
-                      <h2 className="font-[family-name:var(--font-grotesk)] text-xl font-bold tracking-[-0.03em] text-[#f7f1e9]">
+                      <span className="h-5 w-1 rounded-full bg-[#ff5b16]" />
+                      <h2 className="font-[family-name:var(--font-grotesk)] text-[19px] font-bold tracking-[-0.03em] text-white">
                         {cat.category_name}
                       </h2>
                     </div>
-                    <span className="rounded-full bg-[#2c241c] px-3 py-1 text-xs font-bold text-[#a99f92]">
+                    <span className="rounded-full bg-[#211b15] px-2.5 py-1 text-[11px] font-bold text-[#a99f92]">
                       {categoryProducts.length}
                     </span>
                   </div>
@@ -480,7 +560,6 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                         key={item.id}
                         item={item}
                         qrCode={qrCode}
-                        design={design}
                         tableId={tableId ?? null}
                         restaurantId={restaurant?.id ?? null}
                         isPopular={recommendations.some((r) => r.id === item.id)}
@@ -510,6 +589,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             )}
           </div>
         )}
+        </div>
       </section>
 
       {restaurant && tableId ? (

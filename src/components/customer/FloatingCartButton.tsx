@@ -22,7 +22,7 @@ export function FloatingCartButton({ tableId, restaurantId }: FloatingCartButton
     <>
       <button
         id={getCartTargetId()}
-        className="fixed bottom-4 left-1/2 z-30 flex h-[60px] w-[calc(100%-28px)] max-w-[420px] -translate-x-1/2 items-center gap-3 rounded-full bg-[#ff6a1a] px-2.5 text-[#15110d] shadow-[0_14px_32px_rgba(255,106,26,0.4)] transition hover:bg-[#ff7b35]"
+        className="fixed bottom-4 left-1/2 z-30 flex h-[58px] w-[calc(100%-28px)] max-w-[340px] -translate-x-1/2 items-center gap-3 rounded-full bg-[#ff5b16] px-2.5 text-[#15110d] shadow-[0_14px_32px_rgba(255,91,22,0.4)] transition hover:bg-[#ff6d2d]"
         type="button"
         aria-label="Abrir carrito"
         onClick={() => setIsCartOpen(true)}
