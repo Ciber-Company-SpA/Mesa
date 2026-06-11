@@ -42,7 +42,7 @@ function getAppBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.VERCEL_URL ??
-    "http://https://mesa-production-f46d.up.railway.app/"
+    "https://tumesaqr.com"
   )
 }
 

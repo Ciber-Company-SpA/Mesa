@@ -16,7 +16,10 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 const MANIFEST = resolve("android/app/src/main/AndroidManifest.xml")
-const MARKER = "android:host=\"mesa-production-f46d.up.railway.app\""
+const MARKER = "android:host=\"tumesaqr.com\""
+
+// Hosts anteriores: si el manifest generado los tiene, se migran al actual.
+const LEGACY_HOSTS = ["mesa-production-f46d.up.railway.app"]
 
 const INTENT_FILTER = `
             <!-- Deep link: abre la app cuando se escanea un QR /r/<code> en el host verificado. -->
@@ -25,7 +28,7 @@ const INTENT_FILTER = `
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"
-                      android:host="mesa-production-f46d.up.railway.app"
+                      android:host="tumesaqr.com"
                       android:pathPrefix="/r/" />
             </intent-filter>
 `
@@ -37,6 +40,13 @@ try {
   console.error(`[patch-android-manifest] no se encontró ${MANIFEST}.`)
   console.error("[patch-android-manifest] corré `npx cap add android` primero.")
   process.exit(1)
+}
+
+for (const legacyHost of LEGACY_HOSTS) {
+  if (manifest.includes(legacyHost)) {
+    manifest = manifest.replaceAll(legacyHost, "tumesaqr.com")
+    console.log(`[patch-android-manifest] host migrado: ${legacyHost} -> tumesaqr.com`)
+  }
 }
 
 if (manifest.includes(MARKER)) {

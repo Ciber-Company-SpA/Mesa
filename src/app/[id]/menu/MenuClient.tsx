@@ -455,7 +455,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   return (
     <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
       {/* overflow-clip (no -hidden): hidden crea un scroll container y rompe el position:sticky de los hijos */}
-      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-clip bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+      <section className="relative mx-auto min-h-screen w-full overflow-clip bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:max-w-[384px] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
         <div className="px-3.5 pb-6 pt-5">
         <header className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">

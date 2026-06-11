@@ -92,7 +92,7 @@ export function ProductDetailClient({
 
   return (
     <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-white sm:py-4">
-      <section className="relative mx-auto min-h-screen w-full max-w-[384px] overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+      <section className="relative mx-auto min-h-screen w-full overflow-hidden bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:max-w-[384px] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
         <div
           className="relative h-[320px] bg-[#241e18]"
           style={{
@@ -201,7 +201,7 @@ export function ProductDetailClient({
           ) : null}
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[384px] bg-gradient-to-t from-[#110e0b] via-[#110e0b] to-transparent px-5 pb-4 pt-10 sm:bottom-4">
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full bg-gradient-to-t from-[#110e0b] via-[#110e0b] to-transparent px-5 pb-4 pt-10 sm:bottom-4 sm:max-w-[384px]">
           <button
             type="button"
             onClick={handleAddToCart}

@@ -1,6 +1,6 @@
 ﻿const { app, BrowserWindow, shell, Menu, session } = require('electron')
 
-const BASE_URL = 'https://mesa-production-f46d.up.railway.app'
+const BASE_URL = 'https://tumesaqr.com'
 const APP_URL = `${BASE_URL}/admin`
 const isDev = !app.isPackaged
 

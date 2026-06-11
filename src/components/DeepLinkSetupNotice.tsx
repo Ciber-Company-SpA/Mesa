@@ -101,7 +101,7 @@ export function DeepLinkSetupNotice() {
             <li>
               <strong>4.</strong> Activá el toggle del dominio{" "}
               <code className="rounded bg-stone-200 px-1 py-0.5 text-[10px] font-semibold text-stone-700">
-                mesa-production-f46d.up.railway.app
+                tumesaqr.com
               </code>
               .
             </li>

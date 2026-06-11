@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Meseros-App',
   webDir: 'public',
   server: {
-    url: 'https://mesa-production-f46d.up.railway.app/waiter/control',
+    url: 'https://tumesaqr.com/waiter/control',
     cleartext: false,
     androidScheme: 'https'
   },
