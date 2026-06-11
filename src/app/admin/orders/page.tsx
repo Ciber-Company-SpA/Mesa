@@ -114,7 +114,7 @@ export default function OrdersPage() {
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="text-lg font-bold tracking-tight text-stone-900 tabular-nums">
-                        Pedido #{order.id}
+                        Pedido #{order.order_number ?? order.id}
                       </h3>
                       <p className="mt-1 text-sm font-semibold text-stone-700">
                         {tableName}

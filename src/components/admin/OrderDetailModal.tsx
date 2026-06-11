@@ -14,6 +14,7 @@ const statusStyles: Record<string, string> = {
 
 type OrderDetail = {
   id: number
+  order_number: number | null
   total: number
   table_id: number | null
   status_id: number | null
@@ -70,7 +71,7 @@ export function OrderDetailModal({ orderId, onClose }: Props) {
       const { data, error: e } = await supabase
         .from("orders")
         .select(
-          "id, total, table_id, status_id, created_at, ready_at, diner_slot, diner_label, tables(table_number), order_status(status_name), order_items(id, product_name, variant_name, product_price, product_quantity, notes)"
+          "id, order_number, total, table_id, status_id, created_at, ready_at, diner_slot, diner_label, tables(table_number), order_status(status_name), order_items(id, product_name, variant_name, product_price, product_quantity, notes)"
         )
         .eq("id", orderId)
         .maybeSingle()
@@ -102,6 +103,7 @@ export function OrderDetailModal({ orderId, onClose }: Props) {
 
       setOrder({
         id: data.id,
+        order_number: data.order_number,
         total: data.total ?? 0,
         table_id: data.table_id,
         status_id: data.status_id,
@@ -152,7 +154,7 @@ export function OrderDetailModal({ orderId, onClose }: Props) {
             {order ? (
               <>
                 <h2 className="mt-1 text-xl font-extrabold tracking-tight text-stone-950 tabular-nums">
-                  Pedido #{order.id}
+                  Pedido #{order.order_number ?? order.id}
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-stone-700">
                   {tableLabel}
