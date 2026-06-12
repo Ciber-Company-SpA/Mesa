@@ -5,6 +5,7 @@ import { z } from "zod"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { ok, fail, type Result } from "@/services/result"
 import { cloudinary } from "@/lib/cloudinary/config"
+import { fetchImageSafely } from "@/lib/security/safe-image-url"
 
 // ============ TYPES ============
 
@@ -19,7 +20,23 @@ const ParsedProductSchema = z.object({
   price: z.number().int().nonnegative(),
   category_name: z.string().trim().min(1).max(60),
   variants: z.array(ParsedVariantSchema).max(20).default([]),
-  image_url: z.string().url().nullable().optional().default(null),
+  image_url: z
+    .string()
+    .url()
+    .refine(
+      (u) => {
+        try {
+          const url = new URL(u)
+          return url.protocol === "https:" && url.hostname === "images.pexels.com"
+        } catch {
+          return false
+        }
+      },
+      { message: "URL de imagen no permitida" }
+    )
+    .nullable()
+    .optional()
+    .default(null),
 })
 
 const ParsedMenuSchema = z.object({
@@ -208,10 +225,14 @@ async function processWithRemoveBg(
   if (!removeBgKey) return null
 
   try {
-    // 1. Descargar la imagen original
-    const imageRes = await fetch(imageUrl, { cache: "no-store" })
-    if (!imageRes.ok) return null
-    const imageBlob = await imageRes.blob()
+    // 1. Descargar la imagen original (validación SSRF: host whitelist,
+    //    sin redirects, con timeout y límite de bytes)
+    let imageBlob: Blob
+    try {
+      imageBlob = await fetchImageSafely(imageUrl)
+    } catch {
+      return null // URL no segura o descarga falló -> caller usa la URL original como fallback
+    }
 
     // 2. Mandar a remove.bg
     const form = new FormData()
