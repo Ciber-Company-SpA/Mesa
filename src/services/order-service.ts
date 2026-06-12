@@ -295,7 +295,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
   }
 
-  const { tableId, items, dinerToken } = validation.data
+  const { qrToken, items, dinerToken } = validation.data
 
   // Construir el array jsonb que espera la RPC (snake_case).
   const rpcItems = items.map((item) => ({
@@ -307,8 +307,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
 
   const supabase = await createSupabaseServerClient()
 
-  const { data, error } = await supabase.rpc("create_public_order", {
-    p_table_id: tableId,
+  const { data, error } = await supabase.rpc("create_public_order_qr", {
+    p_qr_token: qrToken,
     p_items: rpcItems,
     p_diner_token: dinerToken ?? null,
   })

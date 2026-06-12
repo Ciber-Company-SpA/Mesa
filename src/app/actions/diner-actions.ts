@@ -8,10 +8,10 @@ import {
 import type { Result } from "@/services/result"
 
 export async function claimDinerSlotAction(
-  tableId: number,
+  qrToken: string,
   token: string
 ): Promise<Result<DinerSlot>> {
-  return claimDinerSlotService(tableId, token)
+  return claimDinerSlotService(qrToken, token)
 }
 
 export async function payDinerOrdersAction(

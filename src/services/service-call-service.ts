@@ -11,14 +11,14 @@ type RequestBillRpcResult = {
 }
 
 export async function requestBill(
-  tableId: number,
+  qrToken: string,
   dinerToken: string | null
 ): Promise<Result<RequestBillResult>> {
-  if (!tableId || tableId <= 0) return fail("Mesa inválida")
+  if (!qrToken || qrToken.length < 32) return fail("Mesa inválida")
 
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.rpc("request_bill", {
-    p_table_id: tableId,
+  const { data, error } = await supabase.rpc("request_bill_qr", {
+    p_qr_token: qrToken,
     p_diner_token: dinerToken ?? null,
   })
 

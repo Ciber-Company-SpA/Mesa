@@ -5,7 +5,7 @@ import { useTableOrders, TableOrder } from "@/hooks/useTableOrders"
 import { requestBillAction } from "@/app/actions/service-call-actions"
 
 type TableOrdersHeaderProps = {
-  tableId: number | null
+  qrCode: string | null
   dinerToken?: string | null
 }
 
@@ -37,17 +37,17 @@ function getOrderStatusStep(statusId: number | null, statusName: string | null):
   return 1
 }
 
-export function TableOrdersHeader({ tableId, dinerToken }: TableOrdersHeaderProps) {
-  const { orders } = useTableOrders(tableId)
+export function TableOrdersHeader({ qrCode, dinerToken }: TableOrdersHeaderProps) {
+  const { orders } = useTableOrders(qrCode)
   const [selectedOrder, setSelectedOrder] = useState<TableOrder | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
 
   async function handleRequestBill() {
-    if (!tableId || billStatus !== "idle") return
+    if (!qrCode || billStatus !== "idle") return
     setBillStatus("sending")
     try {
-      const res = await requestBillAction(tableId, dinerToken ?? null)
+      const res = await requestBillAction(qrCode, dinerToken ?? null)
       // "already_pending" también cuenta como pedida: alguien de la mesa ya la pidió.
       setBillStatus(res.ok ? "requested" : "idle")
     } catch {

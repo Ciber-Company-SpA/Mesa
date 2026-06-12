@@ -16,6 +16,8 @@ type UseCreateOrderProps = {
 
 export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderProps) {
   const clearCart = useTableCartStore((state) => state.clear)
+  // Credencial pública de la mesa: las RPC ya no aceptan table_id.
+  const qrCode = useTableCartStore((state) => state.qrCode)
   const setLastOrder = useCartStore((state) => state.setLastOrder)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,8 +32,12 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
 
     const dinerToken = getOrCreateDinerToken(tableId)
 
+    if (!qrCode) {
+      throw new Error("No se pudo identificar la mesa del pedido.")
+    }
+
     const result = await createOrderAction({
-      tableId,
+      qrToken: qrCode,
       dinerToken,
       items: orderItems,
     })

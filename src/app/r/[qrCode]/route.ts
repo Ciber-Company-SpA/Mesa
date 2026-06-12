@@ -18,24 +18,21 @@ export async function GET(
 
   const supabase = await createSupabaseServerClient()
 
-  const { data: qrRow } = await supabase
-    .from("table_qr_codes")
-    .select("id")
-    .eq("qr_code", qrCode)
+  // RPC SECURITY DEFINER: anon ya no puede leer table_qr_codes/tables directo.
+  // Devuelve la mesa solo si el token existe y el QR está activo.
+  const { data: qrTable } = await supabase
+    .rpc("resolve_qr_token", { p_qr_token: qrCode })
     .maybeSingle()
 
-  if (!qrRow) {
-    return new NextResponse("QR no válido", { status: 404 })
-  }
-
-  const { data: tableRow } = await supabase
-    .from("tables")
-    .select("id, table_number, current_waiter_id, restaurant_id")
-    .eq("qr_code_id", qrRow.id)
-    .maybeSingle()
+  const tableRow = qrTable as {
+    table_id: number
+    table_number: number | null
+    restaurant_id: number
+    current_waiter_id: number | null
+  } | null
 
   if (!tableRow) {
-    return new NextResponse("Mesa no encontrada", { status: 404 })
+    return new NextResponse("QR no válido", { status: 404 })
   }
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -56,8 +53,8 @@ export async function GET(
         await supabase
           .from("tables")
           .update({ current_waiter_id: profile.id })
-          .eq("id", tableRow.id)
-          .is("current_waiter_id", null) 
+          .eq("id", tableRow.table_id)
+          .is("current_waiter_id", null)
       } else if (tableRow.current_waiter_id !== profile.id) {
         const res = NextResponse.redirect(
           buildRedirect(`/waiter/busy?tableNumber=${tableRow.table_number ?? ""}`)

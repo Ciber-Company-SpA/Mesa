@@ -19,7 +19,7 @@ export async function createOrderAction(
 ): Promise<Result<CreatedOrder>> {
 
   try {
-    const result = await checkPublicOrderLimit(input.tableId)
+    const result = await checkPublicOrderLimit(input.qrToken)
     if (!result.success) {
       return fail("Estás haciendo pedidos demasiado rápido. Espera un momento e intenta de nuevo.")
     }

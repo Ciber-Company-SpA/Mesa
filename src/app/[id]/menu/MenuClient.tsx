@@ -344,9 +344,9 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     setTable(tableId ?? null, restaurant?.id ?? null, qrCode)
   }, [tableId, restaurant?.id, qrCode, setTable])
   const design = getTemplateDesign(restaurant?.menu_template)
-  const { info: dinerInfo } = useDinerSlot(tableId ?? null)
+  const { info: dinerInfo } = useDinerSlot(tableId ?? null, qrCode)
   const router = useRouter()
-  const { orders: tableOrders } = useTableOrders(tableId ?? null)
+  const { orders: tableOrders } = useTableOrders(qrCode)
   const hasHadOrdersRef = useRef(false)
   const { addItem } = useTableCart(tableId ?? null, restaurant?.id ?? null)
   const [showReco, setShowReco] = useState(false)
@@ -544,7 +544,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           ) : null}
         </div>
 
-        <TableOrdersHeader tableId={tableId ?? null} dinerToken={dinerInfo?.token ?? null} />
+        <TableOrdersHeader qrCode={qrCode} dinerToken={dinerInfo?.token ?? null} />
 
         {/* Listado de Productos */}
         {searchedProducts.length > 0 ? (

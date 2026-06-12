@@ -12,16 +12,16 @@ type ClaimDinerSlotRpcResult = {
 }
 
 export async function claimDinerSlot(
-  tableId: number,
+  qrToken: string,
   token: string
 ): Promise<Result<DinerSlot>> {
-  if (!tableId || tableId <= 0) return fail("Mesa inválida")
+  if (!qrToken || qrToken.length < 32) return fail("Mesa inválida")
   if (!token || token.length < 8) return fail("Token inválido")
 
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.rpc("claim_diner_slot", {
-    p_table_id: tableId,
-    p_token: token,
+  const { data, error } = await supabase.rpc("claim_diner_slot_qr", {
+    p_qr_token: qrToken,
+    p_diner_token: token,
   })
 
   if (error) return fail(error.message ?? "No se pudo asignar comensal")

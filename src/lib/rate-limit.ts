@@ -29,9 +29,9 @@ export async function getClientIp(): Promise<string> {
   return h.get("x-real-ip")?.trim() || "unknown"
 }
 
-export async function checkPublicOrderLimit(tableId: number) {
+export async function checkPublicOrderLimit(qrToken: string) {
   const ip = await getClientIp()
-  const key = `${ip}:table:${tableId}`
+  const key = `${ip}:qr:${qrToken}`
   return publicOrderRatelimit.limit(key)
 }
 

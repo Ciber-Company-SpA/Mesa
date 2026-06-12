@@ -7,8 +7,8 @@ import {
 import type { Result } from "@/services/result"
 
 export async function requestBillAction(
-  tableId: number,
+  qrToken: string,
   dinerToken: string | null
 ): Promise<Result<RequestBillResult>> {
-  return requestBillService(tableId, dinerToken)
+  return requestBillService(qrToken, dinerToken)
 }

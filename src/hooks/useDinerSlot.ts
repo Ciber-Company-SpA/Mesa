@@ -10,13 +10,15 @@ export type DinerSlotInfo = {
   token: string
 }
 
-export function useDinerSlot(tableId: number | null) {
+// tableId se mantiene solo como key del token local (localStorage);
+// la credencial hacia la RPC pública es el qrCode.
+export function useDinerSlot(tableId: number | null, qrCode: string | null) {
   const [info, setInfo] = useState<DinerSlotInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!tableId) {
+    if (!tableId || !qrCode) {
       setInfo(null)
       return
     }
@@ -26,7 +28,7 @@ export function useDinerSlot(tableId: number | null) {
 
     setLoading(true)
     setError(null)
-    claimDinerSlotAction(tableId, token)
+    claimDinerSlotAction(qrCode, token)
       .then((res) => {
         if (cancelled) return
         if (res.ok) {
@@ -45,7 +47,7 @@ export function useDinerSlot(tableId: number | null) {
     return () => {
       cancelled = true
     }
-  }, [tableId])
+  }, [tableId, qrCode])
 
   return { info, loading, error }
 }

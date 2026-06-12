@@ -20,7 +20,9 @@ export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>
 
 
 export const CreateOrderSchema = z.object({
-  tableId: z.number().int().positive(),
+  // Token del QR (32 chars): credencial de capacidad de la mesa. Reemplaza
+  // al table_id enumerable como argumento de las RPC públicas.
+  qrToken: z.string().min(32).max(64),
   dinerToken: z.string().min(8).max(128).nullable().optional(),
   items: z
     .array(CreateOrderItemSchema)

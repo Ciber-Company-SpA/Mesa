@@ -78,12 +78,12 @@ function mapRow(row: OrderRow): TableOrder {
   }
 }
 
-export function useTableOrders(tableId: number | null) {
+export function useTableOrders(qrCode: string | null) {
   const [orders, setOrders] = useState<TableOrder[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const fetchOrders = useCallback(async () => {
-    if (!tableId) {
+    if (!qrCode) {
       setOrders([])
       return
     }
@@ -91,10 +91,10 @@ export function useTableOrders(tableId: number | null) {
     setIsLoading(true)
     try {
       // RPC SECURITY DEFINER: el cliente público (anon) no tiene SELECT directo
-      // sobre orders/order_items; esta función solo devuelve los pedidos de la
-      // mesa que pasa como parámetro.
-      const { data, error } = await supabase.rpc("get_orders_for_table", {
-        p_table_id: tableId,
+      // sobre orders/order_items; la función resuelve la mesa por el token del
+      // QR y solo devuelve los pedidos de esa mesa.
+      const { data, error } = await supabase.rpc("get_orders_for_table_qr", {
+        p_qr_token: qrCode,
       })
 
       if (error) throw error
@@ -107,7 +107,7 @@ export function useTableOrders(tableId: number | null) {
     } finally {
       setIsLoading(false)
     }
-  }, [tableId])
+  }, [qrCode])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de pedidos al montar
@@ -120,13 +120,13 @@ export function useTableOrders(tableId: number | null) {
   // autenticado (mesero), realtime sí funciona y el polling es solo un fallback
   // barato.
   useEffect(() => {
-    if (!tableId) return
+    if (!qrCode) return
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return
       fetchOrders()
     }, 3_000)
     return () => window.clearInterval(id)
-  }, [tableId, fetchOrders])
+  }, [qrCode, fetchOrders])
 
   return { orders, isLoading, refresh: fetchOrders }
 }

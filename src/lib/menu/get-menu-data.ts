@@ -1,55 +1,37 @@
 import { unstable_cache } from "next/cache"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
 import type { MenuData } from "@/types/menu"
+import type { PublicRestaurant } from "@/types/restaurant"
+import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
+
+type PublicMenuRpcResult = {
+  restaurant: PublicRestaurant | null
+  categories: Category[] | null
+  products: Product[] | null
+  tableId: number | null
+  tableNumber: number | null
+}
 
 async function fetchMenuData(qrCode: string): Promise<MenuData> {
   const supabase = createSupabaseAnonClient()
 
-  const { data: qrData, error: qrError } = await supabase
-    .from("table_qr_codes")
-    .select("id")
-    .eq("qr_code", qrCode)
-    .single()
+  // RPC SECURITY DEFINER: anon ya no tiene SELECT sobre tables/table_qr_codes.
+  // La función resuelve la mesa por el token del QR y arma el menú completo.
+  const { data, error } = await supabase.rpc("get_public_menu", {
+    p_qr_token: qrCode,
+  })
 
-  if (qrError || !qrData) throw new Error("QR no válido")
+  if (error || !data) throw new Error("QR no válido")
 
-  const { data: tableData, error: tableError } = await supabase
-    .from("tables")
-    .select("id, table_number, restaurant_id")
-    .eq("qr_code_id", qrData.id)
-    .single()
-
-  if (tableError || !tableData) throw new Error("Mesa no encontrada")
-
-  const { restaurant_id, table_number } = tableData
-
-  const [restaurantRes, productsRes, categoriesRes] = await Promise.all([
-    supabase
-      .from("restaurants")
-      .select("id, restaurant_name, restaurant_logo, menu_template")
-      .eq("id", restaurant_id)
-      .single(),
-    supabase
-      .from("products")
-      .select(`*, categories ( category_name ), product_variants (*)`)
-      .eq("restaurant_id", restaurant_id),
-    supabase
-      .from("categories")
-      .select("id, category_name")
-      .eq("restaurant_id", restaurant_id),
-  ])
-
-  if (restaurantRes.error) throw restaurantRes.error
-  if (productsRes.error) throw productsRes.error
-  if (categoriesRes.error) throw categoriesRes.error
+  const menu = data as unknown as PublicMenuRpcResult
 
   return {
-    restaurant: restaurantRes.data,
-    products: productsRes.data ?? [],
-    categories: (categoriesRes.data ?? []) as Category[],
-    tableId: tableData.id,
-    tableNumber: table_number,
+    restaurant: menu.restaurant ?? null,
+    products: menu.products ?? [],
+    categories: menu.categories ?? [],
+    tableId: menu.tableId ?? null,
+    tableNumber: menu.tableNumber ?? null,
   }
 }
 
