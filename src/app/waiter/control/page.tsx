@@ -327,20 +327,22 @@ function WaiterControlSystem() {
                   key={call.id}
                   className="flex items-center justify-between gap-3 rounded-2xl border border-orange-300/70 bg-orange-50 px-4 py-3 shadow-sm animate-card-entrance"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="relative mt-1 flex h-2.5 w-2.5 shrink-0">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500 opacity-75" />
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500" />
                     </span>
-                    <p className="min-w-0 truncate text-sm font-bold text-stone-900">
-                      🧾 {callTableLabel} pide la cuenta
-                      {call.dinerLabel ? (
-                        <span className="font-semibold text-stone-500"> · {call.dinerLabel}</span>
-                      ) : null}
-                      <span className="ml-1 font-semibold text-stone-400 tabular-nums">
-                        · {minutes < 1 ? "recién" : `hace ${minutes} min`}
-                      </span>
-                    </p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-stone-900">
+                        🧾 {callTableLabel} pide la cuenta
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-stone-500">
+                        {call.dinerLabel ? <>{call.dinerLabel} · </> : null}
+                        <span className="text-stone-400 tabular-nums">
+                          {minutes < 1 ? "recién" : `hace ${minutes} min`}
+                        </span>
+                      </p>
+                    </div>
                   </div>
                   <button
                     type="button"
