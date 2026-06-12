@@ -313,8 +313,10 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     p_diner_token: dinerToken ?? null,
   })
 
-  if (error) {
-
+if (error) {
+    if (error.message?.includes("rate_limit_exceeded")) {
+      return fail("Estás haciendo pedidos demasiado rápido. Espera un momento e intenta de nuevo.")
+    }
     return fail(error.message ?? "Error al crear el pedido")
   }
 

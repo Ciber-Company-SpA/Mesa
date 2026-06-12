@@ -22,7 +22,12 @@ export async function requestBill(
     p_diner_token: dinerToken ?? null,
   })
 
-  if (error) return fail(error.message ?? "No se pudo pedir la cuenta")
+  if (error) {
+    if (error.message?.includes("rate_limit_exceeded")) {
+      return fail("Estás pidiendo la cuenta demasiado seguido. Espera un momento.")
+    }
+    return fail(error.message ?? "No se pudo pedir la cuenta")
+  }
 
   const result = data as RequestBillRpcResult | null
   if (!result?.status) return fail("No se pudo pedir la cuenta")
