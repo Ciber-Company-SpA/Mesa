@@ -8,6 +8,7 @@ import { ScanQrButton } from "@/components/ScanQrButton"
 import { PayTableSection } from "@/components/waiter/PayTableSection"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
+import { useServiceCalls } from "@/hooks/useServiceCalls"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
 import { usePushRegistration } from "@/hooks/usePushRegistration"
 import { supabase } from "@/lib/supabase"
@@ -111,6 +112,7 @@ function WaiterControlSystem() {
     advancingId,
   } = useWaiterOrders(restaurantId)
   const { tables: allTables } = useRestaurantTables(restaurantId)
+  const { calls: serviceCalls, attend: attendServiceCall } = useServiceCalls(restaurantId)
 
   // Derivamos del listado global: mías, libres y ocupadas por otros.
   const assignedTables = useMemo(
@@ -217,6 +219,15 @@ function WaiterControlSystem() {
     [markPaid, triggerToast]
   )
 
+  const handleAttendCall = useCallback(
+    async (callId: number, tableLabel: string) => {
+      const ok = await attendServiceCall(callId, staffId)
+      if (!ok) return
+      triggerToast(`Cuenta de ${tableLabel} atendida 🧾`)
+    },
+    [attendServiceCall, staffId, triggerToast]
+  )
+
   // Mesero ve pedidos de TODAS las mesas que tiene asignadas, no solo la
   // ultima escaneada. La mesa escaneada (focusTableId) solo sirve para
   // resaltar/identificar en la UI; no restringe la lista.
@@ -301,6 +312,48 @@ function WaiterControlSystem() {
 
       <div className="mx-auto max-w-7xl px-6 mt-8">
         <DeepLinkSetupNotice />
+
+        {serviceCalls.length > 0 && (
+          <section className="mb-6 space-y-2.5">
+            {serviceCalls.map((call) => {
+              const callTableLabel =
+                call.tableNumber != null ? `Mesa ${call.tableNumber}` : `Mesa #${call.tableId}`
+              const minutes = Math.max(
+                0,
+                Math.floor((nowMs - new Date(call.createdAt).getTime()) / 60000)
+              )
+              return (
+                <div
+                  key={call.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-orange-300/70 bg-orange-50 px-4 py-3 shadow-sm animate-card-entrance"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500" />
+                    </span>
+                    <p className="min-w-0 truncate text-sm font-bold text-stone-900">
+                      🧾 {callTableLabel} pide la cuenta
+                      {call.dinerLabel ? (
+                        <span className="font-semibold text-stone-500"> · {call.dinerLabel}</span>
+                      ) : null}
+                      <span className="ml-1 font-semibold text-stone-400 tabular-nums">
+                        · {minutes < 1 ? "recién" : `hace ${minutes} min`}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAttendCall(call.id, callTableLabel)}
+                    className="shrink-0 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-stone-700 active:scale-95"
+                  >
+                    Atendida ✓
+                  </button>
+                </div>
+              )
+            })}
+          </section>
+        )}
 
         {ordersError && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">

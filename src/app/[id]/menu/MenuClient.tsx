@@ -544,7 +544,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           ) : null}
         </div>
 
-        <TableOrdersHeader tableId={tableId ?? null} />
+        <TableOrdersHeader tableId={tableId ?? null} dinerToken={dinerInfo?.token ?? null} />
 
         {/* Listado de Productos */}
         {searchedProducts.length > 0 ? (

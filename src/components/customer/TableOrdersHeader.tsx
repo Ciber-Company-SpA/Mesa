@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useTableOrders, TableOrder } from "@/hooks/useTableOrders"
+import { requestBillAction } from "@/app/actions/service-call-actions"
 
 type TableOrdersHeaderProps = {
   tableId: number | null
+  dinerToken?: string | null
 }
 
 function formatPrice(price: number) {
@@ -35,10 +37,23 @@ function getOrderStatusStep(statusId: number | null, statusName: string | null):
   return 1
 }
 
-export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
+export function TableOrdersHeader({ tableId, dinerToken }: TableOrdersHeaderProps) {
   const { orders } = useTableOrders(tableId)
   const [selectedOrder, setSelectedOrder] = useState<TableOrder | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
+
+  async function handleRequestBill() {
+    if (!tableId || billStatus !== "idle") return
+    setBillStatus("sending")
+    try {
+      const res = await requestBillAction(tableId, dinerToken ?? null)
+      // "already_pending" también cuenta como pedida: alguien de la mesa ya la pidió.
+      setBillStatus(res.ok ? "requested" : "idle")
+    } catch {
+      setBillStatus("idle")
+    }
+  }
 
   const hasLiveCounter = orders.some((o) => !o.readyAt)
 
@@ -68,6 +83,23 @@ export function TableOrdersHeader({ tableId }: TableOrdersHeaderProps) {
               {orders.length === 1 ? "1 pedido en curso" : `${orders.length} pedidos en curso`}
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleRequestBill}
+            disabled={billStatus !== "idle"}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-extrabold transition active:scale-95 ${
+              billStatus === "requested"
+                ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+                : "bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/30 hover:bg-orange-500/25 disabled:opacity-60"
+            }`}
+          >
+            {billStatus === "requested"
+              ? "Cuenta pedida ✓"
+              : billStatus === "sending"
+                ? "Pidiendo..."
+                : "🧾 Pedir la cuenta"}
+          </button>
         </div>
 
         <div className="mt-3 flex gap-2.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
