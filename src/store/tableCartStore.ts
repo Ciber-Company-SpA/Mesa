@@ -45,10 +45,9 @@ function mapRowToItem(row: CartRow): CartItem {
   }
 }
 
-const SELECT_COLUMNS =
-  "id, product_id, variant_id, quantity, unit_price, notes, added_by, created_at, " +
-  "products(product_name, product_image), product_variants(variant_name, variant_image)"
-
+// Todo el acceso al carrito (lectura y escritura) pasa por RPC SECURITY DEFINER
+// que reciben el qr_token: anon ya NO puede leer/escribir table_cart_items
+// directamente ni con un table_id inventado.
 export const useTableCartStore = create<TableCartStore>()((set, get) => ({
   items: [],
   tableId: null,
@@ -56,23 +55,18 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
   qrCode: null,
   isLoading: false,
 
-setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode }),
-  // LECTURA: sin cambios. Se mantiene directa (RLS permite leer mesas activas).
+  setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode }),
+
   fetchItems: async () => {
-    const { tableId } = get()
-    if (!tableId) {
+    const { qrCode } = get()
+    if (!qrCode) {
       set({ items: [] })
       return
     }
 
     set({ isLoading: true })
     try {
-      const { data, error } = await supabase
-        .from("table_cart_items")
-        .select(SELECT_COLUMNS)
-        .eq("table_id", tableId)
-        .order("created_at", { ascending: true })
-
+      const { data, error } = await supabase.rpc("get_cart_qr", { p_qr_token: qrCode })
       if (error) throw error
       const rows = (data ?? []) as unknown as CartRow[]
       set({ items: rows.map(mapRowToItem) })
@@ -83,14 +77,12 @@ setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode
     }
   },
 
-  // ESCRITURA: ahora por RPC. La RPC valida mesa/QR activo, recalcula precio
-  // desde la BD y maneja el "sumar si ya existe" internamente.
   addItem: async (input) => {
-    const { tableId } = get()
-    if (!tableId) return
+    const { qrCode } = get()
+    if (!qrCode) return
 
-    const { error } = await supabase.rpc("cart_add_item", {
-      p_table_id: tableId,
+    const { error } = await supabase.rpc("cart_add_item_qr", {
+      p_qr_token: qrCode,
       p_product_id: input.productId,
       p_variant_id: input.variantId ?? null,
       p_quantity: input.quantity ?? 1,
@@ -112,7 +104,11 @@ setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode
       return
     }
 
-    const { error } = await supabase.rpc("cart_update_quantity", {
+    const { qrCode } = get()
+    if (!qrCode) return
+
+    const { error } = await supabase.rpc("cart_update_quantity_qr", {
+      p_qr_token: qrCode,
       p_row_id: rowId,
       p_quantity: quantity,
     })
@@ -126,7 +122,11 @@ setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode
   },
 
   removeItem: async (rowId) => {
-    const { error } = await supabase.rpc("cart_remove_item", {
+    const { qrCode } = get()
+    if (!qrCode) return
+
+    const { error } = await supabase.rpc("cart_remove_item_qr", {
+      p_qr_token: qrCode,
       p_row_id: rowId,
     })
 
@@ -139,12 +139,10 @@ setTable: (tableId, restaurantId, qrCode) => set({ tableId, restaurantId, qrCode
   },
 
   clear: async () => {
-    const { tableId } = get()
-    if (!tableId) return
+    const { qrCode } = get()
+    if (!qrCode) return
 
-    const { error } = await supabase.rpc("cart_clear", {
-      p_table_id: tableId,
-    })
+    const { error } = await supabase.rpc("cart_clear_qr", { p_qr_token: qrCode })
 
     if (error) {
       logger.error("Error vaciando carrito", error)
@@ -160,67 +158,27 @@ export const useTableCartTotal = () =>
     state.items.reduce((acc, i) => acc + i.price * i.quantity, 0)
   )
 
-let activeChannel: ReturnType<typeof supabase.channel> | null = null
-let activeTableId: number | null = null
-let subscriberCount = 0
+// Sincronización del carrito compartido de la mesa por POLLING.
+// Antes era Realtime (postgres_changes), pero eso entregaba las filas a
+// cualquier anon suscrito → fuga de datos. El polling refresca vía get_cart_qr
+// (con el token), seguro. Un solo timer compartido entre todos los consumidores.
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollSubscribers = 0
 
-export function subscribeToTableCart(tableId: number) {
-  subscriberCount += 1
+export function startCartPolling() {
+  pollSubscribers += 1
+  if (pollTimer) return
 
-  if (activeTableId === tableId && activeChannel) return
-
-  if (activeChannel) {
-    supabase.removeChannel(activeChannel)
-    activeChannel = null
-  }
-
-  activeTableId = tableId
-  activeChannel = supabase
-    .channel(`table-cart-${tableId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "table_cart_items",
-        filter: `table_id=eq.${tableId}`,
-      },
-      () => {
-        useTableCartStore.getState().fetchItems()
-      }
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "table_cart_items",
-        filter: `table_id=eq.${tableId}`,
-      },
-      () => {
-        useTableCartStore.getState().fetchItems()
-      }
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: "table_cart_items",
-      },
-      () => {
-        // Deleted rows do not reliably include table_id for realtime filtering.
-        useTableCartStore.getState().fetchItems()
-      }
-    )
-    .subscribe()
+  pollTimer = setInterval(() => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return
+    useTableCartStore.getState().fetchItems()
+  }, 4000)
 }
 
-export function unsubscribeFromTableCart() {
-  subscriberCount = Math.max(0, subscriberCount - 1)
-  if (subscriberCount === 0 && activeChannel) {
-    supabase.removeChannel(activeChannel)
-    activeChannel = null
-    activeTableId = null
+export function stopCartPolling() {
+  pollSubscribers = Math.max(0, pollSubscribers - 1)
+  if (pollSubscribers === 0 && pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 }

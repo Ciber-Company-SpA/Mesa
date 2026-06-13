@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 import {
   useTableCartStore,
-  subscribeToTableCart,
-  unsubscribeFromTableCart,
+  startCartPolling,
+  stopCartPolling,
 } from "@/store/tableCartStore"
 
 export function useTableCart(tableId: number | null, restaurantId: number | null) {
@@ -20,10 +20,10 @@ export function useTableCart(tableId: number | null, restaurantId: number | null
 
     setTable(tableId, restaurantId, useTableCartStore.getState().qrCode)
     fetchItems()
-    subscribeToTableCart(tableId)
+    startCartPolling()
 
     return () => {
-      unsubscribeFromTableCart()
+      stopCartPolling()
     }
   }, [tableId, restaurantId, setTable, fetchItems])
 
