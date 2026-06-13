@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
   // Orígenes permitidos para desarrollo (evita errores de CORS en la red local)
   allowedDevOrigins: [
     "192.168.18.74",  // Laptop de Tomy
-    "10.46.41.101",   // Laptop de Benja
+    "10.142.155.101",   // Laptop de Benja
     "192.168.56.1",   // Laptop de Amaro
   ],
   // Las Server Actions cargan imágenes (importar carta con Gemini, hasta 6 fotos en base64).

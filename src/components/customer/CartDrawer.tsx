@@ -35,69 +35,62 @@ function CartView({
   const removeItem = useTableCartStore((state) => state.removeItem)
   return (
     <>
-      <div className="max-h-[48vh] overflow-y-auto px-5 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="max-h-[48vh] flex-1 overflow-y-auto px-5 py-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {items.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-dashed border-white/15 bg-white/5 px-5 py-10 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-2xl font-black text-orange-100 ring-1 ring-orange-200/20">
+          <div className="rounded-[1.75rem] border border-dashed border-[#27272a] bg-[#18181b] px-5 py-10 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fb923c]/20 text-2xl font-black text-[#fb923c] ring-1 ring-[#fb923c]/20">
               +
             </div>
             <h3 className="mt-4 text-lg font-black">Aun no hay productos</h3>
-            <p className="mt-2 text-sm leading-6 text-stone-300">
+            <p className="mt-2 text-sm leading-6 text-[#a1a1aa]">
               Cuando agregues algo del menu, aparecera aqui.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-[#161618]">
             {items.map((item) => (
-              <article
-                key={item.id}
-                className="flex gap-3 rounded-[1.5rem] bg-white/10 p-3 ring-1 ring-white/10"
-              >
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-900">
+              <article key={item.id} className="flex items-center gap-3 py-3">
+                <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-[#18181b]">
                   {item.image ? (
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="h-full w-full object-contain p-2"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="text-xs font-bold text-stone-400">Sin imagen</span>
+                    <span className="text-[10px] font-bold text-[#52525b]">Sin foto</span>
                   )}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="line-clamp-2 text-sm font-black leading-tight">{item.name}</h3>
-
-                  {/* ✅ reemplaza el <p> de cantidad por esto */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        item.quantity === 1
-                          ? removeItem(item.id)
-                          : updateQuantity(item.id, item.quantity - 1)
-                      }
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-sm font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/20"
-                    >
-                      −
-                    </button>
-
-                    <span className="min-w-[1.25rem] text-center text-sm font-black">
-                      {item.quantity}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500/20 text-sm font-black text-orange-200 ring-1 ring-orange-200/20 transition hover:bg-orange-500/30"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <p className="mt-1 text-sm font-black text-orange-200">
+                  <p className="truncate text-[14.5px] font-semibold">{item.name}</p>
+                  <p className="mt-0.5 text-[13px] font-semibold text-[#a1a1aa]">
                     {formatPrice(item.price * item.quantity)}
                   </p>
+                </div>
+
+                <div className="flex items-center gap-2.5 rounded-full bg-[#18181b] px-2 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      item.quantity === 1
+                        ? removeItem(item.id)
+                        : updateQuantity(item.id, item.quantity - 1)
+                    }
+                    className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[#27272a] text-sm font-black text-[#fafafa] transition hover:bg-[#3f3f46]"
+                    aria-label="Quitar uno"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[14px] text-center text-sm font-bold">{item.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[#fb923c] text-sm font-black text-[#1a1a1a]"
+                    aria-label="Agregar uno"
+                  >
+                    +
+                  </button>
                 </div>
               </article>
             ))}
@@ -105,31 +98,38 @@ function CartView({
         )}
       </div>
 
-      <footer className="border-t border-white/10 px-5 py-5">
+      <footer className="border-t border-[#1f1f23] px-5 pb-6 pt-4">
         {error && (
           <p className="mb-3 text-center text-xs font-semibold text-red-400">{error}</p>
         )}
 
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-bold text-stone-300">Total</span>
-          <span className="text-2xl font-black text-orange-200">{formatPrice(total)}</span>
+        <div className="mb-3.5 flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#a1a1aa]">Total</span>
+          <span className="text-[22px] font-black">{formatPrice(total)}</span>
         </div>
 
         <button
           type="button"
           disabled={!hasItems || isLoading}
           onClick={onContinue}
-          className={`flex w-full items-center justify-center rounded-[1.35rem] px-5 py-4 text-sm font-black ring-1 transition ${
+          className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[15.5px] font-extrabold transition active:scale-[0.98] ${
             hasItems && !isLoading
-              ? "bg-orange-500 text-stone-950 shadow-2xl shadow-orange-500/25 ring-orange-200/50 hover:bg-orange-400"
-              : "cursor-not-allowed bg-stone-800 text-stone-500 ring-white/10"
+              ? "bg-[#fb923c] text-[#1a1a1a]"
+              : "cursor-not-allowed bg-[#27272a] text-[#52525b]"
           }`}
         >
           {isWaitingConnection
             ? "Esperando conexion..."
             : isLoading
-              ? "Creando pedido..."
-              : "Continuar pedido"}
+              ? "Enviando pedido..."
+              : (
+                <>
+                  <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                  </svg>
+                  Enviar pedido a cocina
+                </>
+              )}
         </button>
       </footer>
     </>
@@ -173,37 +173,34 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 backdrop-blur-md"
       onClick={onClose}
     >
       <section
-        className="flex max-h-[86vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] bg-stone-950/95 text-white shadow-2xl shadow-black/40 ring-1 ring-white/10"
+        className="flex max-h-[88vh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[28px] bg-[#0f0f10] text-[#fafafa] shadow-2xl shadow-black/50 sm:mb-4 sm:rounded-[28px]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
-          <div>
-            <p className="text-sm font-semibold text-orange-200/80">Pedido actual</p>
-            <h2 className="text-2xl font-black tracking-tight">Tu carrito</h2>
-          </div>
+        <header className="flex items-center justify-between gap-4 border-b border-[#1f1f23] px-5 py-5">
+          <h2 className="text-[19px] font-black tracking-tight">Tu pedido</h2>
 
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-lg font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/15"
+            className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#18181b] text-lg font-black text-[#a1a1aa] transition hover:text-[#fafafa]"
             aria-label="Cerrar carrito"
           >
-            x
+            ×
           </button>
         </header>
 
         {activeOrder ? (
-          <div className="border-b border-white/10 bg-orange-500/10 px-5 py-3">
+          <div className="border-b border-[#1f1f23] bg-[#fb923c]/10 px-5 py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-orange-200/80">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-[#fb923c]">
                   Pedido en curso
                 </p>
-                <p className="mt-1 truncate text-xs font-bold text-stone-200">
+                <p className="mt-1 truncate text-xs font-bold text-[#d4d4d8]">
                   {activeOrder.statusName ?? "Actualizando estado"}
                 </p>
               </div>
@@ -211,7 +208,7 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
                 type="button"
                 onClick={() => refreshActiveOrder(activeOrder)}
                 disabled={isChecking}
-                className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[0.7rem] font-black text-orange-100 ring-1 ring-white/10 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:text-stone-500"
+                className="shrink-0 rounded-full bg-[#18181b] px-3 py-1.5 text-[0.7rem] font-black text-[#fb923c] ring-1 ring-[#27272a] transition hover:bg-[#27272a] disabled:cursor-not-allowed disabled:text-[#52525b]"
               >
                 {isChecking ? "..." : "Actualizar"}
               </button>

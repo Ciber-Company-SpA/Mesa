@@ -103,3 +103,60 @@ html, body {
 .animate-shake {
   animation: shake 0.5s ease-in-out;
 }
+
+/* Bottom sheets (detalle de producto, carrito): entrada suave de abajo arriba. */
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-sheet-up {
+  animation: sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-overlay-fade {
+  animation: overlayFade 0.2s ease;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.animate-toast-in {
+  animation: toastIn 0.2s ease;
+}
+
+/* Salida de los bottom sheets: se desliza hacia abajo + funde. */
+@keyframes sheetDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+.animate-sheet-down {
+  animation: sheetDown 0.26s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-overlay-fade-out {
+  animation: overlayFadeOut 0.26s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
+  .animate-sheet-down,
+  .animate-overlay-fade,
+  .animate-overlay-fade-out,
+  .animate-toast-in {
+    animation: none;
+  }
+}
