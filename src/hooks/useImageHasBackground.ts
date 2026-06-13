@@ -1,33 +1,34 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  getImageHasBackground,
-  isImageBackgroundCached,
-  setImageHasBackground,
-} from "@/lib/customer/image-bg"
+import { readImageHasBackground, setImageHasBackground } from "@/lib/customer/image-bg"
 
 /**
- * Detecta si una imagen tiene FONDO (`true`) o es un recorte con transparencia
- * (`false`), muestreando el canal alfa del borde en un canvas. El resultado se
- * guarda en el caché compartido (image-bg) para que flyToCart pueda consultarlo.
+ * Detecta si una imagen tiene FONDO (`true`) o es un recorte transparente
+ * (`false`), muestreando el canal alfa del borde en un canvas.
  *
- * - Mientras analiza (o si no se puede leer por CORS) devuelve `true`: asumimos
- *   "con fondo" para no recortar el efecto por error.
- * - Requiere que la imagen permita CORS (Cloudinary lo hace).
+ * - Estado inicial SIEMPRE `false` (sin efecto) para que el primer render —y la
+ *   hidratación SSR— sean deterministas y los recortes nunca parpadeen con el
+ *   blur/degradado. Solo se aplica el efecto cuando se CONFIRMA que tiene fondo.
+ * - El resultado se persiste (image-bg → localStorage), así que en cada F5 una
+ *   imagen ya analizada se resuelve al instante sin volver a analizar.
  */
 export function useImageHasBackground(src: string | null): boolean {
-  const [hasBackground, setHasBackground] = useState<boolean>(() => getImageHasBackground(src))
+  const [hasBackground, setHasBackground] = useState(false)
 
   useEffect(() => {
     if (!src) {
-      setHasBackground(true)
+      setHasBackground(false)
       return
     }
-    if (isImageBackgroundCached(src)) {
-      setHasBackground(getImageHasBackground(src))
+
+    // Conocido (memoria o localStorage): aplicar al instante, sin re-analizar.
+    const known = readImageHasBackground(src)
+    if (known !== null) {
+      setHasBackground(known)
       return
     }
+
     if (typeof window === "undefined") return
 
     let cancelled = false
@@ -42,13 +43,13 @@ export function useImageHasBackground(src: string | null): boolean {
     img.onload = () => {
       if (cancelled) return
       try {
-        if (!img.naturalWidth || !img.naturalHeight) return settle(true)
+        if (!img.naturalWidth || !img.naturalHeight) return settle(false)
         const S = 48
         const canvas = document.createElement("canvas")
         canvas.width = S
         canvas.height = S
         const ctx = canvas.getContext("2d", { willReadFrequently: true })
-        if (!ctx) return settle(true)
+        if (!ctx) return settle(false)
         ctx.drawImage(img, 0, 0, S, S)
         const { data } = ctx.getImageData(0, 0, S, S)
         const alphaAt = (x: number, y: number) => data[(y * S + x) * 4 + 3]
@@ -70,11 +71,12 @@ export function useImageHasBackground(src: string | null): boolean {
         // Si más de la mitad del marco es transparente, es un recorte sin fondo.
         settle(transparent / edge < 0.5)
       } catch {
-        // Canvas contaminado (sin CORS) u otro fallo: asumir con fondo.
-        settle(true)
+        // Canvas contaminado (sin CORS) u otro fallo: tratar como sin fondo
+        // (no aplicar el efecto) para no arriesgar un recorte feo.
+        settle(false)
       }
     }
-    img.onerror = () => settle(true)
+    img.onerror = () => settle(false)
     img.src = src
 
     return () => {

@@ -2,20 +2,25 @@
 
 import { useEffect } from "react"
 import { useRef } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 export function ServiceWorkerRegister() {
   const router = useRouter()
+  const pathname = usePathname()
   const wasOfflineRef = useRef(false)
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return
 
-    if (process.env.NODE_ENV !== "production") {
-      // En desarrollo NO registramos el SW. Además desregistramos cualquier SW
-      // viejo (p. ej. de un `npm run start` previo en este mismo origen) y
-      // limpiamos sus cachés: si no, sigue sirviendo chunks/HTML cacheados y un
-      // F5 normal muestra código viejo (solo Ctrl+F5 lo evita).
+    // El Service Worker existe SOLO para la PWA del mesero (offline). El menú
+    // del cliente (QR), admin y landing NO deben quedar bajo el SW: el cliente
+    // en móvil no puede hacer un hard-reload, así que jamás debe quedar atrapado
+    // con assets cacheados. En dev tampoco se registra.
+    const isWaiterApp = process.env.NODE_ENV === "production" && pathname.startsWith("/waiter")
+
+    if (!isWaiterApp) {
+      // Fuera del área de mesero (o en dev): desregistrar cualquier SW viejo y
+      // limpiar sus cachés, para servir siempre contenido fresco.
       navigator.serviceWorker
         .getRegistrations()
         .then((regs) => Promise.all(regs.map((r) => r.unregister())))
@@ -35,7 +40,7 @@ export function ServiceWorkerRegister() {
     }
 
     navigator.serviceWorker.register("/sw.js").catch(() => undefined)
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     function handleOffline() {
