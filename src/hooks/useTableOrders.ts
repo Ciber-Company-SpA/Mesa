@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
@@ -41,7 +41,7 @@ type OrderRow = {
 function normalize(value: string) {
   return value
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
 }
@@ -78,16 +78,34 @@ function mapRow(row: OrderRow): TableOrder {
   }
 }
 
+// Polling adaptativo: parte rápido y se va espaciando si no hay cambios.
+// Cuando llega algo nuevo, vuelve a la frecuencia mínima.
+const MIN_INTERVAL_MS = 3_000   // hay actividad reciente -> consulta seguido
+const MAX_INTERVAL_MS = 30_000  // sin cambios -> espacia hasta 30s
+const BACKOFF_FACTOR = 1.5      // cuánto crece el intervalo cada vez sin cambios
+
+// Huella simple del estado de los pedidos, para detectar si hubo cambios
+// entre dos consultas (ids + estado + nº de items).
+function ordersFingerprint(orders: TableOrder[]): string {
+  return orders
+    .map((o) => `${o.id}:${o.statusId}:${o.items.length}`)
+    .join("|")
+}
+
 export function useTableOrders(qrCode: string | null) {
   const [orders, setOrders] = useState<TableOrder[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  // Mutables que no deben re-disparar efectos.
+  const lastFingerprintRef = useRef<string>("")
+  const intervalMsRef = useRef<number>(MIN_INTERVAL_MS)
+  const timeoutRef = useRef<number | null>(null)
 
   const fetchOrders = useCallback(async () => {
     if (!qrCode) {
       setOrders([])
       return
     }
-
     setIsLoading(true)
     try {
       // RPC SECURITY DEFINER: el cliente público (anon) no tiene SELECT directo
@@ -96,11 +114,22 @@ export function useTableOrders(qrCode: string | null) {
       const { data, error } = await supabase.rpc("get_orders_for_table_qr", {
         p_qr_token: qrCode,
       })
-
       if (error) throw error
-
       const rows = (data ?? []) as unknown as OrderRow[]
       const active = rows.map(mapRow).filter((o) => isOrderActive(o.statusName))
+
+      // ¿Cambió algo respecto a la última consulta? Ajusta el ritmo del polling.
+      const fp = ordersFingerprint(active)
+      if (fp !== lastFingerprintRef.current) {
+        lastFingerprintRef.current = fp
+        intervalMsRef.current = MIN_INTERVAL_MS // hubo cambio -> volver a consultar seguido
+      } else {
+        intervalMsRef.current = Math.min(
+          Math.round(intervalMsRef.current * BACKOFF_FACTOR),
+          MAX_INTERVAL_MS
+        )
+      }
+
       setOrders(active)
     } catch (err) {
       logger.error("Error cargando pedidos de la mesa", err)
@@ -109,23 +138,52 @@ export function useTableOrders(qrCode: string | null) {
     }
   }, [qrCode])
 
+  // Carga inicial al montar / cambiar de mesa.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de pedidos al montar
     fetchOrders()
   }, [fetchOrders])
 
+  // Polling adaptativo con setTimeout encadenado (no setInterval), para poder
+  // ajustar el delay entre cada vuelta según haya o no cambios.
+  //
   // El cliente público (anon) no recibe eventos de postgres_changes sobre
-  // orders porque la RLS de Supabase realtime se lo bloquea. Polling cada 15s
-  // mientras la mesa esté abierta cubre el gap. Si en el futuro el usuario está
-  // autenticado (mesero), realtime sí funciona y el polling es solo un fallback
-  // barato.
+  // orders (la RLS de realtime lo bloquea), por eso usamos polling. Si la
+  // pestaña no está visible, se pausa del todo y se reanuda al volver.
   useEffect(() => {
     if (!qrCode) return
-    const id = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return
-      fetchOrders()
-    }, 3_000)
-    return () => window.clearInterval(id)
+
+    let cancelled = false
+
+    const scheduleNext = () => {
+      if (cancelled) return
+      timeoutRef.current = window.setTimeout(async () => {
+        if (cancelled) return
+        if (document.visibilityState === "visible") {
+          await fetchOrders()
+        }
+        scheduleNext()
+      }, intervalMsRef.current)
+    }
+
+    // Al volver a la pestaña: refrescar de inmediato y reiniciar al ritmo rápido.
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        intervalMsRef.current = MIN_INTERVAL_MS
+        if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+        fetchOrders()
+        scheduleNext()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility)
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
   }, [qrCode, fetchOrders])
 
   return { orders, isLoading, refresh: fetchOrders }
