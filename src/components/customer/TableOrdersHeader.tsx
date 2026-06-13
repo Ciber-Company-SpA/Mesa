@@ -72,14 +72,14 @@ export function TableOrdersHeader({ qrCode, dinerToken }: TableOrdersHeaderProps
 
   return (
     <>
-      <div className="mb-6 mt-4 rounded-3xl border border-white/10 bg-stone-950/80 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300">
+      <div className="mb-6 mt-4 rounded-3xl border border-black/5 bg-white p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 pl-1">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-500 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
             </span>
-            <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-orange-200/90">
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-orange-600">
               {orders.length === 1 ? "1 pedido en curso" : `${orders.length} pedidos en curso`}
             </p>
           </div>
@@ -90,8 +90,8 @@ export function TableOrdersHeader({ qrCode, dinerToken }: TableOrdersHeaderProps
             disabled={billStatus !== "idle"}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-extrabold transition active:scale-95 ${
               billStatus === "requested"
-                ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
-                : "bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/30 hover:bg-orange-500/25 disabled:opacity-60"
+                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                : "bg-orange-50 text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:opacity-60"
             }`}
           >
             {billStatus === "requested"
@@ -107,23 +107,23 @@ export function TableOrdersHeader({ qrCode, dinerToken }: TableOrdersHeaderProps
             const step = getOrderStatusStep(order.statusId, order.statusName)
             const badgeStyles =
               step === 3
-                ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : step === 2
-                ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
-                : "bg-orange-500/10 text-orange-300 border-orange-500/20"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-orange-50 text-orange-700 border-orange-200"
 
             return (
               <button
                 type="button"
                 onClick={() => setSelectedOrder(order)}
                 key={order.id}
-                className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-2.5 ring-1 ring-white/5 transition duration-300 hover:bg-white/10 hover:border-white/20 active:scale-[0.97] text-left cursor-pointer shadow-lg shadow-black/10"
+                className="flex shrink-0 items-center gap-3 rounded-2xl bg-stone-50 border border-stone-200 px-4 py-2.5 ring-1 ring-black/[0.02] transition duration-300 hover:bg-stone-100 hover:border-stone-300 active:scale-[0.97] text-left cursor-pointer shadow-sm"
               >
                 <div className="flex flex-col">
-                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-stone-400">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-stone-500">
                     Pedido #{order.id} · {formatElapsed(getElapsedSeconds(order, nowMs))}
                   </span>
-                  <span className="text-xs font-black text-white mt-0.5">
+                  <span className="text-xs font-black text-stone-900 mt-0.5">
                     {order.statusName ?? "Actualizando"}
                   </span>
                 </div>

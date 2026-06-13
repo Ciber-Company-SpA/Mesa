@@ -98,8 +98,8 @@ function ProductImage({
       aria-label={!src ? `Foto del plato ${placeholder.emoji}` : undefined}
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
       style={{
-        backgroundColor: "#241e18",
-        backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 11px, transparent 11px 23px)",
+        backgroundColor: "#f4f4f3",
+        backgroundImage: "repeating-linear-gradient(135deg, rgba(0,0,0,0.02) 0 11px, transparent 11px 23px)",
       }}
     >
       {src ? (
@@ -114,7 +114,7 @@ function ProductImage({
           />
         </>
       ) : (
-        <div className="relative z-10 flex flex-col items-center text-center text-[#77695c]">
+        <div className="relative z-10 flex flex-col items-center text-center text-stone-400">
           <svg className="h-6 w-6 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
@@ -176,48 +176,51 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
   return (
     <>
       <article
-        className={`group relative overflow-hidden rounded-[20px] border border-[#3a3028] bg-[#1d1814] shadow-[0_12px_30px_rgba(0,0,0,0.28)] ${
-          isAgotado ? "opacity-55" : ""
+        className={`group relative flex items-center gap-3.5 rounded-2xl border border-black/[0.05] bg-white px-3.5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.05)] ${
+          isAgotado ? "opacity-60" : ""
         }`}
       >
-        <Link href={`/${qrCode}/menu/${encodeId(item.id)}`} className="block">
-          <div className="relative">
-            <ProductImage
-              src={item.product_image}
-              alt={item.product_name}
-              className="h-[140px] w-full bg-[#241e18]"
-              imageClassName="p-2 transition duration-300 group-hover:scale-[1.02]"
-              imgRef={imgRef}
-              categoryName={item.categories?.category_name}
-            />
-            <div className="absolute left-2.5 top-2.5 z-20 flex gap-1.5">
-              {isAgotado ? (
-                <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold text-white">
-                  Agotado
-                </span>
-              ) : isNewProduct(item.created_at) ? (
-                <span className="rounded-full bg-[#ff5b16] px-2.5 py-1 text-[10px] font-extrabold text-[#17110d]">
-                  Nuevo
-                </span>
-              ) : null}
-              {isPopular && !isAgotado ? (
-                <span className="rounded-full border border-[#86683f] bg-[#3a2e20]/90 px-2.5 py-1 text-[10px] font-extrabold text-[#ffc46f]">
-                  Recomendado
-                </span>
-              ) : null}
-            </div>
-          </div>
+        <Link
+          href={`/${qrCode}/menu/${encodeId(item.id)}`}
+          className="flex min-w-0 flex-1 items-center gap-3.5"
+        >
+          <ProductImage
+            src={item.product_image}
+            alt={item.product_name}
+            className="h-[74px] w-[74px] shrink-0 rounded-full ring-1 ring-black/[0.04]"
+            imageClassName="p-1.5 transition duration-300 group-hover:scale-[1.03]"
+            imgRef={imgRef}
+            categoryName={item.categories?.category_name}
+          />
 
-          <div className="min-h-[126px] px-3.5 pb-4 pt-3">
-            <h3 className="font-[family-name:var(--font-grotesk)] text-[17px] font-bold leading-tight tracking-[-0.03em] text-white">
+          <div className="min-w-0 flex-1">
+            {(isAgotado || isNewProduct(item.created_at) || (isPopular && !isAgotado)) && (
+              <div className="mb-1 flex flex-wrap gap-1.5">
+                {isAgotado ? (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
+                    Agotado
+                  </span>
+                ) : isNewProduct(item.created_at) ? (
+                  <span className="rounded-full bg-[#ff5b16] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
+                    Nuevo
+                  </span>
+                ) : null}
+                {isPopular && !isAgotado ? (
+                  <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-amber-700">
+                    Recomendado
+                  </span>
+                ) : null}
+              </div>
+            )}
+            <h3 className="truncate font-[family-name:var(--font-grotesk)] text-[15px] font-bold leading-tight tracking-[-0.02em] text-stone-900">
               {item.product_name}
             </h3>
             {item.product_description ? (
-              <p className="mt-1 line-clamp-2 pr-12 text-[12px] leading-[1.45] text-[#b8a99c]">
+              <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-stone-500">
                 {item.product_description}
               </p>
             ) : null}
-            <p className="mt-3 font-[family-name:var(--font-grotesk)] text-[19px] font-bold text-[#ffbe73]">
+            <p className="mt-1.5 font-[family-name:var(--font-grotesk)] text-[16px] font-bold text-[#ff5b16]">
               {hasVariants
                 ? `Desde ${formatPrice(Math.min(...variants.map((variant) => variant.variant_price)))}`
                 : formatPrice(item.product_price)}
@@ -225,22 +228,22 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
           </div>
         </Link>
 
-        <div className="absolute bottom-4 right-3.5 z-20">
+        <div className="shrink-0">
           {!hasVariants && quantity > 0 ? (
-            <div className="flex items-center gap-1 rounded-full bg-[#2c241c] p-1 ring-1 ring-white/10">
+            <div className="flex items-center gap-1 rounded-full bg-stone-100 p-1 ring-1 ring-black/[0.05]">
               <button
                 type="button"
                 onClick={handleSubtract}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-[#cdbfae]"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-stone-600"
                 aria-label={`Quitar ${item.product_name}`}
               >
                 -
               </button>
-              <span className="min-w-5 text-center text-sm font-extrabold text-white">{quantity}</span>
+              <span className="min-w-5 text-center text-sm font-extrabold text-stone-900">{quantity}</span>
               <button
                 type="button"
                 onClick={handleAdd}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5b16] text-lg font-bold text-[#17110d]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5b16] text-lg font-bold text-white"
                 aria-label={`Agregar otro ${item.product_name}`}
               >
                 +
@@ -251,10 +254,10 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
               type="button"
               disabled={isAgotado || !tableId}
               onClick={handleAdd}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff5b16] text-[27px] font-light leading-none text-[#17110d] shadow-[0_8px_18px_rgba(255,91,22,0.35)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-[#ff5b16] px-4 py-2.5 text-[13px] font-extrabold text-white shadow-[0_6px_14px_rgba(255,91,22,0.3)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={hasVariants ? `Elegir variante de ${item.product_name}` : `Agregar ${item.product_name}`}
             >
-              +
+              Añadir
             </button>
           )}
         </div>
@@ -266,24 +269,24 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
             role="dialog"
             aria-modal="true"
             aria-labelledby={`variant-title-${item.id}`}
-            className="relative w-full max-w-sm overflow-hidden rounded-[24px] border border-[#3a3028] bg-[#18130f] p-5 text-white shadow-2xl"
+            className="relative w-full max-w-sm overflow-hidden rounded-[24px] border border-stone-200 bg-white p-5 text-stone-900 shadow-2xl"
           >
             <button
               type="button"
               onClick={() => setShowVariants(false)}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#2c241c] text-xl text-[#cdbfae] ring-1 ring-white/10"
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-xl text-stone-500 ring-1 ring-black/5"
               aria-label="Cerrar selector de variantes"
             >
               x
             </button>
 
             <div className="pr-12">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#ff7a32]">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#ff5b16]">
                 Elige una opcion
               </p>
               <h2
                 id={`variant-title-${item.id}`}
-                className="mt-1 font-[family-name:var(--font-grotesk)] text-2xl font-bold tracking-tight"
+                className="mt-1 font-[family-name:var(--font-grotesk)] text-2xl font-bold tracking-tight text-stone-900"
               >
                 {item.product_name}
               </h2>
@@ -298,9 +301,9 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
                     addProduct(item.id, variant.id, variant.variant_price)
                     setShowVariants(false)
                   }}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-[#3a3028] bg-[#211b15] p-3 text-left transition hover:border-[#ff5b16]/60"
+                  className="flex w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white p-3 text-left transition hover:border-[#ff5b16]/60"
                 >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#2c241c]">
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-stone-100">
                     {variant.variant_image || item.product_image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -311,12 +314,12 @@ function ProductCard({ item, qrCode, tableId, restaurantId, isPopular }: Product
                     ) : null}
                   </div>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-extrabold">{variant.variant_name}</span>
-                    <span className="mt-1 block text-sm font-bold text-[#ffbe73]">
+                    <span className="block truncate text-sm font-extrabold text-stone-900">{variant.variant_name}</span>
+                    <span className="mt-1 block text-sm font-bold text-[#ff5b16]">
                       {formatPrice(variant.variant_price)}
                     </span>
                   </span>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b16] text-xl text-[#17110d]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ff5b16] text-xl text-white">
                     +
                   </span>
                 </button>
@@ -453,9 +456,9 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-[#f7f1e9] sm:py-4">
+    <main className="min-h-screen bg-[#e9e6e1] font-[family-name:var(--font-manrope)] text-stone-900 sm:py-4">
       {/* overflow-clip (no -hidden): hidden crea un scroll container y rompe el position:sticky de los hijos */}
-      <section className="relative mx-auto min-h-screen w-full overflow-clip bg-[#110e0b] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.28)] sm:min-h-[calc(100vh-32px)] sm:max-w-[384px] sm:rounded-[38px] sm:border-[10px] sm:border-[#0a0807]">
+      <section className="relative mx-auto min-h-screen w-full overflow-clip bg-[#f5f5f4] pb-28 shadow-[0_30px_80px_rgba(38,27,18,0.12)] sm:min-h-[calc(100vh-32px)] sm:max-w-[384px] sm:rounded-[38px] sm:border-[10px] sm:border-[#e7e5e1]">
         <div className="px-3.5 pb-6 pt-5">
         <header className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -468,22 +471,22 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                   className="h-[54px] w-[54px] rounded-full border-[2.5px] border-[#ff6a1a] object-cover"
                 />
               ) : (
-                <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full border-[2.5px] border-[#ff6a1a] bg-[#2c241c] font-[family-name:var(--font-grotesk)] text-lg font-bold text-[#f7f1e9]">
+                <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full border-[2.5px] border-[#ff6a1a] bg-stone-100 font-[family-name:var(--font-grotesk)] text-lg font-bold text-stone-700">
                   {restaurant?.restaurant_name?.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
 
             <div className="min-w-0">
-              <h1 className="truncate font-[family-name:var(--font-grotesk)] text-xl font-bold leading-tight tracking-[-0.03em] text-[#f7f1e9]">
+              <h1 className="truncate font-[family-name:var(--font-grotesk)] text-xl font-bold leading-tight tracking-[-0.03em] text-stone-900">
                 {restaurant?.restaurant_name}
               </h1>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className="rounded-full bg-[#2c241c] px-2.5 py-1 text-[11px] font-bold text-[#cdbfae]">
+                <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-600">
                   Mesa {tableNumber}
                 </span>
                 {dinerInfo && (
-                  <span className="rounded-full bg-[#2c241c] px-2.5 py-1 text-[11px] font-bold text-[#cdbfae]">
+                  <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-600">
                     {dinerInfo.label}
                   </span>
                 )}
@@ -492,16 +495,16 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
           </div>
 
           <div className="shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-[#5fd08a]">
-              <span className="h-2 w-2 rounded-full bg-[#5fd08a]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-600 ring-1 ring-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Abierto
             </span>
           </div>
         </header>
 
-        <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-[#2a231d] bg-[#110e0b]/95 px-3.5 pb-2.5 pt-3 backdrop-blur-xl">
+        <div className="sticky top-0 z-30 -mx-3.5 mt-3 border-b border-stone-200 bg-[#f5f5f4]/95 px-3.5 pb-2.5 pt-3 backdrop-blur-xl">
           <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#6f675c]">
+            <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-stone-400">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -511,12 +514,12 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar platos, bebidas, postres..."
-              className="h-[50px] w-full rounded-2xl border border-[#ffecd6]/[0.08] bg-[#211b15] pl-12 pr-10 text-[14px] font-medium text-[#f7f1e9] outline-none transition placeholder:text-[#6f675c] focus:border-[#ff6a1a]/50"
+              className="h-[50px] w-full rounded-2xl border border-stone-200 bg-white pl-12 pr-10 text-[14px] font-medium text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#ff6a1a]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-3 flex items-center px-2 text-[#6f675c] transition hover:text-white"
+                className="absolute inset-y-0 right-3 flex items-center px-2 text-stone-400 transition hover:text-stone-700"
                 type="button"
               >
                 x
@@ -533,8 +536,8 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                   onClick={() => scrollToCategory(cat.id)}
                   className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
                     selectedCategory === cat.id
-                      ? "bg-[#ff5b16] text-[#15110d] shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
-                      : "border border-[#332a23] bg-[#1d1814] text-[#a99f92]"
+                      ? "bg-[#ff5b16] text-white shadow-[0_6px_14px_rgba(255,91,22,0.25)]"
+                      : "border border-stone-200 bg-white text-stone-600"
                   }`}
                 >
                   {cat.category_name}
@@ -566,16 +569,16 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                   <div className="mb-3 mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <span className="h-5 w-1 rounded-full bg-[#ff5b16]" />
-                      <h2 className="font-[family-name:var(--font-grotesk)] text-[19px] font-bold tracking-[-0.03em] text-white">
+                      <h2 className="font-[family-name:var(--font-grotesk)] text-[19px] font-bold tracking-[-0.03em] text-stone-900">
                         {cat.category_name}
                       </h2>
                     </div>
-                    <span className="rounded-full bg-[#211b15] px-2.5 py-1 text-[11px] font-bold text-[#a99f92]">
+                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-500">
                       {categoryProducts.length}
                     </span>
                   </div>
 
-                  <div className="grid gap-3">
+                  <div className="flex flex-col gap-2.5">
                     {categoryProducts.map((item) => (
                       <ProductCard
                         key={item.id}
@@ -592,18 +595,18 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             })}
           </section>
         ) : (
-          <div className="mt-8 rounded-[1.5rem] border border-[#ffecd6]/[0.08] bg-[#211b15] px-6 py-12 text-center shadow-2xl shadow-black/30">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#2c241c] text-2xl text-[#f0c690]">
+          <div className="mt-8 rounded-[1.5rem] border border-stone-200 bg-white px-6 py-12 text-center shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-2xl text-stone-500">
               ?
             </div>
-            <h2 className="mt-5 text-xl font-bold tracking-tight text-[#f7f1e9]">
+            <h2 className="mt-5 text-xl font-bold tracking-tight text-stone-900">
               {searchQuery ? "Sin resultados para tu busqueda" : "Aun no hay productos disponibles"}
             </h2>
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="mt-4 rounded-xl bg-[#ff6a1a] px-4 py-2 text-xs font-extrabold text-[#15110d] transition hover:bg-[#ff7b35]"
+                className="mt-4 rounded-xl bg-[#ff5b16] px-4 py-2 text-xs font-extrabold text-white transition hover:bg-[#ff7b35]"
               >
                 Limpiar busqueda
               </button>
