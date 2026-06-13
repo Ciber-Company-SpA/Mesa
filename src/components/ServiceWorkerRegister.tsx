@@ -10,7 +10,29 @@ export function ServiceWorkerRegister() {
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return
-    if (process.env.NODE_ENV !== "production") return
+
+    if (process.env.NODE_ENV !== "production") {
+      // En desarrollo NO registramos el SW. Además desregistramos cualquier SW
+      // viejo (p. ej. de un `npm run start` previo en este mismo origen) y
+      // limpiamos sus cachés: si no, sigue sirviendo chunks/HTML cacheados y un
+      // F5 normal muestra código viejo (solo Ctrl+F5 lo evita).
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .catch(() => undefined)
+
+      if (typeof caches !== "undefined") {
+        caches
+          .keys()
+          .then((keys) =>
+            Promise.all(
+              keys.filter((k) => k.startsWith("mesa-offline-")).map((k) => caches.delete(k))
+            )
+          )
+          .catch(() => undefined)
+      }
+      return
+    }
 
     navigator.serviceWorker.register("/sw.js").catch(() => undefined)
   }, [])
