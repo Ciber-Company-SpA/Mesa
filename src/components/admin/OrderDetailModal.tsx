@@ -60,6 +60,7 @@ export function OrderDetailModal({ orderId, onClose }: Props) {
 
   useEffect(() => {
     if (!orderId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al cerrar/cambiar de orden
       setOrder(null)
       setError(null)
       return

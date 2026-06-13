@@ -19,6 +19,7 @@ export function useDinerSlot(tableId: number | null, qrCode: string | null) {
 
   useEffect(() => {
     if (!tableId || !qrCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset cuando no hay mesa
       setInfo(null)
       return
     }

@@ -83,6 +83,7 @@ export function useServiceCalls(restaurantId: number | null) {
   useEffect(() => {
     if (!restaurantId) return
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial al montar
     fetchCalls().catch(() => undefined)
 
     const refetch = () => {
