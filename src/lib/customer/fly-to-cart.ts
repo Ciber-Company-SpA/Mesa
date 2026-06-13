@@ -1,8 +1,6 @@
 // Animación "fly to cart": cuando el usuario toca "Añadir al carrito",
 // la imagen del producto se duplica, achica y vuela hacia el botón del carrito.
 
-import { getImageHasBackground } from "@/lib/customer/image-bg"
-
 const CART_TARGET_ID = "fly-to-cart-target"
 
 export function getCartTargetId(): string {
@@ -24,10 +22,9 @@ export function flyToCart(source: HTMLImageElement | HTMLElement | null): void {
   const clone = source.cloneNode(true) as HTMLElement
 
   // Solo las imágenes CON fondo vuelan recortadas en círculo (cuadrado centrado
-  // + borde redondo + cover). Los recortes transparentes vuelan completos: un
-  // círculo con object-fit cover los cortaría.
-  const src = source instanceof HTMLImageElement ? source.currentSrc || source.src : null
-  const circular = getImageHasBackground(src)
+  // + borde redondo + cover). Los recortes (data-cutout="true") vuelan completos:
+  // un círculo con object-fit cover los cortaría.
+  const circular = source.dataset.cutout !== "true"
 
   clone.style.position = "fixed"
   clone.style.margin = "0"

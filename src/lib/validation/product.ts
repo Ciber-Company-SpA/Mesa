@@ -37,6 +37,8 @@ export const CreateProductOptionSchema = z.object({
   price: PriceSchema,
   imageUrl: ImageUrlSchema,
   imagePublicId: PublicIdSchema,
+  // true si la imagen es un recorte sin fondo (se subió con "quitar fondo").
+  imageRecortada: z.boolean().default(false),
 })
 
 export type CreateProductOptionInput = z.infer<typeof CreateProductOptionSchema>
@@ -72,6 +74,8 @@ export const UpdateProductOptionSchema = z.object({
   price: PriceSchema,
   imageUrl: ImageUrlSchema,
   imagePublicId: PublicIdSchema,
+  // true si la imagen es un recorte sin fondo (se subió con "quitar fondo").
+  imageRecortada: z.boolean().default(false),
 })
 
 export type UpdateProductOptionInput = z.infer<typeof UpdateProductOptionSchema>
@@ -88,6 +92,8 @@ export type ProductOptionForm = {
   removeBg: boolean
   imageUrl: string | null
   imagePublicId: string | null
+  // Valor cargado/persistido de si la imagen actual es un recorte sin fondo.
+  imageRecortada: boolean
 }
 
 export const UpdateProductSchema = z.object({

@@ -85,6 +85,7 @@ export function ProductDetailSheet({
             alt={activeVariant?.variant_name ?? product.product_name}
             className="h-full w-full"
             imgRef={imgRef}
+            hasBackground={!product.image_recortada}
             fade="bottom"
           />
           <button

@@ -13,6 +13,10 @@ export type Product = {
   restaurant_id: number
   status_id: number
   created_at: string
+  // true si la imagen es un recorte sin fondo (PNG transparente). Lo fija el
+  // admin con el toggle "quitar fondo"; el menú lo usa para NO aplicar el
+  // efecto blur+degradado a los recortes.
+  image_recortada?: boolean
   categories: Category
   product_status?: ProductStatus
   product_variants?: ProductVariant[]

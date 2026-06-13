@@ -105,6 +105,7 @@ export function ProductDetailClient({
             alt={activeVariant?.variant_name ?? product.product_name}
             className="h-full w-full"
             imgRef={imageRef}
+            hasBackground={!product.image_recortada}
             fade="bottom"
           />
         </div>

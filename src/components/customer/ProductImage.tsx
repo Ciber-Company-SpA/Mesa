@@ -1,34 +1,32 @@
-"use client"
-
-import { useImageHasBackground } from "@/hooks/useImageHasBackground"
-
 type ProductImageProps = {
   src: string | null
   alt: string
   className?: string
   imgRef?: React.RefObject<HTMLImageElement | null>
   /**
-   * Dirección del degradado de fundido hacia el contenedor. Solo se aplica a
-   * imágenes CON fondo; los recortes transparentes se muestran limpios.
+   * true = la imagen tiene fondo (foto) → blur + cover + degradado.
+   * false = recorte transparente → contain limpio, sin efecto.
+   * El dato viene de la BD (products.image_recortada), no se detecta.
    */
+  hasBackground: boolean
+  /** Dirección del degradado de fundido (solo para imágenes con fondo). */
   fade?: "right" | "bottom"
 }
 
 /**
- * Imagen de producto con tratamiento adaptativo:
- * - CON fondo (foto): backdrop borroso + cover + degradado de fundido.
- * - SIN fondo (recorte transparente): contain, sin blur ni degradado.
- * La detección la hace useImageHasBackground (muestreo de alfa del borde).
+ * Imagen de producto con tratamiento adaptativo según la marca de la BD:
+ * - CON fondo: backdrop borroso + cover + degradado de fundido.
+ * - SIN fondo (recorte): contain, sin blur ni degradado.
+ * Marca la <img> con data-cutout para que flyToCart decida si vuela en círculo.
  */
-export function ProductImage({ src, alt, className = "", imgRef, fade }: ProductImageProps) {
-  const hasBackground = useImageHasBackground(src)
+export function ProductImage({ src, alt, className = "", imgRef, hasBackground, fade }: ProductImageProps) {
+  const dataCutout = hasBackground ? undefined : "true"
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {src ? (
         hasBackground ? (
           <>
-            {/* Backdrop borroso para rellenar el marco. */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 scale-125 bg-cover bg-center blur-2xl brightness-[0.55]"
@@ -40,6 +38,7 @@ export function ProductImage({ src, alt, className = "", imgRef, fade }: Product
               src={src}
               alt={alt}
               loading="lazy"
+              data-cutout={dataCutout}
               className="absolute inset-0 z-[1] h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
             />
             {fade === "right" ? (
@@ -57,6 +56,7 @@ export function ProductImage({ src, alt, className = "", imgRef, fade }: Product
             src={src}
             alt={alt}
             loading="lazy"
+            data-cutout={dataCutout}
             className="absolute inset-0 z-[1] h-full w-full object-contain p-3 transition duration-300 group-hover:scale-[1.04]"
           />
         )

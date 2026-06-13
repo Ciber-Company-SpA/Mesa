@@ -100,6 +100,7 @@ function ProductCard({ item, tableId, restaurantId, isPopular, onAdded, onOpenDe
               alt={item.product_name}
               className="h-full w-full"
               imgRef={imgRef}
+              hasBackground={!item.image_recortada}
               fade="right"
             />
             <div className="absolute left-2.5 top-2.5 z-[3] flex flex-col items-start gap-1.5">

@@ -29,6 +29,7 @@ function createLocalOption(name = ""): ProductOptionForm {
     removeBg: readRemoveBgPreference(),
     imageUrl: null,
     imagePublicId: null,
+    imageRecortada: false,
   }
 }
 
@@ -150,7 +151,12 @@ export function useCreateProduct() {
     const uploadResults = await Promise.all(
       options.map(async (option) => {
         if (!option.imageFile) {
-          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+          return {
+            option,
+            imageUrl: option.imageUrl,
+            imagePublicId: option.imagePublicId,
+            imageRecortada: option.imageRecortada,
+          }
         }
 
         // Esperar al procesado en curso (si lo hay).
@@ -171,18 +177,21 @@ export function useCreateProduct() {
           option,
           imageUrl: result.secure_url,
           imagePublicId: result.public_id,
+          // Imagen nueva: el flag lo determina el toggle "quitar fondo".
+          imageRecortada: option.removeBg,
         }
       })
     )
 
     const preparedOptions: CreateProductOptionInput[] = []
 
-    for (const { option, imageUrl, imagePublicId } of uploadResults) {
+    for (const { option, imageUrl, imagePublicId, imageRecortada } of uploadResults) {
       const rawOption = {
         name: option.name.trim() || "Principal",
         price: Number(option.price),
         imageUrl,
         imagePublicId,
+        imageRecortada,
       }
 
       const validation = CreateProductOptionSchema.safeParse(rawOption)

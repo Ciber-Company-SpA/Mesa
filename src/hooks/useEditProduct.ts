@@ -31,6 +31,7 @@ function createLocalOption(values?: Partial<ProductOptionForm>): ProductOptionFo
     removeBg: readRemoveBgPreference(),
     imageUrl: null,
     imagePublicId: null,
+    imageRecortada: false,
     ...values,
   }
 }
@@ -85,6 +86,7 @@ export function useEditProduct(productId: number | null) {
             price: String(variant.price),
             imageUrl: variant.imageUrl,
             imagePublicId: variant.imagePublicId,
+            imageRecortada: product.fallbackImageRecortada,
           })
         )
       )
@@ -95,6 +97,7 @@ export function useEditProduct(productId: number | null) {
           price: String(product.fallbackPrice),
           imageUrl: product.fallbackImageUrl,
           imagePublicId: product.fallbackImagePublicId,
+          imageRecortada: product.fallbackImageRecortada,
         }),
       ])
     }
@@ -287,7 +290,12 @@ export function useEditProduct(productId: number | null) {
 
         // Sin archivo local ni procesado en curso: conservar la imagen existente.
         if (!option.imageFile && !pending) {
-          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+          return {
+            option,
+            imageUrl: option.imageUrl,
+            imagePublicId: option.imagePublicId,
+            imageRecortada: option.imageRecortada,
+          }
         }
 
         const processed = pending ? await pending : option.processedFile
@@ -296,7 +304,12 @@ export function useEditProduct(productId: number | null) {
 
         // El procesado/descarga falló y no hay archivo local: conservar la imagen existente.
         if (!fileToUpload) {
-          return { option, imageUrl: option.imageUrl, imagePublicId: option.imagePublicId }
+          return {
+            option,
+            imageUrl: option.imageUrl,
+            imagePublicId: option.imagePublicId,
+            imageRecortada: option.imageRecortada,
+          }
         }
 
         const result = await uploadImage(
@@ -311,19 +324,22 @@ export function useEditProduct(productId: number | null) {
           option,
           imageUrl: result.secure_url,
           imagePublicId: result.public_id,
+          // Imagen nueva: el flag lo determina el toggle "quitar fondo".
+          imageRecortada: option.removeBg,
         }
       })
     )
 
     const preparedOptions: UpdateProductOptionInput[] = []
 
-    for (const { option, imageUrl, imagePublicId } of uploadResults) {
+    for (const { option, imageUrl, imagePublicId, imageRecortada } of uploadResults) {
       const rawOption = {
         ...(option.variantId ? { variantId: option.variantId } : {}),
         name: option.name.trim() || "Principal",
         price: Number(option.price),
         imageUrl,
         imagePublicId,
+        imageRecortada,
       }
 
       const validation = UpdateProductOptionSchema.safeParse(rawOption)

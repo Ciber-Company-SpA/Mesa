@@ -34,6 +34,7 @@ export type ProductForEdit = {
   fallbackPrice: number
   fallbackImageUrl: string | null
   fallbackImagePublicId: string | null
+  fallbackImageRecortada: boolean
 }
 
 function revalidateMenu(restaurantId: number) {
@@ -68,7 +69,7 @@ export async function getProductForEdit(productId: number): Promise<Result<Produ
   const [productRes, variantsRes] = await Promise.all([
     supabase
       .from("products")
-      .select("id, product_name, product_description, product_price, product_image, product_image_public_id, category_id")
+      .select("id, product_name, product_description, product_price, product_image, product_image_public_id, category_id, image_recortada")
       .eq("id", productId)
       .maybeSingle(),
     supabase
@@ -90,6 +91,7 @@ export async function getProductForEdit(productId: number): Promise<Result<Produ
     fallbackPrice: productRes.data.product_price,
     fallbackImageUrl: productRes.data.product_image,
     fallbackImagePublicId: productRes.data.product_image_public_id,
+    fallbackImageRecortada: productRes.data.image_recortada ?? false,
     variants: (variantsRes.data ?? []).map((variant) => ({
       id: variant.id,
       name: variant.variant_name,
@@ -125,6 +127,7 @@ export async function createProduct(input: CreateProductInput): Promise<Result<C
       product_price: coverOption.price,
       product_image: coverOption.imageUrl,
       product_image_public_id: coverOption.imagePublicId,
+      image_recortada: coverOption.imageRecortada,
       category_id: categoryId,
       restaurant_id: restaurantId,
       status_id: 1,
@@ -204,6 +207,7 @@ export async function updateProduct(input: UpdateProductInput): Promise<Result<{
       product_price: coverOption.price,
       product_image: coverOption.imageUrl,
       product_image_public_id: coverOption.imagePublicId,
+      image_recortada: coverOption.imageRecortada,
       category_id: categoryId,
     })
     .eq("id", productId)
