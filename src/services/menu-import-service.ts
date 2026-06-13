@@ -6,6 +6,7 @@ import { requireCurrentAdmin } from "@/services/auth-guard"
 import { ok, fail, type Result } from "@/services/result"
 import { cloudinary } from "@/lib/cloudinary/config"
 import { fetchImageSafely } from "@/lib/security/safe-image-url"
+import { logger } from "@/lib/logger"
 
 // ============ TYPES ============
 
@@ -286,6 +287,29 @@ const BulkImportInputSchema = ParsedMenuSchema.extend({
 
 export type BulkImportInput = z.infer<typeof BulkImportInputSchema>
 
+// Procesa una lista de tareas async con un tope de concurrencia (pool).
+// Evita disparar cientos de llamadas externas (remove.bg/Cloudinary) a la vez.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let cursor = 0
+
+  async function run(): Promise<void> {
+    while (cursor < items.length) {
+      const current = cursor
+      cursor += 1
+      results[current] = await worker(items[current], current)
+    }
+  }
+
+  const pool = Array.from({ length: Math.min(limit, items.length) }, () => run())
+  await Promise.all(pool)
+  return results
+}
+
 export async function bulkImportMenu(input: BulkImportInput): Promise<Result<ImportSummary>> {
   const parsed = BulkImportInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -298,130 +322,65 @@ export async function bulkImportMenu(input: BulkImportInput): Promise<Result<Imp
   const { supabase, restaurantId } = auth.data
   const { removeBackground } = parsed.data
 
-  const summary: ImportSummary = {
-    categoriesCreated: 0,
-    categoriesReused: 0,
-    productsCreated: 0,
-    variantsCreated: 0,
-    imagesFound: 0,
-    skipped: [],
-  }
-
-  // Si está activado "remove background", pre-procesamos en paralelo todas las
-  // imágenes ANTES del insert. Reemplazamos las URLs de Pexels por las de Cloudinary
-  // (PNG sin fondo). Si algún paso falla, dejamos la URL original como fallback.
+  // 1) Resolver imágenes ANTES (fuera de la transacción). Si removeBackground
+  //    está activo, cada imagen pasa por remove.bg + Cloudinary, con un tope
+  //    de 4 en paralelo (antes eran todas a la vez).
   const processedImages = new Map<number, { url: string; publicId: string | null }>()
   if (removeBackground) {
-    await Promise.all(
-      parsed.data.products.map(async (p, i) => {
-        if (!p.image_url) return
-        const result = await processWithRemoveBg(p.image_url, restaurantId)
-        if (result) {
-          processedImages.set(i, { url: result.url, publicId: result.publicId })
-        } else {
-          // Fallback: mantener la URL original
-          processedImages.set(i, { url: p.image_url, publicId: null })
-        }
-      })
-    )
-  }
-
-  // Las imágenes ya vienen pre-cargadas (Pexels) y posiblemente editadas por el
-  // admin en el preview. Acá solo usamos `image_url` tal cual lo recibimos.
-
-  // 1) Leer categorías existentes del restaurante (case-insensitive match por nombre).
-  const { data: existingCategories, error: catError } = await supabase
-    .from("categories")
-    .select("id, category_name")
-    .eq("restaurant_id", restaurantId)
-
-  if (catError) return fail("No se pudo leer las categorías existentes")
-
-  const categoryByName = new Map<string, number>()
-  for (const cat of existingCategories ?? []) {
-    categoryByName.set(cat.category_name.trim().toLowerCase(), cat.id)
-  }
-
-  // 2) Crear las categorías que no existan (case-insensitive).
-  const inputCategories = new Set(parsed.data.categories.map((c) => c.trim()))
-  for (const product of parsed.data.products) {
-    inputCategories.add(product.category_name.trim())
-  }
-
-  for (const catName of inputCategories) {
-    const key = catName.toLowerCase()
-    if (categoryByName.has(key)) {
-      summary.categoriesReused += 1
-      continue
-    }
-    const { data: inserted, error } = await supabase
-      .from("categories")
-      .insert({ category_name: catName, restaurant_id: restaurantId })
-      .select("id")
-      .single()
-
-    if (error || !inserted) {
-      summary.skipped.push(`Categoría: ${catName}`)
-      continue
-    }
-    categoryByName.set(key, inserted.id)
-    summary.categoriesCreated += 1
-  }
-
-  // 3) Insertar productos (status_id=1 disponible) y sus variantes.
-  for (let i = 0; i < parsed.data.products.length; i += 1) {
-    const product = parsed.data.products[i]
-    const categoryId = categoryByName.get(product.category_name.trim().toLowerCase())
-    if (!categoryId) {
-      summary.skipped.push(`Producto sin categoría válida: ${product.name}`)
-      continue
-    }
-
-    const processed = processedImages.get(i)
-    const imageUrl = processed?.url ?? product.image_url ?? null
-    const imagePublicId = processed?.publicId ?? null
-    if (imageUrl) summary.imagesFound += 1
-
-    const { data: insertedProduct, error: productError } = await supabase
-      .from("products")
-      .insert({
-        product_name: product.name,
-        product_description: product.description ?? null,
-        product_price: product.price,
-        product_image: imageUrl,
-        product_image_public_id: imagePublicId,
-        category_id: categoryId,
-        restaurant_id: restaurantId,
-        status_id: 1,
-      })
-      .select("id")
-      .single()
-
-    if (productError || !insertedProduct) {
-      summary.skipped.push(`Producto: ${product.name}`)
-      continue
-    }
-    summary.productsCreated += 1
-
-    if (product.variants.length > 0) {
-      const variantsPayload = product.variants.map((v) => ({
-        product_id: insertedProduct.id,
-        variant_name: v.name,
-        variant_price: v.price,
-        variant_image: null,
-        variant_image_public_id: null,
-      }))
-
-      const { error: variantsError } = await supabase
-        .from("product_variants")
-        .insert(variantsPayload)
-
-      if (variantsError) {
-        summary.skipped.push(`Variantes de: ${product.name}`)
+    await mapWithConcurrency(parsed.data.products, 4, async (p, i) => {
+      if (!p.image_url) return
+      const result = await processWithRemoveBg(p.image_url, restaurantId)
+      if (result) {
+        processedImages.set(i, { url: result.url, publicId: result.publicId })
       } else {
-        summary.variantsCreated += product.variants.length
+        // Fallback: mantener la URL original (Pexels).
+        processedImages.set(i, { url: p.image_url, publicId: null })
       }
-    }
+    })
+  }
+
+  // 2) Armar el payload para la RPC transaccional, con las URLs ya resueltas.
+  const payload = {
+    categories: parsed.data.categories,
+    products: parsed.data.products.map((p, i) => {
+      const processed = processedImages.get(i)
+      return {
+        name: p.name,
+        description: p.description ?? null,
+        price: p.price,
+        category_name: p.category_name,
+        image_url: processed?.url ?? p.image_url ?? null,
+        image_public_id: processed?.publicId ?? null,
+        variants: p.variants.map((v) => ({ name: v.name, price: v.price })),
+      }
+    }),
+  }
+
+  // 3) Un solo insert atómico: o entra el menú completo, o no entra nada.
+  const { data, error } = await supabase.rpc("import_menu_bulk", {
+    p_payload: payload,
+  })
+
+  if (error) {
+    logger.error("Error importando menú (RPC)", error)
+    return fail(error.message ?? "No se pudo importar el menú")
+  }
+
+  const r = data as {
+    categories_created: number
+    categories_reused: number
+    products_created: number
+    variants_created: number
+    images_found: number
+  } | null
+
+  const summary: ImportSummary = {
+    categoriesCreated: r?.categories_created ?? 0,
+    categoriesReused: r?.categories_reused ?? 0,
+    productsCreated: r?.products_created ?? 0,
+    variantsCreated: r?.variants_created ?? 0,
+    imagesFound: r?.images_found ?? 0,
+    skipped: [], // con import atómico ya no hay "parciales": todo o nada.
   }
 
   return ok(summary)
