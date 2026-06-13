@@ -36,7 +36,11 @@ export function setImageHasBackground(src: string, value: boolean): void {
   }
 }
 
-/** Para consumidores no-React (flyToCart): `true` solo si SABEMOS que tiene fondo. */
+/**
+ * Para consumidores no-React (flyToCart): circular salvo que SEPAMOS que es un
+ * recorte sin fondo. Por defecto (desconocido) se trata como con fondo, igual
+ * que el render.
+ */
 export function getImageHasBackground(src: string | null | undefined): boolean {
-  return readImageHasBackground(src) === true
+  return readImageHasBackground(src) !== false
 }
