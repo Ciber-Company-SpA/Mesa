@@ -9,7 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -38,5 +37,31 @@ jobs:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
+      # Audit informativo: NO bloquea el build (vulnerabilidades de deps suelen
+      # ser de terceros y no siempre accionables), pero deja el reporte visible
+      # en los logs para revisarlo. Solo las HIGH/CRITICAL se muestran resaltadas.
       - name: Audit de seguridad (informativo)
-        run: npm audit --omit=dev || true
+        run: |
+          echo "=== npm audit (informativo, no bloquea) ==="
+          npm audit --omit=dev || true
+          echo "=== vulnerabilidades high/critical (si las hay) ==="
+          npm audit --omit=dev --audit-level=high || true
+
+  security:
+    # Job separado: verifica que el hardening de RLS sigue en pie.
+    # Si una migración reabre el acceso anónimo a tablas sensibles, FALLA.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Smoke test de RLS (anon no debe leer tablas sensibles)
+        run: node scripts/rls-smoke-test.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
