@@ -15,7 +15,6 @@ import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableOrders } from "@/hooks/useTableOrders"
 import { getTemplateDesign } from "@/lib/menu/templates"
-import { flyToCart } from "@/lib/customer/fly-to-cart"
 import type { MenuData } from "@/types/menu"
 import type { Product } from "@/types/product"
 import { useTableCartStore } from "@/store/tableCartStore"
@@ -35,212 +34,68 @@ function isNewProduct(createdAt: string | null | undefined) {
 
 type ProductCardProps = {
   item: Product
-  tableId: number | null
-  restaurantId: number | null
   isPopular?: boolean
-  onAdded?: (name: string) => void
   onOpenDetail: (item: Product) => void
 }
 
-function ProductCard({ item, tableId, restaurantId, isPopular, onAdded, onOpenDetail }: ProductCardProps) {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [showVariants, setShowVariants] = useState(false)
-  const { items, addItem, updateQuantity, removeItem } = useTableCart(tableId, restaurantId)
+function ProductCard({ item, isPopular, onOpenDetail }: ProductCardProps) {
   const variants = item.product_variants ?? []
   const hasVariants = variants.length > 0
   const isAgotado = item.status_id === 2
-  const productItems = items.filter((entry) => entry.productId === item.id)
-  const cartItem = productItems.find((entry) => entry.variantId === null) ?? null
-  const quantity = productItems.reduce((total, entry) => total + entry.quantity, 0)
   const isNew = isNewProduct(item.created_at)
 
-  function addProduct(productId: number, variantId: number | null, price: number) {
-    if (isAgotado || !tableId || !restaurantId) return
-    flyToCart(imgRef.current)
-    addItem({ productId, variantId, price, quantity: 1 })
-    onAdded?.(item.product_name)
-  }
-
-  function handleAdd(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (hasVariants) {
-      setShowVariants(true)
-      return
-    }
-    addProduct(item.id, null, item.product_price)
-  }
-
-  function handleSubtract(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!cartItem) return
-    if (cartItem.quantity === 1) {
-      removeItem(cartItem.id)
-      return
-    }
-    updateQuantity(cartItem.id, cartItem.quantity - 1)
-  }
-
   return (
-    <>
-      <article
-        className={`group relative flex min-h-[128px] items-stretch overflow-hidden rounded-[26px] border border-[#1f1f23] bg-[#161618] transition active:scale-[0.985] ${
-          isAgotado ? "opacity-60" : ""
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => onOpenDetail(item)}
-          className="flex min-w-0 flex-1 items-stretch text-left"
-        >
-          <div className="relative w-[128px] shrink-0">
-            <ProductImage
-              src={item.product_image}
-              alt={item.product_name}
-              className="h-full w-full"
-              imgRef={imgRef}
-              hasBackground={!item.image_recortada}
-              fade="right"
-            />
-            <div className="absolute left-2.5 top-2.5 z-[3] flex flex-col items-start gap-1.5">
-              {isAgotado ? (
-                <span className="rounded-full bg-[#dc2626] px-2 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-white">
-                  Agotado
-                </span>
-              ) : isNew ? (
-                <span className="rounded-full bg-[#fb923c] px-2 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-[#1a1a1a]">
-                  Nuevo
-                </span>
-              ) : null}
-              {isPopular && !isAgotado ? (
-                <span className="rounded-full bg-black/55 px-2 py-[3px] text-[9px] font-bold text-[#fbbf24] backdrop-blur">
-                  ★ Popular
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col justify-center px-1 py-3.5">
-            <h3 className="line-clamp-2 font-[family-name:var(--font-grotesk)] text-[16px] font-bold leading-tight tracking-[-0.01em] text-[#fafafa]">
-              {item.product_name}
-            </h3>
-            {item.product_description ? (
-              <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[#a1a1aa]">
-                {item.product_description}
-              </p>
-            ) : null}
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="font-[family-name:var(--font-grotesk)] text-[17px] font-extrabold text-[#fb923c]">
-                {hasVariants
-                  ? `Desde ${formatPrice(Math.min(...variants.map((variant) => variant.variant_price)))}`
-                  : formatPrice(item.product_price)}
-              </span>
-            </div>
-          </div>
-        </button>
-
-        <div className="flex shrink-0 items-center pr-2.5">
-          {!hasVariants && quantity > 0 ? (
-            <div className="flex items-center gap-1 rounded-full border border-[#27272a] bg-[#18181b] p-1">
-              <button
-                type="button"
-                onClick={handleSubtract}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-[#fafafa]"
-                aria-label={`Quitar ${item.product_name}`}
-              >
-                −
-              </button>
-              <span className="min-w-5 text-center text-sm font-extrabold text-[#fafafa]">{quantity}</span>
-              <button
-                type="button"
-                onClick={handleAdd}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fb923c] text-lg font-bold text-[#1a1a1a]"
-                aria-label={`Agregar otro ${item.product_name}`}
-              >
-                +
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              disabled={isAgotado || !tableId}
-              onClick={handleAdd}
-              className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#fb923c] text-2xl font-light leading-none text-[#1a1a1a] transition active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label={hasVariants ? `Elegir variante de ${item.product_name}` : `Agregar ${item.product_name}`}
-            >
-              +
-            </button>
-          )}
+    <button
+      type="button"
+      onClick={() => onOpenDetail(item)}
+      className={`group relative flex min-h-[128px] w-full items-stretch overflow-hidden rounded-[26px] border border-[#1f1f23] bg-[#161618] text-left transition active:scale-[0.985] ${
+        isAgotado ? "opacity-60" : ""
+      }`}
+    >
+      <div className="relative w-[128px] shrink-0">
+        <ProductImage
+          src={item.product_image}
+          alt={item.product_name}
+          className="h-full w-full"
+          hasBackground={!item.image_recortada}
+          fade="right"
+        />
+        <div className="absolute left-2.5 top-2.5 z-[3] flex flex-col items-start gap-1.5">
+          {isAgotado ? (
+            <span className="rounded-full bg-[#dc2626] px-2 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-white">
+              Agotado
+            </span>
+          ) : isNew ? (
+            <span className="rounded-full bg-[#fb923c] px-2 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-[#1a1a1a]">
+              Nuevo
+            </span>
+          ) : null}
+          {isPopular && !isAgotado ? (
+            <span className="rounded-full bg-black/55 px-2 py-[3px] text-[9px] font-bold text-[#fbbf24] backdrop-blur">
+              ★ Popular
+            </span>
+          ) : null}
         </div>
-      </article>
+      </div>
 
-      {showVariants ? (
-        <div className="animate-overlay-fade fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:pb-0">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`variant-title-${item.id}`}
-            className="animate-sheet-up relative w-full max-w-sm overflow-hidden rounded-[28px] border border-[#27272a] bg-[#0f0f10] p-5 text-[#fafafa] shadow-2xl"
-          >
-            <button
-              type="button"
-              onClick={() => setShowVariants(false)}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#18181b] text-xl text-[#a1a1aa] ring-1 ring-[#27272a]"
-              aria-label="Cerrar selector de variantes"
-            >
-              ×
-            </button>
-
-            <div className="pr-12">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#fb923c]">
-                Elige una opcion
-              </p>
-              <h2
-                id={`variant-title-${item.id}`}
-                className="mt-1 font-[family-name:var(--font-grotesk)] text-2xl font-bold tracking-tight text-[#fafafa]"
-              >
-                {item.product_name}
-              </h2>
-            </div>
-
-            <div className="mt-5 space-y-2.5">
-              {variants.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  onClick={() => {
-                    addProduct(item.id, variant.id, variant.variant_price)
-                    setShowVariants(false)
-                  }}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-[#27272a] bg-[#18181b] p-3 text-left transition hover:border-[#fb923c]/60"
-                >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#0f0f10]">
-                    {variant.variant_image || item.product_image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={variant.variant_image ?? item.product_image ?? ""}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-extrabold text-[#fafafa]">{variant.variant_name}</span>
-                    <span className="mt-1 block text-sm font-bold text-[#fb923c]">
-                      {formatPrice(variant.variant_price)}
-                    </span>
-                  </span>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fb923c] text-xl text-[#1a1a1a]">
-                    +
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+      <div className="flex min-w-0 flex-1 flex-col justify-center py-3.5 pl-1 pr-4">
+        <h3 className="line-clamp-2 font-[family-name:var(--font-grotesk)] text-[16px] font-bold leading-tight tracking-[-0.01em] text-[#fafafa]">
+          {item.product_name}
+        </h3>
+        {item.product_description ? (
+          <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[#a1a1aa]">
+            {item.product_description}
+          </p>
+        ) : null}
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="font-[family-name:var(--font-grotesk)] text-[17px] font-extrabold text-[#fb923c]">
+            {hasVariants
+              ? `Desde ${formatPrice(Math.min(...variants.map((variant) => variant.variant_price)))}`
+              : formatPrice(item.product_price)}
+          </span>
         </div>
-      ) : null}
-    </>
+      </div>
+    </button>
   )
 }
 
@@ -519,10 +374,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                 <ProductCard
                   key={item.id}
                   item={item}
-                  tableId={tableId ?? null}
-                  restaurantId={restaurant?.id ?? null}
                   isPopular={recommendations.some((r) => r.id === item.id)}
-                  onAdded={(name) => setToast(`${name} agregado`)}
                   onOpenDetail={setDetailProduct}
                 />
               ))}
