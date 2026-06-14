@@ -1,7 +1,8 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { useUploadImage } from "@/hooks/useUploadImage"
+import { trimTransparentEdges } from "@/lib/image-processing"
 
 type LogoUploaderProps = {
   value: string | null
@@ -11,6 +12,7 @@ type LogoUploaderProps = {
 
 export function LogoUploader({ value, onChange, disabled }: LogoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [formatError, setFormatError] = useState("")
   const { uploadImage, uploading, error } = useUploadImage()
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -18,8 +20,17 @@ export function LogoUploader({ value, onChange, disabled }: LogoUploaderProps) {
     e.target.value = "" // permite re-subir el mismo archivo
     if (!file) return
 
+    setFormatError("")
+    if (file.type !== "image/png") {
+      setFormatError("El logo debe ser un PNG con fondo transparente.")
+      return
+    }
+
+    // Recorta el "aire" transparente para que el dibujo llene el círculo.
+    const trimmed = await trimTransparentEdges(file)
+
     const uploaded = await uploadImage(
-      file,
+      trimmed,
       process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCTS_PRESET!
     )
     if (uploaded) onChange(uploaded.secure_url)
@@ -66,17 +77,17 @@ export function LogoUploader({ value, onChange, disabled }: LogoUploaderProps) {
           )}
         </div>
         <p className="text-[11px] leading-4 text-stone-500">
-          PNG o JPG, idealmente cuadrado. Opcional.
+          Solo PNG con fondo transparente. Opcional.
         </p>
-        {error && (
-          <p className="text-[11px] font-medium text-red-600">{error}</p>
+        {(formatError || error) && (
+          <p className="text-[11px] font-medium text-red-600">{formatError || error}</p>
         )}
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/png"
         onChange={handleFile}
         className="hidden"
       />
