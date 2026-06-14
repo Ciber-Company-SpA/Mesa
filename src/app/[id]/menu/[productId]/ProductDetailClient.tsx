@@ -46,6 +46,7 @@ export function ProductDetailClient({
   const [message, setMessage] = useState("")
   const [qty, setQty] = useState(1)
   const imageRef = useRef<HTMLImageElement | null>(null)
+  const touchStartX = useRef<number | null>(null)
 
   const { syncCart } = useCartSync(product?.restaurant_id ?? null)
   const { addItem } = useTableCart(tableId ?? null, product?.restaurant_id ?? null)
@@ -63,6 +64,22 @@ export function ProductDetailClient({
   const currentStatus = realtimeStatus ?? product.status_id
   const unavailable = currentStatus === 2 || currentStatus === 3
   const currentProductId = product.id
+
+  // Deslizar sobre la imagen para cambiar de variante (además de los chips).
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const start = touchStartX.current
+    touchStartX.current = null
+    if (start === null || variants.length < 2) return
+    const dx = (e.changedTouches[0]?.clientX ?? start) - start
+    if (Math.abs(dx) < 40) return
+    setActiveVariantIndex((i) =>
+      dx < 0 ? Math.min(i + 1, variants.length - 1) : Math.max(i - 1, 0)
+    )
+  }
 
   async function handleAddToCart() {
     if (unavailable || !tableId) return
@@ -95,19 +112,37 @@ export function ProductDetailClient({
   return (
     <main className="min-h-screen bg-black font-[family-name:var(--font-manrope)] text-[#fafafa] sm:py-4">
       <section className="relative mx-auto min-h-screen w-full overflow-hidden bg-[#0f0f10] pb-28 shadow-[0_30px_80px_rgba(0,0,0,0.5)] sm:min-h-[calc(100vh-32px)] sm:max-w-[440px] sm:rounded-[38px] sm:border-[10px] sm:border-[#050506]">
-        <div className="relative h-[300px] overflow-hidden bg-[#0f0f10]">
+        <div
+          className="relative h-[300px] overflow-hidden bg-[#0f0f10]"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <BackButton
             label="‹"
             className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-3xl font-light text-white backdrop-blur"
           />
-          <ProductImage
-            src={activeImage}
-            alt={activeVariant?.variant_name ?? product.product_name}
-            className="h-full w-full"
-            imgRef={imageRef}
-            hasBackground={!product.image_recortada}
-            fade="bottom"
-          />
+          <div key={activeVariantIndex} className="absolute inset-0 animate-image-swap">
+            <ProductImage
+              src={activeImage}
+              alt={activeVariant?.variant_name ?? product.product_name}
+              className="h-full w-full"
+              imgRef={imageRef}
+              hasBackground={!product.image_recortada}
+              fade="bottom"
+            />
+          </div>
+          {variants.length > 1 ? (
+            <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
+              {variants.map((variant, index) => (
+                <span
+                  key={variant.id}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    index === activeVariantIndex ? "w-5 bg-[#fb923c]" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="-mt-3 px-5 pb-8">

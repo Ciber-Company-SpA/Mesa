@@ -151,12 +151,23 @@ html, body {
   animation: overlayFadeOut 0.26s ease forwards;
 }
 
+/* Cambio de imagen al deslizar/elegir variante: funde suave + leve zoom. */
+@keyframes imageSwap {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-image-swap {
+  animation: imageSwap 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-up,
   .animate-sheet-down,
   .animate-overlay-fade,
   .animate-overlay-fade-out,
-  .animate-toast-in {
+  .animate-toast-in,
+  .animate-image-swap {
     animation: none;
   }
 }

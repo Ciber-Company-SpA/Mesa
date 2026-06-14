@@ -38,10 +38,28 @@ export function ProductDetailSheet({
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [closing, setClosing] = useState(false)
 
+  const touchStartX = useRef<number | null>(null)
+
   const activeVariant = variants[Math.min(activeVariantIndex, variants.length - 1)] ?? null
   const activePrice = activeVariant?.variant_price ?? product.product_price
   const activeImage = activeVariant?.variant_image ?? product.product_image
   const isAgotado = product.status_id === 2
+
+  // Deslizar sobre la imagen para cambiar de variante (además de los chips).
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const start = touchStartX.current
+    touchStartX.current = null
+    if (start === null || variants.length < 2) return
+    const dx = (e.changedTouches[0]?.clientX ?? start) - start
+    if (Math.abs(dx) < 40) return
+    setActiveVariantIndex((i) =>
+      dx < 0 ? Math.min(i + 1, variants.length - 1) : Math.max(i - 1, 0)
+    )
+  }
 
   // Cierre con animación de salida: dispara el slide-down + fade-out y recién
   // entonces desmonta (onClose) cuando termina.
@@ -79,15 +97,21 @@ export function ProductDetailSheet({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative h-[280px] shrink-0 overflow-hidden bg-[#0f0f10]">
-          <ProductImage
-            src={activeImage}
-            alt={activeVariant?.variant_name ?? product.product_name}
-            className="h-full w-full"
-            imgRef={imgRef}
-            hasBackground={!product.image_recortada}
-            fade="bottom"
-          />
+        <div
+          className="relative h-[280px] shrink-0 overflow-hidden bg-[#0f0f10]"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div key={activeVariantIndex} className="absolute inset-0 animate-image-swap">
+            <ProductImage
+              src={activeImage}
+              alt={activeVariant?.variant_name ?? product.product_name}
+              className="h-full w-full"
+              imgRef={imgRef}
+              hasBackground={!product.image_recortada}
+              fade="bottom"
+            />
+          </div>
           <button
             type="button"
             onClick={requestClose}
@@ -96,6 +120,18 @@ export function ProductDetailSheet({
           >
             ‹
           </button>
+          {variants.length > 1 ? (
+            <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
+              {variants.map((variant, index) => (
+                <span
+                  key={variant.id}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    index === activeVariantIndex ? "w-5 bg-[#fb923c]" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
