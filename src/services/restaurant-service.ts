@@ -201,9 +201,17 @@ export async function updateRestaurantCity(
   return ok(null)
 }
 
+const LogoUrlSchema = z
+  .string()
+  .trim()
+  .url("URL de logo inválida")
+  .max(500, "URL demasiado larga")
+  .nullable()
+
 const CompleteOnboardingSchema = z.object({
   restaurantName: z.string().trim().min(1, "El nombre del restaurante no puede estar vacío").max(60, "Máximo 60 caracteres"),
   adminName: z.string().trim().min(1, "Tu nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
+  restaurantLogo: LogoUrlSchema.optional(),
 })
 
 export type CompleteOnboardingInput = z.infer<typeof CompleteOnboardingSchema>
@@ -221,10 +229,17 @@ export async function completeOnboarding(
 
   const { supabase, restaurantId } = auth.data
 
+  const restaurantUpdate: { restaurant_name: string; restaurant_logo?: string | null } = {
+    restaurant_name: parsed.data.restaurantName,
+  }
+  if (parsed.data.restaurantLogo !== undefined) {
+    restaurantUpdate.restaurant_logo = parsed.data.restaurantLogo
+  }
+
   const [restaurantRes, userRes] = await Promise.all([
     supabase
       .from("restaurants")
-      .update({ restaurant_name: parsed.data.restaurantName })
+      .update(restaurantUpdate)
       .eq("id", restaurantId),
     supabase.rpc("update_own_user_name", { p_user_name: parsed.data.adminName }),
   ])
@@ -232,6 +247,37 @@ export async function completeOnboarding(
   if (restaurantRes.error || userRes.error) {
     return fail("No se pudo completar la configuración inicial")
   }
+
+  revalidateTag("menu", "max")
+  revalidatePath("/[id]/menu", "page")
+  return ok(null)
+}
+
+const UpdateRestaurantLogoSchema = z.object({
+  logo: LogoUrlSchema,
+})
+
+export type UpdateRestaurantLogoInput = z.infer<typeof UpdateRestaurantLogoSchema>
+
+export async function updateRestaurantLogo(
+  input: UpdateRestaurantLogoInput
+): Promise<Result<null>> {
+  const parsed = UpdateRestaurantLogoSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ restaurant_logo: parsed.data.logo })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar el logo")
 
   revalidateTag("menu", "max")
   revalidatePath("/[id]/menu", "page")

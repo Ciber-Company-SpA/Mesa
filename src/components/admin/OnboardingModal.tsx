@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { invalidateCache } from "@/hooks/useCache"
 import { completeOnboarding } from "@/services/restaurant-service"
+import { LogoUploader } from "@/components/admin/LogoUploader"
 
 const DEFAULT_RESTAURANT_NAME = "Restaurante sin nombre"
 
@@ -12,6 +13,7 @@ export function OnboardingModal() {
   const { restaurant, loading, refresh } = useRestaurant()
 
   const [restaurantName, setRestaurantName] = useState("")
+  const [restaurantLogo, setRestaurantLogo] = useState<string | null>(null)
   const [adminName, setAdminName] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -41,6 +43,7 @@ export function OnboardingModal() {
       const result = await completeOnboarding({
         restaurantName: restaurantName.trim(),
         adminName: adminName.trim(),
+        restaurantLogo,
       })
       if (!result.ok) {
         setError(result.error)
@@ -94,6 +97,17 @@ export function OnboardingModal() {
               onChange={(e) => setRestaurantName(e.target.value)}
               placeholder="Ej. Pizzería Roma"
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-500">
+              Logo <span className="font-medium normal-case tracking-normal text-stone-400">(opcional)</span>
+            </label>
+            <LogoUploader
+              value={restaurantLogo}
+              onChange={setRestaurantLogo}
+              disabled={saving}
             />
           </div>
 

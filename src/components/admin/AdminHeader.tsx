@@ -150,9 +150,18 @@ export function AdminHeader() {
         {/* FILA SUPERIOR: Info local y Acciones rapidas */}
         <div className="flex h-16 items-center justify-between gap-4 border-b border-stone-100 py-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-100 text-xl font-bold shadow-inner">
-              M
-            </span>
+            {restaurant?.restaurant_logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={restaurant.restaurant_logo}
+                alt={restaurant.restaurant_name ?? "Logo"}
+                className="h-9 w-9 rounded-2xl border border-stone-200 object-cover shadow-inner"
+              />
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-100 text-xl font-bold shadow-inner">
+                M
+              </span>
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold tracking-tight text-stone-900 sm:text-xl">

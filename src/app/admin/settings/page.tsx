@@ -11,8 +11,10 @@ import {
   updateOrderDestination,
   updateOutputMode,
   updateRestaurantCity,
+  updateRestaurantLogo,
   updateRestaurantName,
 } from "@/services/restaurant-service"
+import { LogoUploader } from "@/components/admin/LogoUploader"
 import { MENU_TEMPLATES, getTemplateDesign } from "@/lib/menu/templates"
 import type { MenuTemplate, OrderDestination, OutputMode, Restaurant } from "@/types/restaurant"
 import type { Category } from "@/types/category"
@@ -299,6 +301,62 @@ function RestaurantNameSection({ currentName, onSaved }: RestaurantNameSectionPr
           <span className="text-xs font-medium text-stone-400">Sin cambios.</span>
         )}
       </div>
+    </section>
+  )
+}
+
+type RestaurantLogoSectionProps = {
+  currentLogo: string | null | undefined
+  onSaved: () => void
+}
+
+function RestaurantLogoSection({ currentLogo, onSaved }: RestaurantLogoSectionProps) {
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  async function handleChange(url: string | null) {
+    if (saving) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const result = await updateRestaurantLogo({ logo: url })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      onSaved()
+      setFeedback({ kind: "ok", message: url ? "Logo actualizado" : "Logo quitado" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Logo del restaurante</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Aparece en el menú público y en el panel. Es opcional.
+      </p>
+
+      <div className="mt-5">
+        <LogoUploader
+          value={currentLogo ?? null}
+          onChange={handleChange}
+          disabled={saving}
+        />
+      </div>
+
+      {feedback && (
+        <p
+          className={`mt-4 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
     </section>
   )
 }
@@ -878,6 +936,14 @@ export default function AdminSettingsPage() {
 
       <RestaurantNameSection
         currentName={restaurant?.restaurant_name}
+        onSaved={() => {
+          if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+          refresh()
+        }}
+      />
+
+      <RestaurantLogoSection
+        currentLogo={restaurant?.restaurant_logo}
         onSaved={() => {
           if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
           refresh()
