@@ -22,17 +22,17 @@ type RpcRow = {
 }
 
 export async function getTopProductsToday(
-  restaurantId: number,
-  limit = 3,
-  fromIso?: string | null
+  qrCode: string,
+  limit = 3
 ): Promise<Result<RecommendedProduct[]>> {
-  if (!restaurantId || restaurantId <= 0) return fail("Restaurante inválido")
+  if (!qrCode) return fail("QR inválido")
 
   const supabase = createSupabaseAnonClient()
-  const { data, error } = await supabase.rpc("get_top_products_today", {
-    p_restaurant_id: restaurantId,
+  // El restaurante y el inicio del día se derivan server-side del token QR;
+  // el cliente no controla el restaurante ni la fecha (sin fuga entre tenants).
+  const { data, error } = await supabase.rpc("get_top_products_today_qr", {
+    p_qr_token: qrCode,
     p_limit: limit,
-    p_from: fromIso ?? null,
   })
   if (error) return fail(error.message ?? "No se pudo cargar recomendaciones")
 

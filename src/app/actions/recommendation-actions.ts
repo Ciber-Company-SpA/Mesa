@@ -7,9 +7,8 @@ import {
 import type { Result } from "@/services/result"
 
 export async function getTopProductsTodayAction(
-  restaurantId: number,
-  limit = 3,
-  fromIso?: string | null
+  qrCode: string,
+  limit = 3
 ): Promise<Result<RecommendedProduct[]>> {
-  return getTopProductsTodayService(restaurantId, limit, fromIso)
+  return getTopProductsTodayService(qrCode, limit)
 }
