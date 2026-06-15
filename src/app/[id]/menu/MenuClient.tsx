@@ -148,7 +148,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const [showReco, setShowReco] = useState(false)
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeCat, setActiveCat] = useState<number | null>(null)
+  const [activeCat, setActiveCat] = useState<number | "all">("all")
   const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
   const [toast, setToast] = useState<string | null>(null)
   const [detailProduct, setDetailProduct] = useState<Product | null>(null)
@@ -257,12 +257,13 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     [categories, availableProducts]
   )
 
-  // Categoría efectiva: la activa si sigue siendo válida; si no, la primera
-  // visible. Se deriva en render (sin setState en efecto) para que el primer
-  // render ya muestre productos y no parpadee el estado vacío.
-  const effectiveCat = useMemo(() => {
-    if (activeCat != null && visibleCategories.some((c) => c.id === activeCat)) return activeCat
-    return visibleCategories[0]?.id ?? null
+  // Categoría efectiva: "all" (Todos) por defecto, o la activa si sigue siendo
+  // válida; si la activa ya no existe, vuelve a "all". Se deriva en render (sin
+  // setState en efecto) para que el primer render ya muestre productos.
+  const effectiveCat = useMemo<number | "all">(() => {
+    if (activeCat === "all") return "all"
+    if (visibleCategories.some((c) => c.id === activeCat)) return activeCat
+    return "all"
   }, [activeCat, visibleCategories])
 
   const searchedProducts = useMemo(() => {
@@ -278,6 +279,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const isSearching = searchQuery.trim().length > 0
   const displayedProducts = useMemo(() => {
     if (isSearching) return searchedProducts
+    if (effectiveCat === "all") return availableProducts
     return availableProducts.filter((p) => p.category_id === effectiveCat)
   }, [isSearching, searchedProducts, availableProducts, effectiveCat])
 
@@ -365,6 +367,17 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
           {!isSearching && visibleCategories.length > 0 ? (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <button
+                type="button"
+                onClick={() => setActiveCat("all")}
+                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition ${
+                  effectiveCat === "all"
+                    ? "bg-[#fb923c] text-[#1a1a1a]"
+                    : "border border-[#27272a] bg-[#18181b] text-[#d4d4d8]"
+                }`}
+              >
+                Todos
+              </button>
               {visibleCategories.map((cat) => {
                 const active = cat.id === effectiveCat
                 return (
