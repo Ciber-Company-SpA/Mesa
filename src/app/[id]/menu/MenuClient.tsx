@@ -44,11 +44,22 @@ function ProductCard({ item, isPopular, onOpenDetail }: ProductCardProps) {
   const isAgotado = item.status_id === 2
   const isNew = isNewProduct(item.created_at)
 
+  function open() {
+    onOpenDetail(item)
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onOpenDetail(item)}
-      className={`group relative flex min-h-[128px] w-full items-stretch overflow-hidden rounded-[26px] border border-[#1f1f23] bg-[#161618] text-left transition active:scale-[0.985] ${
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          open()
+        }
+      }}
+      className={`group relative flex min-h-[128px] w-full cursor-pointer items-stretch overflow-hidden rounded-[26px] border border-[#1f1f23] bg-[#161618] text-left transition active:scale-[0.985] ${
         isAgotado ? "opacity-60" : ""
       }`}
     >
@@ -78,7 +89,7 @@ function ProductCard({ item, isPopular, onOpenDetail }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center py-3.5 pl-1 pr-4">
+      <div className="flex min-w-0 flex-1 flex-col justify-center py-3.5 pl-1 pr-2">
         <h3 className="line-clamp-2 font-[family-name:var(--font-grotesk)] text-[16px] font-bold leading-tight tracking-[-0.01em] text-[#fafafa]">
           {item.product_name}
         </h3>
@@ -95,7 +106,22 @@ function ProductCard({ item, isPopular, onOpenDetail }: ProductCardProps) {
           </span>
         </div>
       </div>
-    </button>
+
+      {/* El "+" no agrega directo: lleva al detalle (igual que tocar la card). */}
+      <div className="flex shrink-0 items-center pr-3">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            open()
+          }}
+          aria-label={`Ver ${item.product_name}`}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fb923c] text-[22px] font-light leading-none text-[#1a1a1a] shadow-[0_8px_18px_rgba(251,146,60,0.22)] transition active:scale-90"
+        >
+          +
+        </button>
+      </div>
+    </div>
   )
 }
 
