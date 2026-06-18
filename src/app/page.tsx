@@ -2,312 +2,205 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import mesaLogo from "@/image/MESA.svg"
 
-const css = `
-.mesa-landing{
-  --orange:#F2701E; --orange-d:#D85B12; --orange-soft:#FDEFE4;
-  --ink:#0F2740; --ink-2:#1B3A5B;
-  --text:#1A1512; --muted:#6C6A66;
-  --bg:#FFFFFF; --panel:#F7F5F2; --line:#E9E5DF; --line-2:#DED9D1;
-  --r:16px; --r-lg:24px;
-  --shadow:0 1px 2px rgba(16,39,64,.04), 0 12px 32px -12px rgba(16,39,64,.12);
-  --shadow-lg:0 2px 6px rgba(16,39,64,.05), 0 40px 80px -24px rgba(16,39,64,.22);
-  --maxw:1200px;
-  --sans:var(--font-manrope),"Manrope",system-ui,sans-serif;
-  --disp:var(--font-grotesk),"Space Grotesk","Manrope",sans-serif;
-  font-family:var(--sans);color:var(--text);background:var(--bg);
-  -webkit-font-smoothing:antialiased;line-height:1.5;width:100%;
+/* ===================================================================== *
+ * Landing pública (marketing) — diseño "Mesa" (Fraunces + coral/pino).
+ * Migrado a Tailwind. Las fuentes (Fraunces, Inter, JetBrains Mono) se
+ * cargan en layout.tsx como variables CSS. Las animaciones (marquee, scan
+ * del QR, float, reveal-on-scroll) viven en globals.css con prefijo mesa-.
+ * ===================================================================== */
+
+const SANS = "font-[family-name:var(--font-inter)]"
+const DISP = "font-[family-name:var(--font-fraunces)]"
+const MONO = "font-[family-name:var(--font-jetbrains)]"
+
+function LogoMark({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="729.7 243.3 441.3 374.5" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="#F87604" d="M1097.8,471.4h-302.04c.86-67.86,74.69-125.23,142.8-129.56v-9.41c-6.41-3.07-10.84-9.68-10.84-17.3,0-10.59,8.53-19.18,19.07-19.18s19.08,8.59,19.08,19.18c0,7.62-4.43,14.21-10.84,17.3v9.39c68.7,4.28,142.78,61.09,142.78,129.57Z" />
+      <path fill="#fff" d="M850.5,463.29s5.31-62.47,63.74-95.57c0,0-76.49,6.41-84.98,95.57h21.25Z" />
+      <path fill="currentColor" d="M1159.34,486.79c-1.05,18.68-16.57,33.62-35.42,33.62h-136.98c-15.37,0-18.76,39.39-19.48,53.06-.08,1.51.73,2.93,2.08,3.61l50.73,25.93h-139.16l50.53-25.84c1.34-.69,2.15-2.1,2.08-3.61-.7-13.58-4.08-53.15-19.48-53.15h-138.44c-18.85,0-34.37-14.95-35.42-33.62h418.96Z" />
+      <line stroke="#fff" strokeMiterlimit="10" strokeWidth="1.56" x1="1159.34" y1="486.79" x2="740.37" y2="486.79" />
+      <polygon fill="currentColor" points="837.83 247.27 837.83 309.3 815.12 309.3 815.12 272.46 756.57 272.46 756.57 337.42 793.45 337.42 793.45 362.59 733.85 362.59 733.85 247.27 837.83 247.27" />
+      <polygon fill="currentColor" points="1063.1 247.27 1063.1 309.3 1085.8 309.3 1085.8 272.46 1144.36 272.46 1144.36 337.42 1107.47 337.42 1107.47 362.59 1167.07 362.59 1167.07 247.27 1063.1 247.27" />
+      <polygon fill="currentColor" points="1166.88 539.91 1166.88 613.76 1062.9 613.76 1062.9 551.73 1085.6 551.73 1085.6 588.57 1144.16 588.57 1144.16 539.91 1166.88 539.91" />
+      <polygon fill="currentColor" points="733.73 539.91 733.73 613.76 837.7 613.76 837.7 551.73 815 551.73 815 588.57 756.45 588.57 756.45 539.91 733.73 539.91" />
+      <rect fill="currentColor" x="870.02" y="247.27" width="25.4" height="25.53" />
+      <rect fill="currentColor" x="733.85" y="389.98" width="25.4" height="25.53" />
+      <rect fill="currentColor" x="1141.48" y="389.98" width="25.4" height="25.53" />
+      <rect fill="currentColor" x="1006.66" y="247.27" width="25.4" height="25.53" />
+    </svg>
+  )
 }
-.mesa-landing *{box-sizing:border-box}
-.mesa-landing h1,.mesa-landing h2,.mesa-landing h3,.mesa-landing h4{font-family:var(--disp);margin:0;line-height:1.05;letter-spacing:-.02em;font-weight:700}
-.mesa-landing p{margin:0}
-.mesa-landing a{color:inherit;text-decoration:none}
-.mesa-landing img{display:block;max-width:100%}
-.mesa-landing .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
-.mesa-landing .eyebrow{font-family:var(--sans);font-weight:700;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
-.mesa-landing .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--sans);font-weight:700;font-size:15px;padding:13px 20px;border-radius:999px;border:1px solid transparent;cursor:pointer;transition:.18s ease;white-space:nowrap}
-.mesa-landing .btn svg{width:17px;height:17px}
-.mesa-landing .btn-primary{background:var(--orange);color:#fff}
-.mesa-landing .btn-primary:hover{background:var(--orange-d);transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(242,112,30,.6)}
-.mesa-landing .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
-.mesa-landing .btn-ghost:hover{border-color:var(--ink);background:#fff}
-.mesa-landing .btn-dark{background:var(--ink);color:#fff}
-.mesa-landing .btn-dark:hover{background:var(--ink-2);transform:translateY(-1px)}
 
-.mesa-landing header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .2s,box-shadow .2s}
-.mesa-landing header.nav.scrolled{border-color:var(--line);box-shadow:0 6px 24px -18px rgba(16,39,64,.4)}
-.mesa-landing .nav-in{display:flex;align-items:center;justify-content:space-between;height:72px}
-.mesa-landing .brand{display:flex;align-items:center;gap:10px}
-.mesa-landing .brand img{height:34px}
-.mesa-landing .nav-links{display:flex;align-items:center;gap:6px}
-.mesa-landing .nav-links a{font-weight:600;font-size:15px;color:#3a3733;padding:9px 14px;border-radius:10px;transition:.15s}
-.mesa-landing .nav-links a:hover{background:var(--panel);color:var(--text)}
-.mesa-landing .nav-cta{display:flex;align-items:center;gap:10px}
-.mesa-landing .nav-toggle{display:none;background:none;border:1px solid var(--line-2);border-radius:10px;width:42px;height:42px;cursor:pointer;align-items:center;justify-content:center}
-.mesa-landing .nav-toggle svg{width:20px;height:20px}
-
-.mesa-landing .hero{position:relative;overflow:hidden;padding:74px 0 40px}
-.mesa-landing .hero::before{content:"";position:absolute;inset:0;background:
-  radial-gradient(680px 420px at 88% -8%, rgba(242,112,30,.10), transparent 60%),
-  radial-gradient(620px 500px at 8% 110%, rgba(15,39,64,.05), transparent 60%);pointer-events:none}
-.mesa-landing .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:54px;align-items:center;position:relative}
-.mesa-landing .badge{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px 7px 8px;font-weight:600;font-size:13.5px;color:#4a4742;box-shadow:var(--shadow)}
-.mesa-landing .badge .dot{display:inline-flex;align-items:center;gap:6px;background:var(--orange-soft);color:var(--orange-d);font-weight:700;font-size:11px;letter-spacing:.04em;padding:4px 9px;border-radius:999px}
-.mesa-landing h1.hero-title{font-size:clamp(38px,5.2vw,62px);margin:22px 0 0;letter-spacing:-.03em}
-.mesa-landing h1.hero-title .hl{color:var(--orange)}
-.mesa-landing .hero p.lead{font-size:19px;color:var(--muted);max-width:30em;margin:20px 0 0;line-height:1.55}
-.mesa-landing .hero-cta{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
-.mesa-landing .hero-meta{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
-.mesa-landing .hero-meta .m{display:flex;flex-direction:column;gap:2px}
-.mesa-landing .hero-meta .m b{font-family:var(--disp);font-size:22px}
-.mesa-landing .hero-meta .m span{font-size:13px;color:var(--muted)}
-
-.mesa-landing .mock{background:#0F2740;border-radius:26px;padding:14px;box-shadow:var(--shadow-lg);position:relative}
-.mesa-landing .mock .screen{background:#fff;border-radius:16px;overflow:hidden}
-.mesa-landing .mock-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
-.mesa-landing .mock-top .t{font-family:var(--disp);font-weight:700;font-size:14px}
-.mesa-landing .mock-dots{display:flex;gap:6px}
-.mesa-landing .mock-dots i{width:9px;height:9px;border-radius:50%;background:var(--line-2)}
-.mesa-landing .mock-body{padding:16px}
-.mesa-landing .stat-row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}
-.mesa-landing .stat{border:1px solid var(--line);border-radius:14px;padding:13px 14px}
-.mesa-landing .stat .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.mesa-landing .stat .big{font-family:var(--disp);font-size:26px;font-weight:700;margin-top:6px}
-.mesa-landing .stat.accent{background:var(--orange);border-color:var(--orange)}
-.mesa-landing .stat.accent .lbl,.mesa-landing .stat.accent .big,.mesa-landing .stat.accent small{color:#fff}
-.mesa-landing .stat small{font-size:11px;color:var(--muted)}
-.mesa-landing .orders{margin-top:14px;display:flex;flex-direction:column;gap:8px}
-.mesa-landing .orders .head{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px}
-.mesa-landing .orders .head a{color:var(--orange);text-transform:none;letter-spacing:0;font-size:11px}
-.mesa-landing .order{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:11px 13px;transition:.15s}
-.mesa-landing .order:hover{border-color:var(--orange);box-shadow:0 8px 20px -14px rgba(242,112,30,.6)}
-.mesa-landing .order .who b{font-size:14px;font-family:var(--disp)}
-.mesa-landing .order .who span{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
-.mesa-landing .pill{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px}
-.mesa-landing .pill.new{background:var(--orange-soft);color:var(--orange-d)}
-.mesa-landing .pill.prep{background:#0F2740;color:#fff}
-.mesa-landing .pill.done{background:#E7F4EC;color:#1E7A48}
-.mesa-landing .qr-float{position:absolute;right:-16px;bottom:24px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:11px;border:1px solid var(--line)}
-.mesa-landing .qr-float .qr{width:46px;height:46px;border-radius:8px;background:
-  repeating-linear-gradient(0deg,#0F2740 0 4px,#fff 4px 8px),
-  repeating-linear-gradient(90deg,#0F2740 0 4px,transparent 4px 8px);background-blend-mode:multiply;border:2px solid #0F2740}
-.mesa-landing .qr-float .txt b{font-size:13px;font-family:var(--disp);display:block}
-.mesa-landing .qr-float .txt span{font-size:11px;color:var(--muted)}
-
-.mesa-landing section.sec{padding:92px 0}
-.mesa-landing .sec-head{max-width:640px}
-.mesa-landing .sec-head h2{font-size:clamp(28px,3.6vw,42px);margin-top:14px}
-.mesa-landing .sec-head p{color:var(--muted);font-size:18px;margin-top:14px;line-height:1.55}
-.mesa-landing .center{margin-left:auto;margin-right:auto;text-align:center}
-
-.mesa-landing .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}
-.mesa-landing .card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:26px;transition:.2s;position:relative;overflow:hidden}
-.mesa-landing .card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--line-2)}
-.mesa-landing .card .ic{width:46px;height:46px;border-radius:13px;background:var(--orange-soft);color:var(--orange-d);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
-.mesa-landing .card .ic svg{width:23px;height:23px}
-.mesa-landing .card h3{font-size:20px}
-.mesa-landing .card p{color:var(--muted);font-size:15px;margin-top:9px;line-height:1.55}
-
-.mesa-landing .ai{margin-top:24px;background:linear-gradient(135deg,#0F2740,#16395B);border-radius:32px;color:#fff;padding:48px;display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;overflow:hidden;position:relative}
-.mesa-landing .ai::after{content:"";position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(242,112,30,.4),transparent 70%);top:-120px;right:-80px}
-.mesa-landing .ai .tag{display:inline-flex;align-items:center;gap:8px;background:rgba(242,112,30,.18);color:#FFC79A;border:1px solid rgba(242,112,30,.35);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
-.mesa-landing .ai h2{font-size:clamp(26px,3vw,38px);margin-top:18px;color:#fff}
-.mesa-landing .ai p{color:#B9C6D6;font-size:17px;margin-top:14px;line-height:1.6}
-.mesa-landing .ai ol{margin:22px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
-.mesa-landing .ai ol li{display:flex;gap:13px;align-items:flex-start;font-size:15px;color:#DCE4EE}
-.mesa-landing .ai ol li .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--orange);color:#fff;font-family:var(--disp);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
-.mesa-landing .ai-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:20px;position:relative;z-index:1;backdrop-filter:blur(6px)}
-.mesa-landing .ai-card .file{display:flex;align-items:center;gap:12px;padding:13px;background:rgba(255,255,255,.06);border-radius:12px;border:1px solid rgba(255,255,255,.1)}
-.mesa-landing .ai-card .file .fi{width:38px;height:38px;border-radius:9px;background:var(--orange);display:flex;align-items:center;justify-content:center}
-.mesa-landing .ai-card .file b{font-size:14px}.mesa-landing .ai-card .file span{font-size:12px;color:#9fb0c4}
-.mesa-landing .ai-card .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:14px;overflow:hidden}
-.mesa-landing .ai-card .bar i{display:block;height:100%;width:78%;background:var(--orange);border-radius:99px}
-.mesa-landing .detect{margin-top:16px;display:flex;flex-direction:column;gap:9px}
-.mesa-landing .detect .it{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:11px 13px}
-.mesa-landing .detect .it b{font-size:13.5px}.mesa-landing .detect .it span{font-size:13px;color:#9fb0c4}
-.mesa-landing .detect .it .conf{font-size:11px;font-weight:700;color:#86E0A8;background:rgba(46,160,90,.18);padding:3px 8px;border-radius:99px}
-.mesa-landing .detect .it .conf.warn{color:#FFC79A;background:rgba(242,112,30,.18)}
-
-.mesa-landing .views{margin-top:44px}
-.mesa-landing .tabbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.mesa-landing .tab{font-family:var(--sans);font-weight:700;font-size:15px;padding:11px 20px;border-radius:999px;border:1px solid var(--line-2);background:#fff;color:#4a4742;cursor:pointer;transition:.16s}
-.mesa-landing .tab:hover{border-color:var(--ink)}
-.mesa-landing .tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.mesa-landing .tab-panels{margin-top:28px}
-.mesa-landing .panel{display:none;grid-template-columns:1fr 1fr;gap:40px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:40px}
-.mesa-landing .panel.active{display:grid;animation:mesaFade .35s ease}
-@keyframes mesaFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.mesa-landing .panel .pi{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--orange)}
-.mesa-landing .panel h3{font-size:28px;margin-top:12px}
-.mesa-landing .panel p{color:var(--muted);font-size:16px;margin-top:12px;line-height:1.6}
-.mesa-landing .panel ul{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
-.mesa-landing .panel ul li{display:flex;gap:11px;font-size:15px;color:#3a3733;align-items:flex-start}
-.mesa-landing .panel ul li svg{width:19px;height:19px;color:var(--orange);flex:none;margin-top:1px}
-.mesa-landing .panel .visual{background:#fff;border:1px solid var(--line);border-radius:18px;min-height:280px;padding:18px;box-shadow:var(--shadow)}
-
-.mesa-landing .kit-row{display:flex;gap:10px;flex-wrap:wrap}
-.mesa-landing .kit-card{flex:1 1 120px;border:1px solid var(--line);border-radius:12px;padding:12px}
-.mesa-landing .kit-card .ph{height:54px;border-radius:8px;background:repeating-linear-gradient(45deg,#F0ECE5 0 8px,#F7F5F2 8px 16px);margin-bottom:9px}
-.mesa-landing .kit-card b{font-size:13px;font-family:var(--disp)}
-.mesa-landing .kit-card span{font-size:12px;color:var(--muted)}
-.mesa-landing .kds{display:flex;flex-direction:column;gap:9px}
-.mesa-landing .kds .k{border-radius:11px;padding:12px;color:#fff}
-.mesa-landing .kds .k.dark{background:#13202b}
-.mesa-landing .kds .k.dark.b{background:#1b2c3a}
-.mesa-landing .kds .k .kh{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
-.mesa-landing .kds .k .km{font-family:var(--disp);font-weight:700;font-size:16px;margin-top:3px}
-.mesa-landing .kds .k .ki{font-size:12.5px;opacity:.85;margin-top:4px}
-
-.mesa-landing .plans{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:46px;align-items:stretch}
-.mesa-landing .plan{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;transition:.2s;position:relative}
-.mesa-landing .plan:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-.mesa-landing .plan.feat{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange),var(--shadow)}
-.mesa-landing .plan .ribbon{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;padding:5px 13px;border-radius:999px;white-space:nowrap}
-.mesa-landing .plan .pn{font-family:var(--disp);font-weight:700;font-size:19px}
-.mesa-landing .plan .range{font-size:13px;color:var(--muted);margin-top:3px}
-.mesa-landing .plan .price{font-family:var(--disp);font-weight:700;font-size:30px;margin-top:18px;letter-spacing:-.02em}
-.mesa-landing .plan .price small{display:block;font-family:var(--sans);font-weight:600;font-size:12px;color:var(--muted);letter-spacing:0;margin-top:3px}
-.mesa-landing .plan .off{display:inline-flex;align-items:center;gap:6px;background:var(--orange-soft);color:var(--orange-d);font-family:var(--sans);font-weight:800;font-size:11.5px;letter-spacing:.04em;padding:5px 11px;border-radius:999px;margin-top:16px}
-.mesa-landing .plan .was{display:block;font-family:var(--sans);font-weight:600;font-size:16px;color:var(--muted);text-decoration:line-through;letter-spacing:0;margin-top:12px}
-.mesa-landing .plan .off + .price,.mesa-landing .plan .was + .price{margin-top:4px}
-.mesa-landing .plan .price .now{color:var(--orange-d)}
-.mesa-landing .plan .sup{margin-top:14px;padding:12px;background:var(--panel);border-radius:12px;border:1px solid var(--line)}
-.mesa-landing .plan .sup b{font-size:14px;font-family:var(--disp)}
-.mesa-landing .plan .sup span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
-.mesa-landing .plan .feats{margin:18px 0 22px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;flex:1}
-.mesa-landing .plan .feats li{display:flex;gap:9px;font-size:13.5px;color:#3a3733;align-items:flex-start}
-.mesa-landing .plan .feats li svg{width:16px;height:16px;color:var(--orange);flex:none;margin-top:2px}
-.mesa-landing .plan .btn{width:100%;justify-content:center}
-.mesa-landing .plan-note{text-align:center;color:var(--muted);font-size:13.5px;margin-top:22px}
-
-.mesa-landing .help-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;margin-top:46px;align-items:start}
-.mesa-landing .faq .q{border-bottom:1px solid var(--line)}
-.mesa-landing .faq .q button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:18px;background:none;border:none;padding:20px 2px;text-align:left;cursor:pointer;font-family:var(--disp);font-weight:600;font-size:18px;color:var(--text)}
-.mesa-landing .faq .q button:hover{color:var(--orange)}
-.mesa-landing .faq .q .chev{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;transition:.25s}
-.mesa-landing .faq .q .chev svg{width:15px;height:15px;transition:.25s}
-.mesa-landing .faq .q.open .chev{background:var(--orange);border-color:var(--orange);color:#fff}
-.mesa-landing .faq .q.open .chev svg{transform:rotate(45deg)}
-.mesa-landing .faq .a{max-height:0;overflow:hidden;transition:max-height .3s ease}
-.mesa-landing .faq .a p{padding:0 2px 22px;color:var(--muted);font-size:15.5px;line-height:1.6;max-width:46em}
-.mesa-landing .guide{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:28px}
-.mesa-landing .guide h3{font-size:21px}
-.mesa-landing .guide p.s{color:var(--muted);font-size:14.5px;margin-top:8px}
-.mesa-landing .steps{margin:22px 0 0;padding:0;list-style:none;display:flex;flex-direction:column}
-.mesa-landing .steps li{display:flex;gap:15px;padding:15px 0;border-top:1px dashed var(--line-2)}
-.mesa-landing .steps li:first-child{border-top:none;padding-top:6px}
-.mesa-landing .steps li .sn{flex:none;width:32px;height:32px;border-radius:10px;background:#fff;border:1px solid var(--line);font-family:var(--disp);font-weight:700;color:var(--orange);display:flex;align-items:center;justify-content:center;font-size:15px}
-.mesa-landing .steps li b{font-size:15px;font-family:var(--disp);display:block}
-.mesa-landing .steps li span{font-size:13.5px;color:var(--muted);display:block;margin-top:2px;line-height:1.5}
-
-.mesa-landing .cta-band{background:var(--ink);border-radius:32px;padding:56px;text-align:center;color:#fff;position:relative;overflow:hidden}
-.mesa-landing .cta-band::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 280px at 50% -20%,rgba(242,112,30,.3),transparent 60%)}
-.mesa-landing .cta-band h2{font-size:clamp(28px,3.4vw,40px);position:relative}
-.mesa-landing .cta-band p{color:#B9C6D6;font-size:18px;margin:16px auto 0;max-width:34em;position:relative}
-.mesa-landing .cta-band .hero-cta{justify-content:center;position:relative}
-
-.mesa-landing footer.foot-wrap{border-top:1px solid var(--line);padding:56px 0 38px;margin-top:92px}
-.mesa-landing .foot{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
-.mesa-landing .foot .brand img{height:32px}
-.mesa-landing .foot p.fd{color:var(--muted);font-size:14px;margin-top:14px;max-width:24em;line-height:1.6}
-.mesa-landing .foot h5{font-family:var(--disp);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#3a3733;margin-bottom:14px}
-.mesa-landing .foot a{display:block;color:var(--muted);font-size:14.5px;padding:6px 0;transition:.15s;cursor:pointer}
-.mesa-landing .foot a:hover{color:var(--orange)}
-.mesa-landing .foot-bot{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;flex-wrap:wrap;gap:12px}
-
-.mesa-landing .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
-.mesa-landing .reveal.in{opacity:1;transform:none}
-
-.mesa-modal-bg{position:fixed;inset:0;background:rgba(15,39,64,.5);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;
-  --orange:#F2701E; --orange-d:#D85B12; --orange-soft:#FDEFE4; --ink:#0F2740;
-  --text:#1A1512; --muted:#6C6A66; --bg:#FFFFFF; --panel:#F7F5F2; --line:#E9E5DF; --line-2:#DED9D1;
-  --shadow-lg:0 2px 6px rgba(16,39,64,.05), 0 40px 80px -24px rgba(16,39,64,.22);
-  --sans:var(--font-manrope),"Manrope",system-ui,sans-serif;
-  --disp:var(--font-grotesk),"Space Grotesk","Manrope",sans-serif;
-  font-family:var(--sans)}
-.mesa-modal-bg.open{display:flex;animation:mesaFade .25s}
-.mesa-modal-bg h3{font-family:var(--disp);font-weight:700;letter-spacing:-.02em;margin:0}
-.mesa-modal-bg .modal{background:#fff;border-radius:24px;max-width:480px;width:100%;padding:34px;box-shadow:var(--shadow-lg);position:relative;color:var(--text)}
-.mesa-modal-bg .modal h3{font-size:25px}
-.mesa-modal-bg .modal p.s{color:var(--muted);margin-top:8px;font-size:15px}
-.mesa-modal-bg .modal .close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.mesa-modal-bg .modal .close:hover{background:var(--panel)}
-.mesa-modal-bg .field{margin-top:16px}
-.mesa-modal-bg .field label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
-.mesa-modal-bg .field input,.mesa-modal-bg .field select,.mesa-modal-bg .field textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:12px 14px;font-family:var(--sans);font-size:15px;background:var(--bg);transition:.15s}
-.mesa-modal-bg .field input:focus,.mesa-modal-bg .field select:focus,.mesa-modal-bg .field textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-soft)}
-.mesa-modal-bg .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-family:var(--sans);font-weight:700;font-size:15px;padding:13px 20px;border-radius:999px;border:1px solid transparent;cursor:pointer;transition:.18s ease;background:var(--orange);color:#fff;width:100%;margin-top:20px}
-.mesa-modal-bg .btn:hover{background:var(--orange-d)}
-.mesa-modal-bg .ok{text-align:center;padding:14px 0}
-.mesa-modal-bg .ok .ico{width:64px;height:64px;border-radius:50%;background:var(--orange-soft);color:var(--orange-d);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
-.mesa-modal-bg .ok .ico svg{width:32px;height:32px}
-
-@media(max-width:920px){
-  .mesa-landing .hero-grid{grid-template-columns:1fr;gap:38px}
-  .mesa-landing .ai{grid-template-columns:1fr;padding:34px}
-  .mesa-landing .panel{grid-template-columns:1fr;padding:28px}
-  .mesa-landing .cards{grid-template-columns:1fr 1fr}
-  .mesa-landing .plans{grid-template-columns:1fr 1fr}
-  .mesa-landing .help-grid{grid-template-columns:1fr;gap:34px}
-  .mesa-landing .foot{grid-template-columns:1fr 1fr}
+function LogoWord({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="528.1 665.9 863.8 170.9" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="currentColor" d="M706.88,747.95l-58.53,80.3h-17.23l-49.78-79.18-8.75,81.64h-40.48l13.67-156.8,33.64-.22,64,100.21,72.2-100.21,27.07.22,13.95,156.8h-40.2l-9.57-82.76Z" />
+      <path fill="currentColor" d="M814.1,673.91h134.28v32.21h-91.62c0,10.29-.27,20.58-.27,31.09h77.67v31.32h-77.4v29.75h94.63v32.43h-137.56l.27-156.8Z" />
+      <path fill="currentColor" d="M1078.83,832.73c-27.35,0-44.85-6.26-73.02-22.37l13.13-30.42c26.8,12.97,43.76,19.68,57.16,19.68,18.87,0,41.29-5.59,41.29-18.12,0-13.65-28.44-15.21-40.48-16.33-31.18-3.13-71.93-8.95-71.93-45.63,0-41.38,47.59-49.66,75.21-49.66,25.44,0,48.41,6.71,73.29,21.25l-12.58,28.41c-21.33-11.41-41.84-16.77-60.72-16.77-29.26,0-36.1,9.62-36.1,15.43,0,11.18,31.45,13.65,39.93,13.65,28.72,2.46,73.02,6.93,73.02,49.66s-48.41,51.22-78.22,51.22Z" />
+      <path fill="currentColor" d="M1331.82,801.41h-76.03l-14.49,29.3h-41.84l79.58-157.25h32.82l76.03,157.25h-42.94l-13.13-29.3ZM1270.28,769.65h47.04l-23.25-49.21-23.79,49.21Z" />
+    </svg>
+  )
 }
-@media(max-width:680px){
-  .mesa-landing .nav-links,.mesa-landing .nav-cta .btn-ghost{display:none}
-  .mesa-landing .nav-toggle{display:flex}
-  .mesa-landing .nav-links.mobile-open{display:flex;position:absolute;top:72px;left:0;right:0;flex-direction:column;background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;gap:4px}
-  .mesa-landing .nav-links.mobile-open a{padding:13px}
-  .mesa-landing .cards,.mesa-landing .plans,.mesa-landing .foot{grid-template-columns:1fr}
-  .mesa-landing .hero{padding:48px 0 30px}
-  .mesa-landing section.sec{padding:64px 0}
-  .mesa-landing .qr-float{display:none}
-  .mesa-landing .cta-band,.mesa-landing .ai{padding:32px 24px}
-}
-`
 
 const Check = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" /></svg>
+  <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" /></svg>
+)
+const Arrow = () => (
+  <svg className="h-[17px] w-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
 )
 
-const tabs = [
-  { id: "cliente", label: "Cliente" },
-  { id: "cocina", label: "Cocina" },
-  { id: "mesero", label: "Mesero" },
-  { id: "admin", label: "Admin" },
+const marqueeItems = [
+  "Sin filas en caja", "Cero errores de comanda", "Menú siempre al día",
+  "Cocina en tiempo real", "Funciona sin internet", "Carga tu carta con IA",
+  "Reportes por producto",
 ]
 
-const faqs = [
+const flowSteps = [
   {
-    q: "¿Necesito instalar una app?",
-    a: "No. MESA es una web app: tus clientes escanean el QR con la cámara y el menú abre directo en el navegador. Tú gestionas todo desde el panel, también en el navegador.",
+    title: "Escanea la mesa",
+    text: "Cada mesa tiene su QR. Sin descargar nada, el menú abre en el navegador.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg>,
   },
   {
-    q: "¿Qué pasa si se cae el internet?",
-    a: "El sistema es offline-first: el menú sigue visible desde el cache local y los pedidos se encolan para sincronizarse automáticamente cuando vuelve la conexión. Funciona incluso con WiFi malo.",
+    title: "Arma el pedido",
+    text: "El cliente elige por categoría, ve fotos y precios, y agrega notas.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18M16 10a4 4 0 0 1-8 0" /></svg>,
   },
   {
-    q: "¿Puedo subir mi menú actual en PDF?",
-    a: "Sí, es nuestra feature estrella. Subes tu PDF, la IA extrae productos, precios y categorías, y tú revisas y apruebas antes de publicar. La IA propone, el humano aprueba.",
+    title: "La cocina recibe",
+    text: "La comanda entra a pantalla con número de mesa, hora y detalle.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3 8-8" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
   },
   {
-    q: "¿Cuánto tarda la configuración?",
-    a: "El onboarding es autónomo: un dueño sin conocimientos técnicos puede dejar todo configurado en unos 20 minutos, sin llamar a soporte.",
-  },
-  {
-    q: "¿Funciona con impresora de cocina o pantalla?",
-    a: "Con ambos. Puedes recibir los pedidos en una pantalla de cocina en tiempo real o como impresión de boleta. Si la máquina falla, el mesero puede activar el envío manual como respaldo.",
-  },
-  {
-    q: "¿Sirve para varias sucursales?",
-    a: "Sí. Para más de 100 mesas o varias sucursales tenemos el plan Personalizado, con reportes consolidados e integraciones a medida.",
+    title: "Tú administras",
+    text: "Ves ventas por producto, mesa y horario para decidir con datos.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg>,
   },
 ]
+
+const features = [
+  {
+    title: "Categorías del menú",
+    text: "Organiza tu carta por categorías para que cada producto sea fácil de encontrar y editar.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>,
+    tone: "coral",
+  },
+  {
+    title: "Productos y precios",
+    text: "Administra platos, descripciones, precios, estado visible e imagen de cada producto.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></svg>,
+    tone: "amber",
+  },
+  {
+    title: "Mesas con QR único",
+    text: "Cada mesa tiene su QR para que los clientes pidan desde el celular, sin instalar nada.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg>,
+    tone: "pine",
+  },
+  {
+    title: "Seguimiento de pedidos",
+    text: "Revisa pedidos por mesa, estado, tiempo de ingreso y total durante todo el servicio.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3 8-8" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
+    tone: "coral",
+  },
+  {
+    title: "Gestión de meseros",
+    text: "Agrega meseros desde el panel y MESA les envía las credenciales por correo automáticamente.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    tone: "pine",
+  },
+  {
+    title: "Reportes básicos y avanzados",
+    text: "Productos más vendidos, total por mesa, horas peak y facturación: del día al año o por rango.",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg>,
+    tone: "amber",
+  },
+]
+
+const icoTone: Record<string, string> = {
+  coral: "bg-[#F87604]/12 text-[#D95F00]",
+  amber: "bg-[#FFA62B]/16 text-[#C77B00]",
+  pine: "bg-[#1C4D43]/10 text-[#1C4D43]",
+}
+
+const plans = [
+  {
+    name: "Plan 15", range: "1 – 15 mesas", featured: false,
+    was: "$2.500.000 + IVA", now: "$1.250.000 + IVA",
+    addon: "+ $150.000", addonText: "Soporte Tier 3 · 24/7 (recomendado)",
+    feats: ["Menú QR + carga con IA", "Vistas Cliente, Cocina, Mesero y Admin", "Reportes básicos"],
+    mesas: "1 – 15 mesas", btn: "ghost",
+  },
+  {
+    name: "Plan 50", range: "16 – 50 mesas", featured: true,
+    was: "$6.000.000 + IVA", now: "$3.000.000 + IVA",
+    addon: "+ $300.000", addonText: "Soporte Tier 3 · 24/7 (recomendado)",
+    feats: ["Todo lo del Plan 15", "Reportes avanzados y horas peak", "Gestión completa de meseros"],
+    mesas: "16 – 50 mesas", btn: "primary",
+  },
+  {
+    name: "Plan 100", range: "50 – 100 mesas", featured: false,
+    was: "$10.000.000 + IVA", now: "$5.000.000 + IVA",
+    addon: "+ $450.000", addonText: "Soporte Tier 3 · 24/7 (recomendado)",
+    feats: ["Todo lo del Plan 50", "Operación de alto volumen", "Prioridad en soporte"],
+    mesas: "50 – 100 mesas", btn: "ghost",
+  },
+  {
+    name: "Personalizado", range: "100+ mesas o varias sucursales", featured: false, custom: true,
+    nowText: "Contactar",
+    addon: "Soporte a medida", addonText: "Definimos el nivel según tu caso",
+    feats: ["Multi-sucursal", "Reportes consolidados", "Integraciones a medida"],
+    mesas: "100+ o varias sucursales", btn: "dark",
+  },
+] as const
+
+const faqs = [
+  { q: "¿Mis clientes tienen que descargar una app?", a: "No. MESA es una web app: tus clientes escanean el QR con la cámara y el menú abre directo en el navegador. No instalan nada." },
+  { q: "¿Cómo genero el QR de cada mesa?", a: "Desde el panel, en la sección Mesas. Cada mesa tiene su QR único, que puedes descargar en PDF para imprimir y pegar en la mesa." },
+  { q: "¿Puedo usarlo si solo quiero el menú digital?", a: "Sí. Puedes publicar solo el menú QR para que tus clientes lo vean, y activar la toma de pedidos a cocina más adelante cuando quieras." },
+  { q: "¿La cocina necesita un equipo especial?", a: "No. Basta una pantalla o tablet con navegador para ver las comandas en tiempo real, o una impresora térmica bluetooth para la boleta. Si la máquina falla, los meseros gestionan todo desde el panel." },
+  { q: "¿Cómo se cobran los pagos en línea?", a: "Hoy el cobro se hace en el local: el cliente pide la cuenta desde la app y el mesero la cierra. La integración de pago en línea está en el roadmap." },
+  { q: "¿Cómo funciona el precio y el soporte?", a: "El precio depende de la cantidad de mesas (planes 15, 50, 100 o personalizado) e incluye acceso completo a la plataforma. El soporte Tier 3 24/7 es un complemento recomendado." },
+]
+
+// Documentos legales. NOTA: textos en lenguaje claro a modo de borrador;
+// revísalos con tu asesoría legal antes de publicar en producción.
+const legalDocs = [
+  {
+    title: "Términos y condiciones",
+    body: [
+      ["Qué es MESA", "MESA es una plataforma de menú digital y toma de pedidos por QR para restaurantes y cafeterías. Al contratar el servicio, el local (el “Cliente”) obtiene acceso a un panel de administración y a las vistas de cliente, cocina y mesero."],
+      ["Uso del servicio", "El Cliente es responsable del contenido que carga (menú, precios, imágenes) y de mantener sus credenciales seguras. No está permitido usar la plataforma para fines ilícitos ni intentar vulnerar la seguridad del sistema o de otros locales."],
+      ["Precios y pagos", "El valor depende del plan contratado según la cantidad de mesas. Los precios se expresan en pesos chilenos (CLP) más IVA. El soporte Tier 3 24/7 es un complemento opcional con costo aparte."],
+      ["Disponibilidad y responsabilidad", "Trabajamos para mantener el servicio disponible de forma continua, pero no garantizamos una operación libre de interrupciones. MESA no es responsable de pérdidas indirectas derivadas de cortes de conexión del local o de terceros."],
+    ],
+  },
+  {
+    title: "Política de privacidad",
+    body: [
+      ["Qué datos tratamos", "Datos de la cuenta del local y su personal (nombre, correo), el contenido del menú y datos operativos de los pedidos. Los clientes finales del local pueden navegar el menú y pedir sin crear una cuenta."],
+      ["Para qué los usamos", "Para operar el servicio: mostrar el menú, procesar pedidos en tiempo real, generar reportes para el local y enviar notificaciones operativas (por ejemplo, credenciales a meseros)."],
+      ["Con quién los compartimos", "Usamos proveedores de infraestructura para prestar el servicio (base de datos y autenticación, almacenamiento de imágenes y envío de correos). No vendemos datos personales a terceros."],
+      ["Tus derechos", "El Cliente puede solicitar acceder, corregir o eliminar sus datos escribiéndonos al correo de contacto. Conservamos los datos mientras la cuenta esté activa y por los plazos que exija la ley."],
+    ],
+  },
+]
+
+function btnClass(kind: string) {
+  const base = `${SANS} inline-flex items-center justify-center gap-2 font-semibold text-[15.5px] px-6 py-3 rounded-full border-[1.5px] border-transparent cursor-pointer transition-all duration-300 whitespace-nowrap`
+  if (kind === "primary") return `${base} bg-[#F87604] text-white shadow-[0_8px_22px_rgba(248,118,4,.32)] hover:bg-[#D95F00] hover:-translate-y-0.5`
+  if (kind === "ghost") return `${base} bg-transparent text-[#221C18] border-[#221C18]/25 hover:border-[#221C18] hover:bg-[#FAF6F0] hover:-translate-y-0.5`
+  if (kind === "dark") return `${base} bg-[#221C18] text-white hover:bg-black hover:-translate-y-0.5`
+  return base
+}
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("cliente")
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
+  const [legalOpen, setLegalOpen] = useState<number | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalSent, setModalSent] = useState(false)
   const [modalMesas, setModalMesas] = useState("1 – 15 mesas")
@@ -326,23 +219,17 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setModalOpen(false)
-    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setModalOpen(false) }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
   useEffect(() => {
-    const els = document.querySelectorAll(".mesa-landing .reveal")
+    const els = document.querySelectorAll(".mesa-reveal")
     const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("in")
-            io.unobserve(e.target)
-          }
-        }),
+      (entries) => entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target) }
+      }),
       { threshold: 0.12 }
     )
     els.forEach((el) => io.observe(el))
@@ -350,443 +237,451 @@ export default function Home() {
   }, [])
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: css }} />
-
-      <div className="mesa-landing">
-        <header className={`nav${scrolled ? " scrolled" : ""}`} id="nav">
-          <div className="wrap nav-in">
-            <a href="#top" className="brand" aria-label="MESA inicio">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mesaLogo.src} alt="MESA" />
-            </a>
-            <nav className={`nav-links${navOpen ? " mobile-open" : ""}`} id="navlinks">
-              <a href="#funcionalidades" onClick={() => setNavOpen(false)}>Funcionalidades</a>
-              <a href="#planes" onClick={() => setNavOpen(false)}>Planes</a>
-              <a href="#ayuda" onClick={() => setNavOpen(false)}>Ayuda</a>
-            </nav>
-            <div className="nav-cta">
-              <Link href="/login" className="btn btn-ghost">Iniciar sesión</Link>
-              <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo</button>
-              <button className="nav-toggle" aria-label="Menú" onClick={() => setNavOpen((v) => !v)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
-              </button>
-            </div>
+    <div className={`${SANS} min-w-0 flex-1 bg-white text-[#221C18] text-[17px] leading-[1.6] antialiased`}>
+      {/* ---------- NAV ---------- */}
+      <header className={`fixed inset-x-0 top-0 z-[100] transition-all duration-300 ${scrolled ? "bg-white/85 backdrop-blur-xl shadow-[0_1px_0_#ECE3D8] py-[11px]" : "py-[18px]"}`}>
+        <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-6 px-7">
+          <a href="#top" className="inline-flex items-center gap-[11px] text-[#221C18] transition-opacity hover:opacity-80" aria-label="Mesa, ir al inicio">
+            <LogoMark className="h-[30px] w-auto shrink-0" />
+            <LogoWord className="h-[18px] w-auto shrink-0" />
+          </a>
+          <nav className={`items-center gap-[34px] md:flex ${navOpen ? "fixed inset-x-3.5 top-16 flex flex-col items-start gap-1.5 rounded-[18px] border border-[#ECE3D8] bg-white p-3.5 shadow-[0_30px_70px_rgba(34,28,24,.16)]" : "hidden"}`}>
+            {[["Funcionalidades", "#funcionalidades"], ["Cómo funciona", "#como"], ["Planes", "#planes"], ["Ayuda", "#ayuda"]].map(([label, href]) => (
+              <a key={href} href={href} onClick={() => setNavOpen(false)} className="text-[15px] font-medium text-[#6B615A] transition-colors hover:text-[#221C18] max-md:w-full max-md:py-2">{label}</a>
+            ))}
+          </nav>
+          <div className="flex items-center gap-3.5">
+            <Link href="/login" className={`${btnClass("ghost")} max-md:hidden`}>Iniciar sesión</Link>
+            <button className={btnClass("primary")} onClick={() => openModal()}>Contactar</button>
+            <button className="grid place-items-center rounded-[10px] border-[1.5px] border-[#ECE3D8] p-[9px] md:hidden" aria-label="Abrir menú" onClick={() => setNavOpen((v) => !v)}>
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+            </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <a id="top" />
-        <section className="hero">
-          <div className="wrap hero-grid">
-            <div>
-              <span className="badge"><span className="dot">PWA</span> Pedidos por QR para restaurantes y cafeterías</span>
-              <h1 className="hero-title">Menos caos en el local. <span className="hl">Más mesas atendidas.</span></h1>
-              <p className="lead">MESA digitaliza el pedido completo: tus clientes escanean el QR de su mesa, piden desde el navegador y todo llega en tiempo real a cocina. Sin pedidos perdidos, sin errores, sin contratar más personal.</p>
-              <div className="hero-cta">
-                <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                </button>
-                <a href="#funcionalidades" className="btn btn-ghost">Ver funcionalidades</a>
-              </div>
-              <div className="hero-meta">
-                <div className="m"><b>&lt;2s</b><span>Carga del menú en 4G</span></div>
-                <div className="m"><b>20 min</b><span>Configuración autónoma</span></div>
-                <div className="m"><b>Offline</b><span>El menú nunca se cae</span></div>
-              </div>
+      {/* ---------- HERO ---------- */}
+      <header id="top" className="relative overflow-hidden px-0 pt-[140px] pb-[90px] max-md:pt-[120px] max-md:pb-[70px]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-[120px] -right-20 h-[520px] w-[520px] rounded-full blur-[10px]" style={{ background: "radial-gradient(circle at 30% 30%, rgba(255,166,43,.28), transparent 62%)" }} />
+          <div className="absolute -bottom-[160px] -left-[120px] h-[460px] w-[460px] rounded-full blur-[10px]" style={{ background: "radial-gradient(circle at 60% 40%, rgba(248,118,4,.16), transparent 65%)" }} />
+        </div>
+        <div className="mx-auto grid max-w-[1180px] grid-cols-1 items-center gap-14 px-7 md:grid-cols-[1.05fr_.95fr]">
+          <div>
+            <span className={`${MONO} mesa-reveal inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Menú digital + comandas en tiempo real</span>
+            <h1 className={`${DISP} mesa-reveal mt-[22px] text-[clamp(2.6rem,5.6vw,4.5rem)] font-semibold leading-[1.04] tracking-[-.01em]`}>
+              El menú que <em className="font-medium italic text-[#F87604]">toma el pedido</em> por ti.
+            </h1>
+            <p className="mesa-reveal mt-[22px] max-w-[30ch] text-[clamp(1.05rem,1.6vw,1.3rem)] leading-[1.55] text-[#6B615A]">
+              Tu cliente escanea la mesa, pide desde su teléfono y la cocina lo recibe al instante. Tú administras categorías, productos y mesas desde un solo panel.
+            </p>
+            <div className="mesa-reveal mt-8 flex flex-wrap gap-3.5">
+              <a href="#planes" className={btnClass("primary")}>Ver planes <Arrow /></a>
+              <a href="#como" className={btnClass("ghost")}>Ver cómo funciona</a>
             </div>
-            <div className="mock" aria-hidden="true">
-              <div className="screen">
-                <div className="mock-top">
-                  <div className="t">Panel · Hoy</div>
-                  <div className="mock-dots"><i /><i /><i /></div>
-                </div>
-                <div className="mock-body">
-                  <div className="stat-row">
-                    <div className="stat"><div className="lbl">Ventas del día</div><div className="big">$428.000</div><small>24 pedidos cerrados</small></div>
-                    <div className="stat accent"><div className="lbl">Pedidos activos</div><div className="big">18</div><small>Ver comandas →</small></div>
-                    <div className="stat"><div className="lbl">Mesas totales</div><div className="big">16</div><small>QR y estados</small></div>
-                  </div>
-                  <div className="orders">
-                    <div className="head"><span>Pedidos recientes</span><a href="#funcionalidades">Ver todos</a></div>
-                    <div className="order"><div className="who"><b>Mesa 4</b><span>Pedido #101 · $25.990</span></div><span className="pill new">Nuevo</span></div>
-                    <div className="order"><div className="who"><b>Mesa 2</b><span>Pedido #102 · $18.990</span></div><span className="pill prep">En preparación</span></div>
-                    <div className="order"><div className="who"><b>Mesa 7</b><span>Pedido #103 · $32.990</span></div><span className="pill done">Listo</span></div>
-                  </div>
-                </div>
-              </div>
-              <div className="qr-float">
-                <div className="qr" />
-                <div className="txt"><b>Mesa 12</b><span>QR único activo</span></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sec" id="funcionalidades">
-          <div className="wrap">
-            <div className="sec-head reveal">
-              <span className="eyebrow">Funcionalidades</span>
-              <h2>Todo lo que necesitas para operar tu local.</h2>
-              <p>Desde la carta hasta el cierre del día. MESA reúne la gestión de menú, mesas con QR y seguimiento de pedidos en una sola web app.</p>
-            </div>
-            <div className="cards">
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg></div>
-                <h3>Categorías del menú</h3>
-                <p>Organiza tu carta por categorías para que cada producto sea fácil de encontrar y editar.</p>
-              </div>
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></svg></div>
-                <h3>Productos y precios</h3>
-                <p>Administra platos, descripciones, precios, estado visible e imagen de cada producto.</p>
-              </div>
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg></div>
-                <h3>Mesas del local</h3>
-                <p>Cada mesa tiene su QR único para que los clientes pidan desde el celular, sin instalar nada.</p>
-              </div>
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3 8-8" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg></div>
-                <h3>Seguimiento de pedidos</h3>
-                <p>Revisa pedidos por mesa, estado, tiempo de ingreso y total durante todo el servicio.</p>
-              </div>
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg></div>
-                <h3>Gestión de meseros</h3>
-                <p>Agrega meseros desde el panel y MESA les envía las credenciales por correo para acceder al área de meseros.</p>
-              </div>
-              <div className="card reveal">
-                <div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg></div>
-                <h3>Reportes básicos y avanzados</h3>
-                <p>Productos más vendidos, total por mesa, horas peak y facturación: del día al año o por rango personalizado.</p>
-              </div>
-            </div>
-
-            <div className="ai reveal">
-              <div>
-                <span className="tag">★ Feature estrella</span>
-                <h2>Sube tu menú en PDF y deja que la IA lo arme por ti.</h2>
-                <p>¿Ya tienes tu carta en PDF? No la reescribas. La IA la analiza y extrae productos, precios y categorías. Tú solo revisas y publicas.</p>
-                <ol>
-                  <li><span className="n">1</span><div>Subes el PDF de tu menú existente al panel.</div></li>
-                  <li><span className="n">2</span><div>La IA detecta nombres, precios, categorías e imágenes.</div></li>
-                  <li><span className="n">3</span><div>Revisas y corriges los ítems marcados como inciertos.</div></li>
-                  <li><span className="n">4</span><div>Con un click queda publicado y disponible vía QR.</div></li>
-                </ol>
-              </div>
-              <div className="ai-card">
-                <div className="file">
-                  <div className="fi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg></div>
-                  <div><b>menu-cafe-aurora.pdf</b><span>Analizando con IA…</span></div>
-                </div>
-                <div className="bar"><i /></div>
-                <div className="detect">
-                  <div className="it"><div><b>Café cortado</b> <span>· Cafetería</span></div><span className="conf">$2.500 ✓</span></div>
-                  <div className="it"><div><b>Sandwich Italiano</b> <span>· Sándwiches</span></div><span className="conf">$6.900 ✓</span></div>
-                  <div className="it"><div><b>Kuchen del día</b> <span>· Pastelería</span></div><span className="conf warn">revisar precio</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="views">
-              <div className="sec-head center reveal" style={{ maxWidth: 560, marginBottom: 8 }}>
-                <span className="eyebrow">Cuatro vistas, un solo sistema</span>
-                <h2 style={{ fontSize: "clamp(24px,3vw,34px)" }}>Cada rol ve exactamente lo que necesita.</h2>
-              </div>
-              <div className="tabbar reveal">
-                {tabs.map((t) => (
-                  <button
-                    key={t.id}
-                    className={`tab${activeTab === t.id ? " active" : ""}`}
-                    onClick={() => setActiveTab(t.id)}
-                  >
-                    {t.label}
-                  </button>
+            <div className="mesa-reveal mt-9 flex flex-wrap items-center gap-[18px]">
+              <div className="flex">
+                {[["#1C4D43", "P"], ["#F87604", "M"], ["#2E6B5E", "A"], ["#D95F00", "+"]].map(([bg, ch], i) => (
+                  <span key={ch} className="grid h-9 w-9 place-items-center rounded-full border-[2.5px] border-white text-[14px] font-semibold text-white" style={{ background: bg, marginLeft: i === 0 ? 0 : -10 }}>{ch}</span>
                 ))}
               </div>
-              <div className="tab-panels">
-                <div className={`panel${activeTab === "cliente" ? " active" : ""}`}>
-                  <div>
-                    <div className="pi">Vista Cliente</div>
-                    <h3>Escanea, pide y sigue tu pedido.</h3>
-                    <p>El cliente abre el menú en el navegador sin instalar nada, arma su carrito con notas por ítem y confirma. Ve el estado en tiempo real.</p>
-                    <ul>
-                      <li><Check />Carrito universal con división de cuenta por dispositivo</li>
-                      <li><Check />Notas por ítem (&quot;sin cebolla&quot;)</li>
-                      <li><Check />Pide sin tener que llamar al mesero</li>
-                    </ul>
-                  </div>
-                  <div className="visual">
-                    <div className="kit-row">
-                      <div className="kit-card"><div className="ph" /><b>Pizza Margarita</b><span>$8.900</span></div>
-                      <div className="kit-card"><div className="ph" /><b>Limonada menta</b><span>$3.500</span></div>
-                    </div>
-                    <div className="order" style={{ marginTop: 12 }}><div className="who"><b>Tu pedido · Mesa 12</b><span>2 ítems · $12.400</span></div><span className="pill new">Confirmar</span></div>
-                  </div>
-                </div>
-                <div className={`panel${activeTab === "cocina" ? " active" : ""}`}>
-                  <div>
-                    <div className="pi">Vista Cocina</div>
-                    <h3>Los pedidos llegan solos, en tiempo real.</h3>
-                    <p>Pantalla grande o impresión de boleta. Cada pedido muestra mesa, ítems, notas y tiempo transcurrido. Alertas para pedidos nuevos y olvidados.</p>
-                    <ul>
-                      <li><Check />Estados Nuevo → En preparación → Listo</li>
-                      <li><Check />Alerta visual y sonora</li>
-                      <li><Check />Modo oscuro optimizado para cocina</li>
-                    </ul>
-                  </div>
-                  <div className="visual">
-                    <div className="kds">
-                      <div className="k dark"><div className="kh"><span>Mesa 4 · #101</span><span>2 min</span></div><div className="km">2× Pizza · 1× Limonada</div><div className="ki">Nota: sin cebolla</div></div>
-                      <div className="k dark b"><div className="kh"><span>Mesa 7 · #103</span><span>6 min</span></div><div className="km">1× Lomo · 1× Papas</div><div className="ki">En preparación</div></div>
-                    </div>
-                  </div>
-                </div>
-                <div className={`panel${activeTab === "mesero" ? " active" : ""}`}>
-                  <div>
-                    <div className="pi">Vista Mesero</div>
-                    <h3>Gestiona tus mesas y nada se te escapa.</h3>
-                    <p>El mesero ve sus mesas asignadas, recibe notificaciones de pedidos nuevos y mesas sin atender, y actúa como segundo filtro antes de cocina.</p>
-                    <ul>
-                      <li><Check />Notificaciones de pedidos y mesas no atendidas</li>
-                      <li><Check />Confirma qué pedidos pasan a preparación</li>
-                      <li><Check />Respaldo si falla la impresora de cocina</li>
-                    </ul>
-                  </div>
-                  <div className="visual">
-                    <div className="orders">
-                      <div className="order"><div className="who"><b>Mesa 3</b><span>Esperando atención · 4 min</span></div><span className="pill new">Atender</span></div>
-                      <div className="order"><div className="who"><b>Mesa 8</b><span>Pedido nuevo · $14.500</span></div><span className="pill prep">A cocina</span></div>
-                      <div className="order"><div className="who"><b>Mesa 5</b><span>Listo para entregar</span></div><span className="pill done">Entregar</span></div>
-                    </div>
-                  </div>
-                </div>
-                <div className={`panel${activeTab === "admin" ? " active" : ""}`}>
-                  <div>
-                    <div className="pi">Vista Admin</div>
-                    <h3>Tú tienes el control total del local.</h3>
-                    <p>Edita menú, precios, categorías y mesas. Registra meseros, genera los QR y revisa reportes diarios, semanales o por el rango que quieras.</p>
-                    <ul>
-                      <li><Check />Reportes del día, semana, 3/6 meses, 1 año o personalizado</li>
-                      <li><Check />QR descargables en PDF para imprimir</li>
-                      <li><Check />Pedidos del local en tiempo real</li>
-                    </ul>
-                  </div>
-                  <div className="visual">
-                    <div className="stat-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                      <div className="stat"><div className="lbl">Facturado hoy</div><div className="big">$428.000</div></div>
-                      <div className="stat accent"><div className="lbl">Ticket promedio</div><div className="big">$17.800</div></div>
-                    </div>
-                    <div className="kit-card" style={{ marginTop: 12 }}><b style={{ display: "block", marginBottom: 8 }}>Más vendidos</b><span>1. Pizza Margarita · 2. Café cortado · 3. Lomo a lo pobre</span></div>
-                  </div>
-                </div>
-              </div>
+              <small className="text-[13.5px] leading-[1.4] text-[#6B615A]">Restaurantes y cafeterías ya<br /><b className="font-semibold text-[#221C18]">operan sin caos con MESA</b></small>
             </div>
           </div>
-        </section>
 
-        <section className="sec" style={{ paddingTop: 0 }}>
-          <div className="wrap">
-            <div className="ai reveal" style={{ background: "#fff", border: "1px solid var(--line)", color: "var(--text)", boxShadow: "var(--shadow)" }}>
-              <div>
-                <span className="tag" style={{ background: "var(--orange-soft)", color: "var(--orange-d)", borderColor: "transparent" }}>Arquitectura anti-caos</span>
-                <h2 style={{ color: "var(--text)" }}>Diseñado para no fallar un sábado a las 9 PM.</h2>
-                <p style={{ color: "var(--muted)" }}>La confiabilidad es el producto. Si se cae el internet, el menú sigue visible desde el dispositivo y los pedidos se encolan para sincronizarse al volver la conexión.</p>
+          {/* signature visual: teléfono sobre la mesa + tag QR */}
+          <div aria-hidden className="relative mx-auto h-[560px] w-full max-w-[300px] justify-self-center max-md:max-w-[360px]">
+            <div className="absolute bottom-[6%] left-1/2 h-[46%] w-[108%] -translate-x-1/2 rounded-[50%] shadow-[inset_0_2px_0_rgba(255,255,255,.7),0_10px_30px_rgba(34,28,24,.10)]" style={{ background: "linear-gradient(160deg,#FAF6F0,#F3ECE2)" }} />
+            <div className="absolute left-1/2 top-0 z-[3] h-[520px] w-[260px] -translate-x-1/2 rotate-[-3deg] rounded-[38px] bg-[#0e0c0b] p-[11px] shadow-[0_30px_70px_rgba(34,28,24,.16)]">
+              <PhonePreview />
+            </div>
+            <div className="absolute bottom-[5%] right-[-18px] z-[4] w-[120px] rotate-[4deg] rounded-[16px] border border-[#ECE3D8] bg-white p-[11px] shadow-[0_30px_70px_rgba(34,28,24,.16)]">
+              <div className="mb-[9px] flex items-center justify-between">
+                <b className={`${MONO} text-[11px] font-bold tracking-[.1em]`}>MESA 07</b>
+                <i className="rounded-[6px] bg-[#1C4D43]/10 px-[7px] py-[3px] text-[9px] font-semibold not-italic text-[#1C4D43]">Escanéame</i>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <div className="card" style={{ margin: 0 }}><div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M2 8.82a15 15 0 0 1 20 0" /><line x1="12" y1="20" x2="12" y2="20" /></svg></div><h3 style={{ fontSize: 17 }}>Offline-first</h3><p style={{ fontSize: 14 }}>El menú se cachea localmente y funciona con WiFi malo.</p></div>
-                <div className="card" style={{ margin: 0 }}><div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8" /><path d="M21 3v5h-5" /></svg></div><h3 style={{ fontSize: 17 }}>Reconexión auto</h3><p style={{ fontSize: 14 }}>Detecta la pérdida de señal y reanuda sin intervención.</p></div>
-                <div className="card" style={{ margin: 0 }}><div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg></div><h3 style={{ fontSize: 17 }}>Carga &lt;2s</h3><p style={{ fontSize: 14 }}>El menú del cliente abre en menos de 2 segundos en 4G.</p></div>
-                <div className="card" style={{ margin: 0 }}><div className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg></div><h3 style={{ fontSize: 17 }}>Cola local</h3><p style={{ fontSize: 14 }}>Ningún pedido se pierde, aunque falle la red.</p></div>
+              <div className="relative aspect-square w-full overflow-hidden rounded-[11px] border border-[#ECE3D8] bg-white">
+                <svg viewBox="0 0 100 100" className="h-full w-full" role="img" aria-label="Código QR de la mesa">
+                  <rect width="100" height="100" fill="#fff" />
+                  <g fill="#221C18">
+                    <path d="M8 8h26v26H8zM14 14v14h14V14z" /><path d="M66 8h26v26H66zM72 14v14h14V14z" /><path d="M8 66h26v26H8zM14 72v14h14V72z" />
+                    <rect x="18" y="18" width="6" height="6" /><rect x="76" y="18" width="6" height="6" /><rect x="18" y="76" width="6" height="6" />
+                    <rect x="42" y="8" width="6" height="6" /><rect x="54" y="8" width="6" height="6" /><rect x="42" y="20" width="6" height="6" />
+                    <rect x="8" y="42" width="6" height="6" /><rect x="20" y="42" width="6" height="6" /><rect x="8" y="54" width="6" height="6" />
+                    <rect x="42" y="42" width="6" height="6" /><rect x="54" y="42" width="6" height="6" /><rect x="66" y="42" width="6" height="6" /><rect x="78" y="42" width="6" height="6" /><rect x="90" y="42" width="6" height="6" />
+                    <rect x="42" y="54" width="6" height="6" /><rect x="66" y="54" width="6" height="6" /><rect x="90" y="54" width="6" height="6" />
+                    <rect x="42" y="66" width="6" height="6" /><rect x="54" y="66" width="6" height="6" /><rect x="78" y="66" width="6" height="6" />
+                    <rect x="42" y="78" width="6" height="6" /><rect x="66" y="78" width="6" height="6" /><rect x="90" y="78" width="6" height="6" />
+                    <rect x="54" y="90" width="6" height="6" /><rect x="78" y="90" width="6" height="6" />
+                  </g>
+                </svg>
+                <div className="animate-mesa-scan absolute inset-x-[6%] h-[2px] shadow-[0_0_12px_2px_rgba(248,118,4,.6)]" style={{ background: "linear-gradient(90deg,transparent,#F87604,transparent)" }} />
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </header>
 
-        <section className="sec" id="planes" style={{ background: "var(--panel)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
-          <div className="wrap">
-            <div className="sec-head center reveal">
-              <span className="eyebrow">Planes</span>
-              <h2>Un plan para cada tamaño de local.</h2>
-              <p>El precio depende de la cantidad de mesas. Incluye acceso completo a la plataforma; el soporte Tier 3 24/7 es un complemento recomendado.</p>
+      {/* ---------- MARQUEE ---------- */}
+      {/* Dos grupos idénticos sin gap entre ellos; cada ítem lleva su separador
+          con margen uniforme (también después del último), así translateX(-50%)
+          cae exactamente en la costura y el loop es continuo, sin saltos. */}
+      <div aria-hidden className="overflow-hidden border-y border-[#ECE3D8] bg-white py-5">
+        <div className="animate-mesa-marquee flex w-max">
+          {[0, 1].map((g) => (
+            <div key={g} className="flex shrink-0 items-center">
+              {marqueeItems.map((t, i) => (
+                <span key={i} className={`${DISP} whitespace-nowrap text-[20px] font-medium text-[#6B615A] after:mx-[30px] after:text-[#F87604] after:content-['·']`}>{t}</span>
+              ))}
             </div>
-            <div className="plans">
-              <div className="plan reveal">
-                <div className="pn">Plan 15</div>
-                <div className="range">1 – 15 mesas</div>
-                <div className="off">★ 50% OFF lanzamiento</div>
-                <span className="was">$2.500.000 + IVA</span>
-                <div className="price"><span className="now">$1.250.000 + IVA</span><small>Acceso a la plataforma</small></div>
-                <div className="sup"><b>+ $150.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
-                <ul className="feats">
-                  <li><Check />Menú QR + upload con IA</li>
-                  <li><Check />Vistas Cliente, Cocina, Mesero y Admin</li>
-                  <li><Check />Reportes básicos</li>
-                </ul>
-                <button className="btn btn-ghost" onClick={() => openModal("1 – 15 mesas")}>Contactar</button>
-              </div>
-              <div className="plan feat reveal">
-                <div className="ribbon">Más elegido</div>
-                <div className="pn">Plan 50</div>
-                <div className="range">16 – 50 mesas</div>
-                <div className="off">★ 50% OFF lanzamiento</div>
-                <span className="was">$6.000.000 + IVA</span>
-                <div className="price"><span className="now">$3.000.000 + IVA</span><small>Acceso a la plataforma</small></div>
-                <div className="sup"><b>+ $300.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
-                <ul className="feats">
-                  <li><Check />Todo lo del Plan 15</li>
-                  <li><Check />Reportes avanzados y horas peak</li>
-                  <li><Check />Gestión completa de meseros</li>
-                </ul>
-                <button className="btn btn-primary" onClick={() => openModal("16 – 50 mesas")}>Contactar</button>
-              </div>
-              <div className="plan reveal">
-                <div className="pn">Plan 100</div>
-                <div className="range">50 – 100 mesas</div>
-                <div className="off">★ 50% OFF lanzamiento</div>
-                <span className="was">$10.000.000 + IVA</span>
-                <div className="price"><span className="now">$5.000.000 + IVA</span><small>Acceso a la plataforma</small></div>
-                <div className="sup"><b>+ $450.000</b><span>Soporte Tier 3 · 24/7 (recomendado)</span></div>
-                <ul className="feats">
-                  <li><Check />Todo lo del Plan 50</li>
-                  <li><Check />Operación de alto volumen</li>
-                  <li><Check />Prioridad en soporte</li>
-                </ul>
-                <button className="btn btn-ghost" onClick={() => openModal("50 – 100 mesas")}>Contactar</button>
-              </div>
-              <div className="plan reveal">
-                <div className="pn">Personalizado</div>
-                <div className="range">100+ mesas o varias sucursales</div>
-                <div className="price">Contactar<small>A medida de tu operación</small></div>
-                <div className="sup"><b>Soporte a medida</b><span>Definimos el nivel según tu caso</span></div>
-                <ul className="feats">
-                  <li><Check />Multi-sucursal</li>
-                  <li><Check />Reportes consolidados</li>
-                  <li><Check />Integraciones a medida</li>
-                </ul>
-                <button className="btn btn-dark" onClick={() => openModal("100+ o varias sucursales")}>Contactar</button>
-              </div>
-            </div>
-            <p className="plan-note">Los valores son referenciales en pesos chilenos (CLP). El costo de procesamiento de menú con IA se absorbe en el setup. <a onClick={() => openModal()} style={{ color: "var(--orange)", fontWeight: 700, cursor: "pointer" }}>Habla con un ejecutivo</a> para una propuesta a tu medida.</p>
-          </div>
-        </section>
-
-        <section className="sec" id="ayuda">
-          <div className="wrap">
-            <div className="sec-head reveal">
-              <span className="eyebrow">Ayuda</span>
-              <h2>Empieza con confianza.</h2>
-              <p>Resolvemos las dudas frecuentes y te dejamos una guía paso a paso para poner tu local en marcha en minutos.</p>
-            </div>
-            <div className="help-grid">
-              <div className="faq reveal">
-                {faqs.map((f, i) => {
-                  const open = faqOpen === i
-                  return (
-                    <div key={f.q} className={`q${open ? " open" : ""}`}>
-                      <button onClick={() => setFaqOpen(open ? null : i)}>
-                        {f.q}
-                        <span className="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" /></svg></span>
-                      </button>
-                      <div className="a" style={{ maxHeight: open ? 500 : 0 }}><p>{f.a}</p></div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="guide reveal">
-                <h3>Guía de onboarding</h3>
-                <p className="s">Cuatro pasos para dejar tu local listo para recibir pedidos.</p>
-                <ul className="steps">
-                  <li><div className="sn">1</div><div><b>Sube tu menú PDF</b><span>La IA lo arma por ti; tú revisas y publicas.</span></div></li>
-                  <li><div className="sn">2</div><div><b>Genera e imprime los QR</b><span>Un QR único por mesa, descargable en PDF.</span></div></li>
-                  <li><div className="sn">3</div><div><b>Conecta tu cocina</b><span>Pantalla en tiempo real o impresión de boleta.</span></div></li>
-                  <li><div className="sn">4</div><div><b>Invita a tus meseros</b><span>Reciben sus credenciales por correo automáticamente.</span></div></li>
-                </ul>
-                <button className="btn btn-primary" onClick={() => openModal()} style={{ width: "100%", justifyContent: "center", marginTop: 22 }}>Contacta a un ejecutivo</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sec" style={{ paddingTop: 0 }}>
-          <div className="wrap">
-            <div className="cta-band reveal">
-              <h2>Más mesas atendidas, menos errores, menos estrés.</h2>
-              <p>Sin contratar más personal. Hablemos de cómo MESA se adapta a tu local.</p>
-              <div className="hero-cta">
-                <button className="btn btn-primary" onClick={() => openModal()}>Contacta a un ejecutivo
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                </button>
-                <a href="#planes" className="btn" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}>Ver planes</a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <footer className="foot-wrap">
-          <div className="wrap">
-            <div className="foot">
-              <div>
-                <a href="#top" className="brand" aria-label="MESA inicio">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={mesaLogo.src} alt="MESA" />
-                </a>
-                <p className="fd">Sistema de pedidos por QR para restaurantes y cafeterías. Más mesas atendidas, menos errores — sin contratar más personal.</p>
-              </div>
-              <div><h5>Producto</h5>
-                <a href="#funcionalidades">Funcionalidades</a>
-                <a href="#funcionalidades">Upload de menú con IA</a>
-                <a href="#planes">Planes</a>
-              </div>
-              <div><h5>Ayuda</h5>
-                <a href="#ayuda">Preguntas frecuentes</a>
-                <a href="#ayuda">Guía de onboarding</a>
-                <a onClick={() => openModal()}>Contacto</a>
-              </div>
-              <div><h5>Empieza</h5>
-                <Link href="/login">Iniciar sesión</Link>
-                <a onClick={() => openModal()}>Contacta a un ejecutivo</a>
-              </div>
-            </div>
-            <div className="foot-bot">
-              <span>© 2026 MESA · Chile</span>
-              <span>Hecho para operar sin caos.</span>
-            </div>
-          </div>
-        </footer>
+          ))}
+        </div>
       </div>
 
+      {/* ---------- HOW IT WORKS ---------- */}
+      <section id="como" className="px-0 py-24 max-md:py-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="mesa-reveal mx-auto mb-[54px] max-w-[640px] text-center">
+            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Del QR al plato</span>
+            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Cuatro pasos, cero fricción.</h2>
+            <p className="mt-4 text-[1.1rem] text-[#6B615A]">Es una secuencia real: tu cliente pide solo y tu equipo trabaja sobre pedidos que llegan ordenados.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-4">
+            {flowSteps.map((s, i) => (
+              <div key={s.title} className="mesa-reveal relative pt-[30px]">
+                <span className={`${MONO} absolute left-0 top-0 text-[13px] font-bold text-[#F87604]`}>0{i + 1}</span>
+                <div className="mb-4 grid h-[50px] w-[50px] place-items-center rounded-[14px] bg-[#FAF6F0] text-[#1C4D43] [&_svg]:h-6 [&_svg]:w-6">{s.icon}</div>
+                <h3 className={`${DISP} mb-[7px] text-[1.25rem] font-semibold`}>{s.title}</h3>
+                <p className="text-[14.5px] text-[#6B615A]">{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- FEATURES (bento) ---------- */}
+      <section id="funcionalidades" className="bg-[#FAF6F0] px-0 py-24 max-md:py-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="mesa-reveal mb-[54px] max-w-[640px]">
+            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Funcionalidades</span>
+            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Todo lo que necesitas para operar tu local.</h2>
+            <p className="mt-4 text-[1.1rem] text-[#6B615A]">Desde la carta hasta el cierre del día. MESA reúne la gestión de menú, mesas con QR y seguimiento de pedidos en una sola web app.</p>
+          </div>
+          <div className="grid grid-cols-1 items-stretch gap-[18px] md:grid-cols-2 lg:grid-cols-12">
+            {/* tarjeta grande: feature estrella (IA) */}
+            <article className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border-transparent bg-[#1C4D43] p-7 text-white md:col-span-2 lg:col-span-8 lg:row-span-2">
+              <span className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-[#F87604]/18 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[.06em] text-[#FFC79A]">★ Feature estrella</span>
+              <h3 className={`${DISP} mb-3.5 max-w-[18ch] text-[clamp(1.6rem,2.2vw,2.05rem)] font-semibold leading-[1.08]`}>Sube tu menú en PDF y deja que la IA lo arme por ti.</h3>
+              <p className="max-w-[42ch] text-[15.5px] text-white/80">La IA detecta nombres, precios y categorías. Tú revisas los ítems marcados como inciertos y publicas con un click. La IA propone, el humano aprueba.</p>
+              <div className="mt-6 rounded-[18px] border border-white/10 bg-white/[.06] p-5 backdrop-blur-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.06] p-3">
+                  <div className="grid h-[38px] w-[38px] place-items-center rounded-[9px] bg-[#F87604]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg></div>
+                  <div><b className="text-[14px]">menu-cafe-aurora.pdf</b><span className="block text-[12px] text-[#9fb0c4]">Analizando con IA…</span></div>
+                </div>
+                <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-white/10"><i className="block h-full w-[78%] rounded-full bg-[#F87604]" /></div>
+                <div className="mt-4 flex flex-col gap-2.5">
+                  {[["Café cortado", "· Cafetería", "$2.500 ✓", false], ["Sándwich Italiano", "· Sándwiches", "$6.900 ✓", false], ["Kuchen del día", "· Pastelería", "revisar precio", true]].map(([n, c, p, warn]) => (
+                    <div key={n as string} className="flex items-center justify-between rounded-[11px] border border-white/10 bg-white/[.05] px-3 py-2.5">
+                      <div className="text-[13.5px]"><b>{n}</b> <span className="text-[#9fb0c4]">{c}</span></div>
+                      <span className={`rounded-full px-2 py-[3px] text-[11px] font-bold ${warn ? "bg-[#F87604]/18 text-[#FFC79A]" : "bg-[#2EA05A]/18 text-[#86E0A8]"}`}>{p}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </article>
+
+            {features.map((f, i) => (
+              <article key={f.title} className={`mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border border-[#ECE3D8] bg-white p-[26px] transition-all duration-300 hover:-translate-y-[5px] hover:border-transparent hover:shadow-[0_10px_30px_rgba(34,28,24,.10)] lg:col-span-4 ${i >= 2 ? "lg:col-span-3" : ""}`}>
+                <div className={`mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] ${icoTone[f.tone]} [&_svg]:h-[23px] [&_svg]:w-[23px]`}>{f.icon}</div>
+                <h3 className={`${DISP} mb-[9px] text-[1.3rem] font-semibold`}>{f.title}</h3>
+                <p className="max-w-[42ch] text-[14.5px] text-[#6B615A]">{f.text}</p>
+              </article>
+            ))}
+          </div>
+
+          {/* fiabilidad / anti-caos */}
+          <div className="mesa-reveal mt-[18px] grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Offline-first", "El menú se cachea localmente y funciona con WiFi malo.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M2 8.82a15 15 0 0 1 20 0" /><line x1="12" y1="20" x2="12" y2="20" /></svg>],
+              ["Reconexión auto", "Detecta la pérdida de señal y reanuda sin intervención.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8" /><path d="M21 3v5h-5" /></svg>],
+              ["Carga <2s", "El menú del cliente abre en menos de 2 segundos en 4G.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg>],
+              ["Cola local", "Ningún pedido se pierde, aunque falle la red.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>],
+            ].map(([t, d, ico]) => (
+              <article key={t as string} className="rounded-[28px] border border-[#ECE3D8] bg-white p-[26px]">
+                <div className="mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] bg-[#F87604]/12 text-[#D95F00] [&_svg]:h-[23px] [&_svg]:w-[23px]">{ico}</div>
+                <h3 className={`${DISP} mb-[9px] text-[17px] font-semibold`}>{t}</h3>
+                <p className="text-[14px] text-[#6B615A]">{d}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- PLANES ---------- */}
+      <section id="planes" className="border-y border-[#ECE3D8] bg-white px-0 py-24 max-md:py-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="mesa-reveal mx-auto mb-[54px] max-w-[640px] text-center">
+            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Planes</span>
+            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Un plan para cada tamaño de local.</h2>
+            <p className="mt-4 text-[1.1rem] text-[#6B615A]">El precio depende de la cantidad de mesas. Incluye acceso completo a la plataforma; el soporte Tier 3 24/7 es un complemento recomendado.</p>
+          </div>
+          <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {plans.map((p) => (
+              <div key={p.name} className={`mesa-reveal relative flex flex-col rounded-[28px] bg-white p-7 px-[22px] transition-all duration-300 hover:-translate-y-[5px] hover:shadow-[0_10px_30px_rgba(34,28,24,.10)] ${p.featured ? "border-[1.5px] border-[#F87604] shadow-[0_24px_50px_rgba(248,118,4,.15)]" : "border border-[#ECE3D8]"}`}>
+                {p.featured && <span className={`${MONO} absolute -top-[13px] left-1/2 -translate-x-1/2 rounded-full bg-[#F87604] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-white`}>Más elegido</span>}
+                <div className={`${DISP} text-[1.5rem] font-semibold`}>{p.name}</div>
+                <div className="mt-[5px] mb-4 text-[14px] text-[#6B615A]">{p.range}</div>
+                {"now" in p && p.now ? (
+                  <>
+                    <span className="mb-2.5 self-start rounded-full bg-[#F87604]/10 px-3 py-[7px] text-[12.5px] font-semibold text-[#D95F00]">★ 50% OFF lanzamiento</span>
+                    <span className="text-[14px] text-[#6B615A] line-through decoration-[#6B615A]/60">{p.was}</span>
+                    <div className={`${DISP} mt-1 flex items-baseline gap-x-[7px] gap-y-[2px] leading-[1.05]`}>
+                      <span className="text-[clamp(1.7rem,2.3vw,2.15rem)] font-semibold tracking-[-.02em] text-[#D95F00]">{p.now}</span>
+                    </div>
+                    <span className="mt-2.5 text-[13.5px] text-[#6B615A]">Acceso a la plataforma</span>
+                  </>
+                ) : (
+                  <div className={`${DISP} mt-1 text-[clamp(1.5rem,2vw,1.9rem)] font-semibold`}>{("nowText" in p && p.nowText) || "Contactar"}<small className={`${SANS} mt-[3px] block text-[12px] font-semibold text-[#6B615A]`}>A medida de tu operación</small></div>
+                )}
+                <div className={`mt-[18px] rounded-[18px] border border-[#ECE3D8] p-[13px] px-[15px] ${p.featured || ("custom" in p && p.custom) ? "bg-white" : "bg-[#FAF6F0]"}`}>
+                  <b className={`${DISP} block text-[15px] font-semibold`}>{p.addon}</b>
+                  <small className="mt-0.5 block text-[12px] leading-[1.4] text-[#6B615A]">{p.addonText}</small>
+                </div>
+                <ul className="my-6 flex flex-1 flex-col gap-3">
+                  {p.feats.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-[14.5px] text-[#3a3733]"><span className="mt-[3px] text-[#F87604]"><Check /></span>{f}</li>
+                  ))}
+                </ul>
+                <button className={`${btnClass(p.btn)} w-full`} onClick={() => openModal(p.mesas)}>Contactar</button>
+              </div>
+            ))}
+          </div>
+          <p className="mx-auto mt-[38px] max-w-[780px] text-center text-[14px] leading-[1.6] text-[#6B615A]">
+            Los valores son referenciales en pesos chilenos (CLP). El costo de procesamiento de menú con IA se absorbe en el setup.{" "}
+            <button onClick={() => openModal()} className="font-semibold text-[#D95F00] hover:underline">Habla con un ejecutivo</button> para una propuesta a tu medida.
+          </p>
+        </div>
+      </section>
+
+      {/* ---------- AYUDA / FAQ ---------- */}
+      <section id="ayuda" className="px-0 py-24 max-md:py-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[.85fr_1.15fr]">
+            <div className="mesa-reveal lg:sticky lg:top-[110px]">
+              <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Ayuda</span>
+              <h2 className={`${DISP} my-4 text-[clamp(1.8rem,3vw,2.6rem)] font-semibold`}>¿Tienes una duda? Aquí partimos.</h2>
+              <p className="mb-[26px] text-[#6B615A]">Las preguntas que más nos hacen, y dónde encontrarnos cuando necesitas a una persona.</p>
+              <div className="flex flex-col gap-3.5">
+                <button onClick={() => openModal()} className="flex items-center gap-3.5 rounded-[18px] border border-[#ECE3D8] bg-white p-4 px-[18px] text-left transition-all hover:translate-x-1 hover:border-[#F87604]">
+                  <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#FAF6F0] text-[#1C4D43]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span>
+                  <span><b className="block text-[15px]">Chat de soporte</b><small className="text-[13px] text-[#6B615A]">Respondemos de 9 a 21 h, todos los días.</small></span>
+                </button>
+                <a href="mailto:hola@mesa.app" className="flex items-center gap-3.5 rounded-[18px] border border-[#ECE3D8] bg-white p-4 px-[18px] text-left transition-all hover:translate-x-1 hover:border-[#F87604]">
+                  <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#FAF6F0] text-[#1C4D43]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="m22 7-10 6L2 7" /></svg></span>
+                  <span><b className="block text-[15px]">hola@mesa.app</b><small className="text-[13px] text-[#6B615A]">Escríbenos y te contestamos el mismo día.</small></span>
+                </a>
+                <button onClick={() => openModal()} className="flex items-center gap-3.5 rounded-[18px] border border-[#ECE3D8] bg-white p-4 px-[18px] text-left transition-all hover:translate-x-1 hover:border-[#F87604]">
+                  <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#FAF6F0] text-[#1C4D43]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg></span>
+                  <span><b className="block text-[15px]">Centro de ayuda</b><small className="text-[13px] text-[#6B615A]">Guías paso a paso para configurar tu local.</small></span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mesa-reveal flex flex-col">
+              {faqs.map((f, i) => {
+                const open = faqOpen === i
+                return (
+                  <div key={f.q} className={`border-b border-[#ECE3D8] ${open ? "is-open" : ""}`}>
+                    <button onClick={() => setFaqOpen(open ? null : i)} className={`${DISP} flex w-full items-center justify-between gap-[18px] py-[22px] px-1 text-left text-[1.18rem] font-semibold text-[#221C18]`}>
+                      {f.q}
+                      <span className={`relative grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border-[1.5px] transition-all duration-300 ${open ? "border-[#F87604] bg-[#F87604]" : "border-[#ECE3D8]"}`}>
+                        <span className={`absolute h-[1.5px] w-[11px] ${open ? "bg-white" : "bg-[#F87604]"}`} />
+                        <span className={`absolute h-[11px] w-[1.5px] transition-transform ${open ? "scale-y-0 bg-white" : "bg-[#F87604]"}`} />
+                      </span>
+                    </button>
+                    <div className="overflow-hidden transition-[max-height] duration-300" style={{ maxHeight: open ? 500 : 0 }}>
+                      <p className="max-w-[60ch] px-1 pb-6 text-[15.5px] text-[#6B615A]">{f.a}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- LEGAL ---------- */}
+      <section id="legal" className="bg-[#FAF6F0] px-0 py-24 max-md:py-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="mesa-reveal mx-auto mb-[54px] max-w-[640px] text-center">
+            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Lo legal, en claro</span>
+            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Términos y privacidad sin letra chica.</h2>
+            <p className="mt-4 text-[1.1rem] text-[#6B615A]">Toca cada panel para leer el detalle. Escrito para que se entienda, no para esconder nada.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-[22px] md:grid-cols-2">
+            {legalDocs.map((doc, i) => {
+              const open = legalOpen === i
+              return (
+                <div key={doc.title} className="mesa-reveal h-fit overflow-hidden rounded-[28px] border border-[#ECE3D8] bg-white">
+                  <button onClick={() => setLegalOpen(open ? null : i)} className="flex w-full items-center justify-between gap-4 p-7 text-left">
+                    <span>
+                      <small className={`${MONO} block text-[11px] uppercase tracking-[.1em] text-[#6B615A]`}>Documento</small>
+                      <h3 className={`${DISP} mt-1 text-[1.35rem] font-semibold`}>{doc.title}</h3>
+                    </span>
+                    <svg className={`h-5 w-5 shrink-0 text-[#F87604] transition-transform duration-300 ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                  <div className="overflow-hidden transition-[max-height] duration-500" style={{ maxHeight: open ? 900 : 0 }}>
+                    <div className="px-7 pb-7 text-[14.5px] text-[#6B615A]">
+                      {doc.body.map(([h, p]) => (
+                        <div key={h}>
+                          <h4 className="mt-[18px] text-[14px] font-bold text-[#221C18]">{h}</h4>
+                          <p className="mt-1.5 max-w-[64ch] leading-relaxed">{p}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- CTA ---------- */}
+      <section className="px-0 pb-24 max-md:pb-[72px]">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="mesa-reveal relative overflow-hidden rounded-[28px] bg-[#221C18] px-12 py-16 text-center text-white max-md:px-[26px] max-md:py-12">
+            <div className="pointer-events-none absolute -top-20 -right-10 h-[300px] w-[300px] rounded-full" style={{ background: "radial-gradient(circle,rgba(248,118,4,.4),transparent 65%)" }} />
+            <div className="pointer-events-none absolute -bottom-[100px] -left-[60px] h-[320px] w-[320px] rounded-full" style={{ background: "radial-gradient(circle,rgba(255,166,43,.28),transparent 65%)" }} />
+            <div className="relative z-[1]">
+              <h2 className={`${DISP} mx-auto max-w-[18ch] text-[clamp(2rem,4vw,3.2rem)] font-semibold`}>Tu próxima mesa puede <em className="font-medium italic text-[#FFA62B]">pedir sola</em>.</h2>
+              <p className="mx-auto mt-[18px] mb-8 max-w-[46ch] text-white/70">Configuramos tu carta, generamos los QR de cada mesa y te dejamos recibiendo comandas.</p>
+              <div className="flex flex-wrap justify-center gap-3.5">
+                <a href="#planes" className={`${SANS} inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-transparent bg-white px-6 py-3 text-[15.5px] font-semibold text-[#221C18] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#FFA62B]`}>Ver planes</a>
+                <button onClick={() => openModal()} className={`${SANS} inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-white/30 bg-transparent px-6 py-3 text-[15.5px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white`}>Habla con un ejecutivo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- FOOTER ---------- */}
+      <footer className="px-0 pt-18 pb-9">
+        <div className="mx-auto max-w-[1180px] px-7">
+          <div className="grid grid-cols-1 gap-10 border-b border-[#ECE3D8] pb-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+            <div>
+              <a href="#top" className="inline-flex items-center gap-[11px] text-[#221C18]" aria-label="Mesa inicio">
+                <LogoMark className="h-[34px] w-auto" />
+                <LogoWord className="h-[21px] w-auto" />
+              </a>
+              <p className="mt-4 max-w-[32ch] text-[14.5px] text-[#6B615A]">Sistema de pedidos por QR para restaurantes y cafeterías. Más mesas atendidas, menos errores — sin contratar más personal.</p>
+            </div>
+            {[
+              ["Producto", [["Funcionalidades", "#funcionalidades"], ["Cómo funciona", "#como"], ["Planes", "#planes"]]],
+              ["Ayuda", [["Preguntas frecuentes", "#ayuda"]]],
+            ].map(([title, links]) => (
+              <div key={title as string}>
+                <h4 className={`${MONO} mb-4 text-[13px] font-medium uppercase tracking-[.14em] text-[#6B615A]`}>{title}</h4>
+                {(links as string[][]).map(([l, href]) => (
+                  <a key={l} href={href} className="mb-[11px] block text-[15px] text-[#221C18] transition-all hover:pl-1 hover:text-[#F87604]">{l}</a>
+                ))}
+                {title === "Ayuda" && <button onClick={() => openModal()} className="mb-[11px] block text-[15px] text-[#221C18] transition-all hover:pl-1 hover:text-[#F87604]">Contacto</button>}
+              </div>
+            ))}
+            <div>
+              <h4 className={`${MONO} mb-4 text-[13px] font-medium uppercase tracking-[.14em] text-[#6B615A]`}>Empieza</h4>
+              <Link href="/login" className="mb-[11px] block text-[15px] text-[#221C18] transition-all hover:pl-1 hover:text-[#F87604]">Iniciar sesión</Link>
+              <button onClick={() => openModal()} className="mb-[11px] block text-[15px] text-[#221C18] transition-all hover:pl-1 hover:text-[#F87604]">Contacta a un ejecutivo</button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3.5 pt-7">
+            <small className="text-[13.5px] text-[#6B615A]">© 2026 MESA · Chile</small>
+            <div className="flex gap-[22px]">
+              <a href="#legal" className="text-[13.5px] text-[#6B615A] transition-colors hover:text-[#221C18]">Términos</a>
+              <a href="#legal" className="text-[13.5px] text-[#6B615A] transition-colors hover:text-[#221C18]">Privacidad</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* ---------- MODAL CONTACTO ---------- */}
       <div
-        className={`mesa-modal-bg${modalOpen ? " open" : ""}`}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setModalOpen(false)
-        }}
+        className={`fixed inset-0 z-[200] flex items-center justify-center p-5 transition-[opacity,visibility] duration-300 ${modalOpen ? "visible opacity-100" : "invisible opacity-0"}`}
+        style={{ background: "rgba(34,28,24,.55)", backdropFilter: "blur(5px)" }}
+        onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false) }}
       >
-        <div className="modal">
-          <button className="close" aria-label="Cerrar" onClick={() => setModalOpen(false)}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        <div className={`relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-[28px] bg-white p-10 shadow-[0_30px_70px_rgba(34,28,24,.16)] transition-transform duration-300 max-md:p-[22px] ${modalOpen ? "translate-y-0 scale-100" : "translate-y-4 scale-[.985]"}`}>
+          <button className="absolute right-[22px] top-[22px] grid h-[38px] w-[38px] place-items-center rounded-full border-[1.5px] border-[#ECE3D8] bg-white text-[#6B615A] transition-all hover:rotate-90 hover:border-[#221C18] hover:text-[#221C18] max-md:right-4 max-md:top-4" aria-label="Cerrar" onClick={() => setModalOpen(false)}>
+            <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
           {!modalSent ? (
             <div>
-              <h3>Contacta a un ejecutivo</h3>
-              <p className="s">Cuéntanos de tu local y te contactamos con una propuesta a tu medida.</p>
-              <div className="field"><label>Nombre del local</label><input type="text" placeholder="Café Aurora" /></div>
-              <div className="field"><label>Tu nombre</label><input type="text" placeholder="Nombre y apellido" /></div>
-              <div className="field"><label>Correo o teléfono</label><input type="text" placeholder="hola@local.cl / +56 9 ..." /></div>
-              <div className="field"><label>¿Cuántas mesas tiene tu local?</label>
-                <select value={modalMesas} onChange={(e) => setModalMesas(e.target.value)}><option>1 – 15 mesas</option><option>16 – 50 mesas</option><option>50 – 100 mesas</option><option>100+ o varias sucursales</option></select>
+              <h3 className={`${DISP} pr-11 text-[1.9rem] font-semibold tracking-[-.01em] max-md:text-[1.55rem]`}>Contacta a un ejecutivo</h3>
+              <p className="mt-2.5 mb-[26px] max-w-[42ch] text-[15px] text-[#6B615A]">Cuéntanos de tu local y te contactamos con una propuesta a tu medida.</p>
+              {[["Nombre del local", "Café Aurora"], ["Tu nombre", "Nombre y apellido"], ["Correo o teléfono", "hola@local.cl / +56 9 ..."]].map(([label, ph]) => (
+                <div key={label} className="mb-[18px]">
+                  <label className="mb-2 block text-[14px] font-semibold text-[#221C18]">{label}</label>
+                  <input type="text" placeholder={ph} className="w-full rounded-xl border-[1.5px] border-[#ECE3D8] bg-white px-[15px] py-[13px] text-[15px] text-[#221C18] outline-none transition-all placeholder:text-[#A79C92] focus:border-[#F87604] focus:shadow-[0_0_0_3px_rgba(248,118,4,.13)]" />
+                </div>
+              ))}
+              <div className="mb-[18px]">
+                <label className="mb-2 block text-[14px] font-semibold text-[#221C18]">¿Cuántas mesas tiene tu local?</label>
+                <select value={modalMesas} onChange={(e) => setModalMesas(e.target.value)} className="w-full cursor-pointer appearance-none rounded-xl border-[1.5px] border-[#ECE3D8] bg-white px-[15px] py-[13px] pr-[42px] text-[15px] text-[#221C18] outline-none transition-all focus:border-[#F87604] focus:shadow-[0_0_0_3px_rgba(248,118,4,.13)]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236B615A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
+                  <option>1 – 15 mesas</option><option>16 – 50 mesas</option><option>50 – 100 mesas</option><option>100+ o varias sucursales</option>
+                </select>
               </div>
-              <button className="btn" onClick={() => setModalSent(true)}>Enviar solicitud</button>
+              <button className={`${btnClass("primary")} mt-2 w-full py-[1.05em]`} onClick={() => setModalSent(true)}>Enviar solicitud</button>
             </div>
           ) : (
-            <div className="ok">
-              <div className="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" /></svg></div>
-              <h3>¡Solicitud enviada!</h3>
-              <p className="s">Un ejecutivo de MESA te contactará a la brevedad.</p>
+            <div className="py-3 text-center">
+              <div className="mx-auto mb-[18px] grid h-[62px] w-[62px] place-items-center rounded-full bg-[#1C4D43]/10 text-[#1C4D43]"><svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" /></svg></div>
+              <h3 className={`${DISP} text-[1.9rem] font-semibold max-md:text-[1.55rem]`}>¡Solicitud enviada!</h3>
+              <p className="mx-auto mt-2.5 max-w-[34ch] text-[15px] text-[#6B615A]">Un ejecutivo de MESA te contactará a la brevedad.</p>
             </div>
           )}
         </div>
       </div>
-    </>
+    </div>
+  )
+}
+
+/* Mini-preview del menú del cliente (estático, look oscuro real de la app). */
+function PhonePreview() {
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-[28px] bg-[#0a0908] text-white">
+      <div className="flex flex-1 flex-col p-[18px] pt-5">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border-[1.5px] border-[#f87604] bg-[#161310]">
+            <LogoMark className="h-[22px] w-[22px] text-white" />
+          </div>
+          <h3 className={`${DISP} min-w-0 flex-1 truncate text-[15px] font-bold leading-tight`}>La Parrilla de Benja</h3>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="rounded-full bg-[#f87604] px-2.5 py-1 text-[10px] font-bold text-[#2a1705]">Mesa 1</span>
+          <small className="text-[10px] text-[#8a8178]">· Comensal 1</small>
+        </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#241f19] bg-[#15120f] px-3 py-2.5 text-[#7d756c]">
+          <svg className="h-[14px] w-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <span className="text-[11px]">Buscar platos…</span>
+        </div>
+        <div className="mt-3 flex gap-1.5 overflow-hidden">
+          {["Todos", "Pizza", "Bebidas"].map((c, i) => (
+            <span key={c} className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-semibold ${i === 0 ? "bg-[#f87604] text-[#2a1705]" : "bg-[#1a1714] text-[#b0a89f]"}`}>{c}</span>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-1 flex-col gap-2.5">
+          {[["Pizza", "Desde $2.500", "from-orange-500 to-red-700"], ["Café", "Desde $1.200", "from-amber-700 to-stone-900"]].map(([n, p, grad]) => (
+            <div key={n} className="flex items-center gap-2.5 rounded-[16px] border border-[#241f19] bg-[#161310] p-2.5">
+              <div className={`h-[42px] w-[52px] shrink-0 rounded-[10px] bg-gradient-to-br ${grad}`} />
+              <div className="min-w-0 flex-1">
+                <b className="block text-[12px] font-bold">{n}</b>
+                <span className="mt-1 block text-[12px] font-bold text-[#f87604]">{p}</span>
+              </div>
+              <button className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#f87604] text-[18px] leading-none text-white">+</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
