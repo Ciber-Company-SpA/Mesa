@@ -80,45 +80,6 @@ const flowSteps = [
   },
 ]
 
-const features = [
-  {
-    title: "Categorías del menú",
-    text: "Organiza tu carta por categorías para que cada producto sea fácil de encontrar y editar.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>,
-    tone: "coral",
-  },
-  {
-    title: "Productos y precios",
-    text: "Administra platos, descripciones, precios, estado visible e imagen de cada producto.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></svg>,
-    tone: "amber",
-  },
-  {
-    title: "Mesas con QR único",
-    text: "Cada mesa tiene su QR para que los clientes pidan desde el celular, sin instalar nada.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg>,
-    tone: "pine",
-  },
-  {
-    title: "Seguimiento de pedidos",
-    text: "Revisa pedidos por mesa, estado, tiempo de ingreso y total durante todo el servicio.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3 8-8" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
-    tone: "coral",
-  },
-  {
-    title: "Gestión de meseros",
-    text: "Agrega meseros desde el panel y MESA les envía las credenciales por correo automáticamente.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-    tone: "pine",
-  },
-  {
-    title: "Reportes básicos y avanzados",
-    text: "Productos más vendidos, total por mesa, horas peak y facturación: del día al año o por rango.",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg>,
-    tone: "amber",
-  },
-]
-
 const icoTone: Record<string, string> = {
   coral: "bg-[#F87604]/12 text-[#D95F00]",
   amber: "bg-[#FFA62B]/16 text-[#C77B00]",
@@ -363,54 +324,48 @@ export default function Home() {
       <section id="funcionalidades" className="bg-[#FAF6F0] px-0 py-24 max-md:py-[72px]">
         <div className="mx-auto max-w-[1180px] px-7">
           <div className="mesa-reveal mb-[54px] max-w-[640px]">
-            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Funcionalidades</span>
-            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Todo lo que necesitas para operar tu local.</h2>
-            <p className="mt-4 text-[1.1rem] text-[#6B615A]">Desde la carta hasta el cierre del día. MESA reúne la gestión de menú, mesas con QR y seguimiento de pedidos en una sola web app.</p>
+            <span className={`${MONO} inline-flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[.22em] text-[#D95F00] before:inline-block before:h-[1.5px] before:w-[26px] before:bg-[#F87604] before:content-['']`}>Todo en un panel</span>
+            <h2 className={`${DISP} mt-4 text-[clamp(2rem,3.6vw,3rem)] font-semibold`}>Una herramienta para mandar tu local entero.</h2>
+            <p className="mt-4 text-[1.1rem] text-[#6B615A]">Desde el menú que ve el cliente hasta los números que ves tú al cerrar la caja.</p>
           </div>
           <div className="grid grid-cols-1 items-stretch gap-[18px] md:grid-cols-2 lg:grid-cols-12">
-            {/* tarjeta grande: feature estrella (IA) */}
-            <article className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border-transparent bg-[#1C4D43] p-7 text-white md:col-span-2 lg:col-span-8 lg:row-span-2">
-              <span className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-[#F87604]/18 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[.06em] text-[#FFC79A]">★ Feature estrella</span>
-              <h3 className={`${DISP} mb-3.5 max-w-[18ch] text-[clamp(1.6rem,2.2vw,2.05rem)] font-semibold leading-[1.08]`}>Sube tu menú en PDF y deja que la IA lo arme por ti.</h3>
-              <p className="max-w-[42ch] text-[15.5px] text-white/80">La IA detecta nombres, precios y categorías. Tú revisas los ítems marcados como inciertos y publicas con un click. La IA propone, el humano aprueba.</p>
-              <div className="mt-6 rounded-[18px] border border-white/10 bg-white/[.06] p-5 backdrop-blur-sm">
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.06] p-3">
-                  <div className="grid h-[38px] w-[38px] place-items-center rounded-[9px] bg-[#F87604]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg></div>
-                  <div><b className="text-[14px]">menu-cafe-aurora.pdf</b><span className="block text-[12px] text-[#9fb0c4]">Analizando con IA…</span></div>
-                </div>
-                <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-white/10"><i className="block h-full w-[78%] rounded-full bg-[#F87604]" /></div>
-                <div className="mt-4 flex flex-col gap-2.5">
-                  {[["Café cortado", "· Cafetería", "$2.500 ✓", false], ["Sándwich Italiano", "· Sándwiches", "$6.900 ✓", false], ["Kuchen del día", "· Pastelería", "revisar precio", true]].map(([n, c, p, warn]) => (
-                    <div key={n as string} className="flex items-center justify-between rounded-[11px] border border-white/10 bg-white/[.05] px-3 py-2.5">
-                      <div className="text-[13.5px]"><b>{n}</b> <span className="text-[#9fb0c4]">{c}</span></div>
-                      <span className={`rounded-full px-2 py-[3px] text-[11px] font-bold ${warn ? "bg-[#F87604]/18 text-[#FFC79A]" : "bg-[#2EA05A]/18 text-[#86E0A8]"}`}>{p}</span>
-                    </div>
-                  ))}
-                </div>
+            {/* 1 · Card grande coral: función estrella */}
+            <article className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] bg-[linear-gradient(150deg,#F87604,#D95F00)] p-7 text-white md:col-span-2 lg:col-span-8 lg:row-span-2">
+              <div className="mb-5 grid h-[54px] w-[54px] place-items-center rounded-[13px] bg-white/20 [&_svg]:h-6 [&_svg]:w-6">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg>
               </div>
+              <h3 className={`${DISP} mb-3.5 max-w-[16ch] text-[clamp(1.6rem,2.2vw,2.05rem)] font-semibold leading-[1.08]`}>Pedidos por QR en cada mesa</h3>
+              <p className="max-w-[32ch] text-[15.5px] text-white/90">El corazón de Mesa: el cliente escanea, pide y paga desde su mesa. Menos filas, menos errores y mesas que rotan más rápido.</p>
+              <span className={`${MONO} mt-auto pt-[18px] text-[11px] uppercase tracking-[.14em] text-white/85`}>Función estrella</span>
+              <div className="pointer-events-none absolute -bottom-[30px] -right-[30px] h-[140px] w-[140px] rounded-full bg-white/[.08]" />
             </article>
 
-            {features.map((f, i) => (
-              <article key={f.title} className={`mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border border-[#ECE3D8] bg-white p-[26px] transition-all duration-300 hover:-translate-y-[5px] hover:border-transparent hover:shadow-[0_10px_30px_rgba(34,28,24,.10)] lg:col-span-4 ${i >= 2 ? "lg:col-span-3" : ""}`}>
-                <div className={`mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] ${icoTone[f.tone]} [&_svg]:h-[23px] [&_svg]:w-[23px]`}>{f.icon}</div>
-                <h3 className={`${DISP} mb-[9px] text-[1.3rem] font-semibold`}>{f.title}</h3>
-                <p className="max-w-[42ch] text-[14.5px] text-[#6B615A]">{f.text}</p>
-              </article>
-            ))}
-          </div>
+            {/* 2 · Carga IA (blanca, arriba-derecha) */}
+            <article className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border border-[#ECE3D8] bg-white p-[26px] transition-all duration-300 hover:-translate-y-[5px] hover:border-transparent hover:shadow-[0_10px_30px_rgba(34,28,24,.10)] lg:col-span-4">
+              <div className="mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] bg-[#FFA62B]/16 text-[#C77B00] [&_svg]:h-[23px] [&_svg]:w-[23px]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></svg></div>
+              <h3 className={`${DISP} mb-[9px] text-[1.3rem] font-semibold`}>Carga tu menú con IA</h3>
+              <p className="text-[14.5px] text-[#6B615A]">Sube tu carta en PDF y la IA extrae productos, precios y categorías.</p>
+            </article>
 
-          {/* fiabilidad / anti-caos */}
-          <div className="mesa-reveal mt-[18px] grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            {/* 3 · Comandas en vivo (pino, medio-derecha) */}
+            <article className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] bg-[#1C4D43] p-[26px] text-white lg:col-span-4">
+              <div className="mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] bg-white/14 text-white [&_svg]:h-[23px] [&_svg]:w-[23px]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg></div>
+              <h3 className={`${DISP} mb-[9px] text-[1.3rem] font-semibold`}>Comandas en vivo</h3>
+              <p className="text-[14.5px] text-white/80">Pantalla de cocina con cada pedido por mesa y estado.</p>
+              <span className={`${MONO} mt-auto pt-[18px] text-[11px] uppercase tracking-[.14em] text-white/65`}>Tiempo real</span>
+            </article>
+
+            {/* 4-7 · Fila inferior (blancas) */}
             {[
-              ["Offline-first", "El menú se cachea localmente y funciona con WiFi malo.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M2 8.82a15 15 0 0 1 20 0" /><line x1="12" y1="20" x2="12" y2="20" /></svg>],
-              ["Reconexión auto", "Detecta la pérdida de señal y reanuda sin intervención.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8" /><path d="M21 3v5h-5" /></svg>],
-              ["Carga <2s", "El menú del cliente abre en menos de 2 segundos en 4G.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg>],
-              ["Cola local", "Ningún pedido se pierde, aunque falle la red.", <svg key="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>],
-            ].map(([t, d, ico]) => (
-              <article key={t as string} className="rounded-[28px] border border-[#ECE3D8] bg-white p-[26px]">
-                <div className="mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] bg-[#F87604]/12 text-[#D95F00] [&_svg]:h-[23px] [&_svg]:w-[23px]">{ico}</div>
-                <h3 className={`${DISP} mb-[9px] text-[17px] font-semibold`}>{t}</h3>
-                <p className="text-[14px] text-[#6B615A]">{d}</p>
+              { t: "Categorías", d: "Organiza la carta en secciones y ordénalas a tu gusto.", tone: "coral", ico: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg> },
+              { t: "Productos", d: "Fotos, precios, variantes y stock. Agotado se oculta solo.", tone: "amber", ico: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></svg> },
+              { t: "Mesas y salones", d: "Crea mesas por salón y genera el QR único de cada una con un clic.", tone: "pine", ico: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 21v.01M21 17v.01M17 21v.01" /></svg> },
+              { t: "Reportes", d: "Ventas por producto, mesa y hora: tu plato estrella y tus horas valle.", tone: "coral", ico: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg> },
+            ].map((c) => (
+              <article key={c.t} className="mesa-reveal relative flex flex-col overflow-hidden rounded-[28px] border border-[#ECE3D8] bg-white p-[26px] transition-all duration-300 hover:-translate-y-[5px] hover:border-transparent hover:shadow-[0_10px_30px_rgba(34,28,24,.10)] lg:col-span-3">
+                <div className={`mb-4 grid h-[46px] w-[46px] place-items-center rounded-[13px] ${icoTone[c.tone]} [&_svg]:h-[23px] [&_svg]:w-[23px]`}>{c.ico}</div>
+                <h3 className={`${DISP} mb-[9px] text-[1.3rem] font-semibold`}>{c.t}</h3>
+                <p className="text-[14.5px] text-[#6B615A]">{c.d}</p>
               </article>
             ))}
           </div>
