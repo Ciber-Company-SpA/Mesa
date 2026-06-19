@@ -431,7 +431,7 @@ export default function Home() {
                   <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#FAF6F0] text-[#1C4D43]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span>
                   <span><b className="block text-[15px]">Chat de soporte</b><small className="text-[13px] text-[#6B615A]">Respondemos de 9 a 21 h, todos los días.</small></span>
                 </button>
-                <a href="mailto:hola@mesa.app" className="flex items-center gap-3.5 rounded-[18px] border border-[#ECE3D8] bg-white p-4 px-[18px] text-left transition-all hover:translate-x-1 hover:border-[#F87604]">
+                <a href="mailto:contacto@tumesaqr.com" className="flex items-center gap-3.5 rounded-[18px] border border-[#ECE3D8] bg-white p-4 px-4.5 text-left transition-all hover:translate-x-1 hover:border-[#F87604]">
                   <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#FAF6F0] text-[#1C4D43]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="m22 7-10 6L2 7" /></svg></span>
                   <span><b className="block text-[15px]">hola@mesa.app</b><small className="text-[13px] text-[#6B615A]">Escríbenos y te contestamos el mismo día.</small></span>
                 </a>
