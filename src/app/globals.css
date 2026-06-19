@@ -189,11 +189,20 @@ html, body {
 .mesa-reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
 .mesa-reveal.in { opacity: 1; transform: none; }
 
+/* Hero "fluted glass": estrías diagonales que se mecen + glow naranja vivo.
+   Recreación CSS del shader original (sin dependencias WebGL). */
+@keyframes mesaFlute { from { transform: translateX(-3%); } to { transform: translateX(3%); } }
+.animate-mesa-flute { animation: mesaFlute 24s ease-in-out infinite alternate; }
+@keyframes mesaGlow { from { transform: translate(0,0) scale(1); } to { transform: translate(-7%,5%) scale(1.18); } }
+.animate-mesa-glow { animation: mesaGlow 16s ease-in-out infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
   /* El marquee es decorativo y debe moverse siempre (pedido explícito); el
      resto de animaciones sí se desactivan con reduce-motion. */
   .animate-mesa-scan,
   .animate-mesa-float,
-  .animate-mesa-float-slow { animation: none; }
+  .animate-mesa-float-slow,
+  .animate-mesa-flute,
+  .animate-mesa-glow { animation: none; }
   .mesa-reveal { opacity: 1; transform: none; transition: none; }
 }

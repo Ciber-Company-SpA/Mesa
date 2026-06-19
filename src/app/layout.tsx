@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Manrope, Bricolage_Grotesque, Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Manrope, Bricolage_Grotesque, Fraunces, Inter, JetBrains_Mono, Inter_Tight } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { CapacitorBootstrap } from "@/components/CapacitorBootstrap";
 import "./globals.css";
@@ -46,6 +46,12 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "MESA",
   description: "Plataforma operativa para restaurantes: pedidos en vivo, mesas y meseros.",
@@ -78,7 +84,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${bricolage.variable} ${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${bricolage.variable} ${fraunces.variable} ${inter.variable} ${jetbrains.variable} ${interTight.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ServiceWorkerRegister />
