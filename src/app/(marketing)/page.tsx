@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { Btn, Mark, Ico, Eyebrow, Feature, CornerArrow, DashShot, Counter, CtaBand, HeroFx } from "@/components/marketing/site"
 
 export const metadata = {
@@ -62,6 +61,27 @@ export default function Home() {
           <div className="cta-row">
             <Btn label="Solicita una demo" href="/demo" />
             <span className="chip"><Mark stroke="#F5871F" /><span className="lab">Listo en minutos</span><span className="pill">Sin apps</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section className="video-intro bg-white" aria-labelledby="video-intro-title">
+        <div className="wrap">
+          <div className="video-intro-copy reveal">
+            <p className="kicker muted">MESA en acción</p>
+            <h2 id="video-intro-title">Una mejor forma de atender, en menos de un minuto.</h2>
+          </div>
+          <div className="video-frame reveal">
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              poster="/videos/presentacion-poster.jpg"
+              aria-label="Video de presentación de MESA"
+            >
+              <source src="/videos/presentacion.mp4" type="video/mp4" />
+              Tu navegador no puede reproducir este video.
+            </video>
           </div>
         </div>
       </section>
