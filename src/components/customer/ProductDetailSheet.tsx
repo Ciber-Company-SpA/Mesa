@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTableCart } from "@/hooks/useTableCart"
 import { ProductImage } from "@/components/customer/ProductImage"
 import { flyToCart } from "@/lib/customer/fly-to-cart"
@@ -37,6 +37,10 @@ export function ProductDetailSheet({
   const [qty, setQty] = useState(1)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [closing, setClosing] = useState(false)
+  const [checking, setChecking] = useState(false)
+  // Agotado detectado por el chequeo en vivo al intentar agregar (cubre el caso
+  // de menú cacheado que no reflejó la última venta).
+  const [soldOut, setSoldOut] = useState(false)
 
   const touchStartX = useRef<number | null>(null)
 
@@ -46,7 +50,14 @@ export function ProductDetailSheet({
   // Agotado = toggle manual (status_id 2) o sin stock por receta. Con variantes,
   // se evalúa la variante seleccionada; si no, el producto.
   const stockOut = activeVariant ? !!activeVariant.stock_out : !!product.stock_out
-  const isAgotado = product.status_id === 2 || stockOut
+  const isAgotado = product.status_id === 2 || stockOut || soldOut
+
+  // Al cambiar de variante, limpiar el "agotado" detectado en vivo (era de la
+  // variante anterior).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al cambiar de variante
+    setSoldOut(false)
+  }, [activeVariantIndex])
 
   // Deslizar sobre la imagen para cambiar de variante (además de los chips).
   function handleTouchStart(e: React.TouchEvent) {
@@ -72,17 +83,39 @@ export function ProductDetailSheet({
     window.setTimeout(onClose, 260)
   }
 
-  function handleAdd() {
-    if (isAgotado || !tableId || !restaurantId) return
-    flyToCart(imgRef.current)
-    addItem({
-      productId: product.id,
-      variantId: activeVariant?.id ?? null,
-      price: activePrice,
-      quantity: qty,
-    })
-    onAdded?.(product.product_name)
-    requestClose()
+  async function handleAdd() {
+    if (isAgotado || checking || !tableId || !restaurantId) return
+    setChecking(true)
+    try {
+      // Chequeo en vivo: el menú puede estar cacheado y no reflejar la última
+      // venta. Si ya no hay stock, bloqueamos acá (sin revelar qué insumo falta).
+      const params = new URLSearchParams({ id: String(product.id) })
+      if (activeVariant) params.set("variant_id", String(activeVariant.id))
+      const res = await fetch(`/api/product-status?${params.toString()}`)
+      const data = await res.json().catch(() => null)
+
+      const unavailable =
+        !data ||
+        data.status_id !== 1 ||
+        (activeVariant ? !!data.variant_stock_out : !!data.stock_out)
+
+      if (unavailable) {
+        setSoldOut(true)
+        return
+      }
+
+      flyToCart(imgRef.current)
+      addItem({
+        productId: product.id,
+        variantId: activeVariant?.id ?? null,
+        price: activePrice,
+        quantity: qty,
+      })
+      onAdded?.(product.product_name)
+      requestClose()
+    } finally {
+      setChecking(false)
+    }
   }
 
   return (
@@ -214,10 +247,14 @@ export function ProductDetailSheet({
             <button
               type="button"
               onClick={handleAdd}
-              disabled={isAgotado || !tableId}
+              disabled={isAgotado || checking || !tableId}
               className="flex h-[52px] flex-1 items-center justify-center rounded-full bg-[#fb923c] text-[15px] font-extrabold text-[#1a1a1a] shadow-[0_12px_28px_rgba(251,146,60,0.25)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#27272a] disabled:text-[#52525b] disabled:shadow-none"
             >
-              {isAgotado ? "Agotado" : `Agregar ${qty} — ${formatPrice(activePrice * qty)}`}
+              {isAgotado
+                ? "Agotado"
+                : checking
+                  ? "Verificando…"
+                  : `Agregar ${qty} — ${formatPrice(activePrice * qty)}`}
             </button>
           </div>
         </div>

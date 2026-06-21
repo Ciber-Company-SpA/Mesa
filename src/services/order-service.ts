@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
   CreateOrderSchema,
@@ -5,6 +6,7 @@ import {
 } from "@/lib/validation/order"
 import { ok, fail, type Result } from "@/services/result"
 import { requireStaffForRestaurant } from "@/services/auth-guard"
+import { menuTag } from "@/lib/menu/menu-cache"
 
 export const ORDER_STATUS_NUEVO = 1
 export const ORDER_STATUS_PREPARANDO = 2
@@ -323,6 +325,14 @@ if (error) {
   const result = data as CreatePublicOrderRpcResult | null
   if (!result || !result.id) {
     return fail("Error al crear el pedido")
+  }
+
+  // El pedido descontó stock por receta: refrescar el menú cacheado para que el
+  // "agotado" se refleje en las próximas cargas (no hay realtime en el menú).
+  try {
+    revalidateTag(menuTag(result.restaurant_id), "max")
+  } catch {
+    // fuera de contexto de revalidación: ignorar
   }
 
   return ok({
