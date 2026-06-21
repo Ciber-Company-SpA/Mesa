@@ -172,12 +172,18 @@ export async function setIngredientStock(
   return ok({ id: parsed.data.id })
 }
 
+export type ImportMode = "catalogo" | "compra"
+
 export async function importIngredients(
-  rows: ImportIngredientRowInput[]
+  rows: ImportIngredientRowInput[],
+  mode: ImportMode = "catalogo"
 ): Promise<Result<ImportIngredientsSummary>> {
   const parsed = ImportIngredientsSchema.safeParse(rows)
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+  if (mode !== "catalogo" && mode !== "compra") {
+    return fail("Modo de importación inválido")
   }
 
   const guard = await requireCurrentAdmin()
@@ -186,6 +192,7 @@ export async function importIngredients(
 
   const { data, error } = await supabase.rpc("import_ingredients_bulk", {
     p_items: parsed.data,
+    p_mode: mode,
   })
 
   if (error) return fail(error.message)

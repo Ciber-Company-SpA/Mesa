@@ -12,6 +12,7 @@ import {
   listMovements as listMovementsService,
   getProductRecipe as getProductRecipeService,
   setProductRecipe as setProductRecipeService,
+  type ImportMode,
 } from "@/services/inventory-service"
 import { suggestProductRecipe as suggestProductRecipeService } from "@/services/recipe-ai-service"
 import type {
@@ -73,9 +74,10 @@ export async function setIngredientStockAction(
 }
 
 export async function importIngredientsAction(
-  rows: ImportIngredientRowInput[]
+  rows: ImportIngredientRowInput[],
+  mode: ImportMode = "catalogo"
 ): Promise<Result<ImportIngredientsSummary>> {
-  const result = await importIngredientsService(rows)
+  const result = await importIngredientsService(rows, mode)
   if (result.ok) updateTag("menu")
   return result
 }

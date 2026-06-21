@@ -19,6 +19,7 @@ type Props = {
 }
 
 export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
+  const [mode, setMode] = useState<"catalogo" | "compra">("catalogo")
   const [rows, setRows] = useState<ParsedIngredientRow[]>([])
   const [headerError, setHeaderError] = useState("")
   const [fileName, setFileName] = useState("")
@@ -27,9 +28,12 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
   const [summary, setSummary] = useState<ImportIngredientsSummary | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
+  const isCompra = mode === "compra"
+
   useEffect(() => {
     if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al abrir el modal
+    setMode("catalogo")
     setRows([])
     setHeaderError("")
     setFileName("")
@@ -60,7 +64,7 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
     if (payload.length === 0 || importing) return
     setImporting(true)
     setError("")
-    const res = await importIngredientsAction(payload)
+    const res = await importIngredientsAction(payload, mode)
     setImporting(false)
     if (!res.ok) {
       setError(res.error)
@@ -126,10 +130,37 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
       ) : (
         // -------- CARGA + PREVIEW --------
         <div className="space-y-4">
+          {/* MODO */}
+          <div>
+            <div className="flex gap-1 rounded-xl bg-stone-100 p-1">
+              {(["catalogo", "compra"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={importing}
+                  onClick={() => setMode(m)}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
+                    mode === m ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+                  }`}
+                >
+                  {m === "catalogo" ? "Definir inventario" : "Registrar compra"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] text-stone-500">
+              {isCompra
+                ? "Suma la cantidad comprada a los insumos existentes (sin tocar los mínimos). Los que no existan, se crean."
+                : "Crea o actualiza insumos: fija el stock y el mínimo de alerta."}
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
             <p className="text-xs text-stone-600">
-              Columnas: <span className="font-semibold">Nombre, Unidad, Stock, Mínimo</span>. Unidad:
-              unidad, g, kg, ml, L.
+              Columnas:{" "}
+              <span className="font-semibold">
+                {isCompra ? "Nombre, Unidad, Cantidad" : "Nombre, Unidad, Stock, Mínimo"}
+              </span>
+              . Unidad: unidad, g, kg, ml, L.
             </p>
             <button
               type="button"
@@ -172,8 +203,8 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
                   <thead className="sticky top-0 bg-stone-50 text-[10px] uppercase tracking-wider text-stone-500">
                     <tr>
                       <th className="px-3 py-2 font-bold">Insumo</th>
-                      <th className="px-3 py-2 font-bold">Stock</th>
-                      <th className="px-3 py-2 font-bold">Mínimo</th>
+                      <th className="px-3 py-2 font-bold">{isCompra ? "Cantidad" : "Stock"}</th>
+                      {!isCompra && <th className="px-3 py-2 font-bold">Mínimo</th>}
                       <th className="px-3 py-2 font-bold">Estado</th>
                     </tr>
                   </thead>
@@ -184,9 +215,11 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
                         <td className="px-3 py-1.5 tabular-nums text-stone-700">
                           {r.valid && r.base ? formatStock(r.baseStock, r.base) : "—"}
                         </td>
-                        <td className="px-3 py-1.5 tabular-nums text-stone-700">
-                          {r.valid && r.base ? formatStock(r.baseMin, r.base) : "—"}
-                        </td>
+                        {!isCompra && (
+                          <td className="px-3 py-1.5 tabular-nums text-stone-700">
+                            {r.valid && r.base ? formatStock(r.baseMin, r.base) : "—"}
+                          </td>
+                        )}
                         <td className="px-3 py-1.5">
                           {r.valid ? (
                             <span className="text-emerald-700">Listo</span>
