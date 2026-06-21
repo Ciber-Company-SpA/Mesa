@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Modal } from "@/components/ui/Modal"
-import { importIngredientsAction } from "@/app/actions/inventory-actions"
+import { importIngredientsAction, mapInventoryHeadersAction } from "@/app/actions/inventory-actions"
 import {
   parseInventoryCsv,
+  buildInventoryRows,
   toImportPayload,
   downloadInventoryTemplate,
   type ParsedIngredientRow,
@@ -26,6 +27,12 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState("")
   const [summary, setSummary] = useState<ImportIngredientsSummary | null>(null)
+  const [table, setTable] = useState<string[][]>([])
+  const [headers, setHeaders] = useState<string[]>([])
+  const [aiMapping, setAiMapping] = useState(false)
+  const [aiMapped, setAiMapped] = useState<
+    { name: string; unit: string; stock: string | null; min: string | null } | null
+  >(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const isCompra = mode === "compra"
@@ -40,7 +47,30 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
     setImporting(false)
     setError("")
     setSummary(null)
+    setTable([])
+    setHeaders([])
+    setAiMapping(false)
+    setAiMapped(null)
   }, [open])
+
+  async function runAiMapping(tbl: string[][], hdrs: string[]) {
+    setAiMapping(true)
+    setHeaderError("")
+    const res = await mapInventoryHeadersAction(hdrs, tbl.slice(1, 4))
+    setAiMapping(false)
+    if (!res.ok) {
+      setHeaderError(res.error)
+      return
+    }
+    const map = res.data
+    setRows(buildInventoryRows(tbl, map))
+    setAiMapped({
+      name: hdrs[map.name] ?? "?",
+      unit: hdrs[map.unit] ?? "?",
+      stock: map.stock >= 0 ? hdrs[map.stock] ?? null : null,
+      min: map.min >= 0 ? hdrs[map.min] ?? null : null,
+    })
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -48,11 +78,24 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
     setFileName(file.name)
     setError("")
     setSummary(null)
+    setAiMapped(null)
     try {
       const text = await file.text()
       const result = parseInventoryCsv(text)
-      setHeaderError(result.headerError ?? "")
-      setRows(result.rows)
+      setTable(result.table)
+      setHeaders(result.headers)
+      if (result.headerError) {
+        setRows([])
+        // Si hay data pero no reconocimos las columnas, intentamos con IA.
+        if (result.table.length >= 2) {
+          await runAiMapping(result.table, result.headers)
+        } else {
+          setHeaderError(result.headerError)
+        }
+      } else {
+        setHeaderError("")
+        setRows(result.rows)
+      }
     } catch {
       setHeaderError("No se pudo leer el archivo.")
       setRows([])
@@ -183,10 +226,34 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
             {fileName && <p className="mt-1.5 text-[11px] text-stone-500">{fileName}</p>}
           </div>
 
-          {headerError && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-              {headerError}
+          {aiMapping && (
+            <p className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700">
+              ✨ Mapeando columnas con IA…
             </p>
+          )}
+
+          {aiMapped && !headerError && (
+            <p className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-700">
+              ✨ Columnas detectadas con IA — <b>Nombre</b>: “{aiMapped.name}” · <b>Unidad</b>: “
+              {aiMapped.unit}”
+              {aiMapped.stock ? ` · Stock: “${aiMapped.stock}”` : ""}
+              {aiMapped.min ? ` · Mínimo: “${aiMapped.min}”` : ""}
+            </p>
+          )}
+
+          {headerError && !aiMapping && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+              {headerError}
+              {table.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => runAiMapping(table, headers)}
+                  className="ml-2 font-bold underline"
+                >
+                  Reintentar con IA
+                </button>
+              )}
+            </div>
           )}
 
           {rows.length > 0 && (

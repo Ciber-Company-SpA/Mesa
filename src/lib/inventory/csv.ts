@@ -88,9 +88,20 @@ export type ParsedIngredientRow = {
   error?: string
 }
 
+// Índices (basados en 0) de cada campo dentro de las columnas del CSV.
+// -1 = columna ausente.
+export type ColumnMap = {
+  name: number
+  unit: number
+  stock: number
+  min: number
+}
+
 export type ParseResult = {
   headerError?: string
   rows: ParsedIngredientRow[]
+  table: string[][] // tabla cruda (incluye encabezados) para re-mapear
+  headers: string[] // encabezados crudos (sin normalizar), para mostrar/IA
 }
 
 function normalizeHeader(s: string): string {
@@ -128,52 +139,68 @@ function findColumn(headers: string[], aliases: string[]): number {
   return headers.findIndex((h) => aliases.includes(h))
 }
 
+// Detecta las columnas por alias de encabezado (case/acento-insensible).
+export function detectInventoryColumns(normalizedHeaders: string[]): ColumnMap {
+  return {
+    name: findColumn(normalizedHeaders, HEADER_ALIASES.name),
+    unit: findColumn(normalizedHeaders, HEADER_ALIASES.unit),
+    stock: findColumn(normalizedHeaders, HEADER_ALIASES.stock),
+    min: findColumn(normalizedHeaders, HEADER_ALIASES.min),
+  }
+}
+
+function buildRow(cols: string[], map: ColumnMap): ParsedIngredientRow {
+  const name = (cols[map.name] ?? "").trim()
+  const rawUnit = (cols[map.unit] ?? "").trim()
+  const stockStr = map.stock >= 0 ? (cols[map.stock] ?? "").trim() : ""
+  const minStr = map.min >= 0 ? (cols[map.min] ?? "").trim() : ""
+
+  const displayUnit = parseUnit(rawUnit)
+  const stock = stockStr === "" ? 0 : parseNumber(stockStr)
+  const min = minStr === "" ? 0 : parseNumber(minStr)
+
+  let error: string | undefined
+  if (!name) error = "Falta el nombre"
+  else if (!displayUnit) error = `Unidad no reconocida: "${rawUnit}"`
+  else if (Number.isNaN(stock) || stock < 0) error = "Stock inválido"
+  else if (Number.isNaN(min) || min < 0) error = "Mínimo inválido"
+
+  if (error || !displayUnit) {
+    return { name, rawUnit, displayUnit, base: null, baseStock: 0, baseMin: 0, valid: false, error }
+  }
+
+  const { base, amount: baseStock } = toBaseAmount(stock, displayUnit)
+  const { amount: baseMin } = toBaseAmount(min, displayUnit)
+  return { name, rawUnit, displayUnit, base, baseStock, baseMin, valid: true }
+}
+
+// Construye las filas a partir de la tabla cruda y un mapeo de columnas
+// (sirve tanto para el mapeo por alias como para el que devuelve la IA).
+export function buildInventoryRows(table: string[][], map: ColumnMap): ParsedIngredientRow[] {
+  return table.slice(1).map((cols) => buildRow(cols, map))
+}
+
 export function parseInventoryCsv(text: string): ParseResult {
   const table = parseCsv(text)
+  const headers = table[0] ?? []
+
   if (table.length < 2) {
-    return { headerError: "El archivo no tiene filas de datos.", rows: [] }
+    return { headerError: "El archivo no tiene filas de datos.", rows: [], table, headers }
   }
 
-  const headers = table[0].map(normalizeHeader)
-  const iName = findColumn(headers, HEADER_ALIASES.name)
-  const iUnit = findColumn(headers, HEADER_ALIASES.unit)
-  const iStock = findColumn(headers, HEADER_ALIASES.stock)
-  const iMin = findColumn(headers, HEADER_ALIASES.min)
+  const cols = detectInventoryColumns(headers.map(normalizeHeader))
 
-  if (iName < 0 || iUnit < 0) {
+  if (cols.name < 0 || cols.unit < 0) {
     return {
       headerError:
-        "Faltan columnas obligatorias. La primera fila debe incluir al menos 'Nombre' y 'Unidad'.",
+        "No reconocimos las columnas 'Nombre' y 'Unidad' en la primera fila.",
       rows: [],
+      table,
+      headers,
     }
   }
 
-  const rows: ParsedIngredientRow[] = table.slice(1).map((cols) => {
-    const name = (cols[iName] ?? "").trim()
-    const rawUnit = (cols[iUnit] ?? "").trim()
-    const stockStr = iStock >= 0 ? (cols[iStock] ?? "").trim() : ""
-    const minStr = iMin >= 0 ? (cols[iMin] ?? "").trim() : ""
-
-    const displayUnit = parseUnit(rawUnit)
-    const stock = stockStr === "" ? 0 : parseNumber(stockStr)
-    const min = minStr === "" ? 0 : parseNumber(minStr)
-
-    let error: string | undefined
-    if (!name) error = "Falta el nombre"
-    else if (!displayUnit) error = `Unidad no reconocida: "${rawUnit}"`
-    else if (Number.isNaN(stock) || stock < 0) error = "Stock inválido"
-    else if (Number.isNaN(min) || min < 0) error = "Mínimo inválido"
-
-    if (error || !displayUnit) {
-      return { name, rawUnit, displayUnit, base: null, baseStock: 0, baseMin: 0, valid: false, error }
-    }
-
-    const { base, amount: baseStock } = toBaseAmount(stock, displayUnit)
-    const { amount: baseMin } = toBaseAmount(min, displayUnit)
-    return { name, rawUnit, displayUnit, base, baseStock, baseMin, valid: true }
-  })
-
-  return { rows }
+  return { rows: buildInventoryRows(table, cols), table, headers }
 }
 
 // Filas válidas en el formato que espera el servidor (unidad base).

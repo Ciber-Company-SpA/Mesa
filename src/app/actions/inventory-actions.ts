@@ -15,6 +15,10 @@ import {
   type ImportMode,
 } from "@/services/inventory-service"
 import { suggestProductRecipe as suggestProductRecipeService } from "@/services/recipe-ai-service"
+import {
+  mapInventoryHeaders as mapInventoryHeadersService,
+  type HeaderColumnMap,
+} from "@/services/inventory-ai-service"
 import type {
   CreateIngredientInput,
   UpdateIngredientInput,
@@ -80,6 +84,13 @@ export async function importIngredientsAction(
   const result = await importIngredientsService(rows, mode)
   if (result.ok) updateTag("menu")
   return result
+}
+
+export async function mapInventoryHeadersAction(
+  headers: string[],
+  sampleRows: string[][]
+): Promise<Result<HeaderColumnMap>> {
+  return mapInventoryHeadersService(headers, sampleRows)
 }
 
 export async function listMovementsAction(
