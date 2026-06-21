@@ -37,6 +37,8 @@ export function useCreateProduct() {
   const { restaurantId, loading: loadingId } = useRestaurantId()
   const { uploadImage, uploading } = useUploadImage()
   const successRef = useRef(false)
+  // ID del producto recién creado, para flujos post-creación (ej: abrir receta).
+  const createdIdRef = useRef<number | null>(null)
   // Promesa de procesamiento en curso por localId — para esperar al submit.
   const processingPromises = useRef<Map<string, Promise<File | null>>>(new Map())
   // Token por localId para descartar resultados viejos cuando el usuario cambia imagen/toggle.
@@ -246,6 +248,7 @@ export function useCreateProduct() {
       throw new Error(result.error)
     }
 
+    createdIdRef.current = result.data.id
     invalidateProductCaches()
     successRef.current = true
   })
@@ -260,24 +263,26 @@ export function useCreateProduct() {
     processingPromises.current.clear()
   }
 
-  async function createProduct(): Promise<boolean> {
-    if (loading || loadingId) return false
+  // Devuelve el ID del producto creado, o null si falló.
+  async function createProduct(): Promise<number | null> {
+    if (loading || loadingId) return null
 
     successRef.current = false
+    createdIdRef.current = null
 
     try {
       setLoading(true)
       setError("")
       await createProductWithRetry()
       if (successRef.current) resetForm()
-      return successRef.current
+      return successRef.current ? createdIdRef.current : null
     } catch (err: unknown) {
       handleMutationError(err, {
         logTag: "Error creando producto",
         fallback: "Error al crear producto",
         setError,
       })
-      return false
+      return null
     } finally {
       setLoading(false)
     }

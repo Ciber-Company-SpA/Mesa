@@ -47,6 +47,8 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editInitialTab, setEditInitialTab] = useState<"datos" | "receta">("datos")
+  const [editAutoAI, setEditAutoAI] = useState(false)
   const {
     products,
     totalProducts,
@@ -75,12 +77,26 @@ export default function ProductsPage() {
       <CreateProductDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={refresh}
+        onCreated={(newId, configureStock, useAi) => {
+          refresh()
+          if (configureStock) {
+            // Abrir el producto recién creado directo en su pestaña de receta.
+            setEditInitialTab("receta")
+            setEditAutoAI(useAi)
+            setEditingId(newId)
+          }
+        }}
       />
       <EditProductDialog
         open={editingId !== null}
         productId={editingId}
-        onClose={() => setEditingId(null)}
+        initialTab={editInitialTab}
+        autoSuggestAI={editAutoAI}
+        onClose={() => {
+          setEditingId(null)
+          setEditInitialTab("datos")
+          setEditAutoAI(false)
+        }}
         onSaved={refresh}
       />
 

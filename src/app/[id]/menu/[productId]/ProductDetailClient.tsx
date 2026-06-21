@@ -62,7 +62,9 @@ export function ProductDetailClient({
   const activePrice = activeVariant?.variant_price ?? product.product_price
   const activeImage = activeVariant?.variant_image ?? product.product_image
   const currentStatus = realtimeStatus ?? product.status_id
-  const unavailable = currentStatus === 2 || currentStatus === 3
+  // Agotado por stock: variante seleccionada (si hay) o el flag del producto.
+  const stockUnavailable = activeVariant ? !!activeVariant.stock_out : !!product.stock_out
+  const unavailable = currentStatus === 2 || currentStatus === 3 || stockUnavailable
   const currentProductId = product.id
 
   // Deslizar sobre la imagen para cambiar de variante (además de los chips).

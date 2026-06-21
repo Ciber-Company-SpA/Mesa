@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Modal } from "@/components/ui/Modal"
 import { ProductOptionsEditor } from "@/components/admin/ProductOptionsEditor"
 import { useCreateProduct } from "@/hooks/useCreateProduct"
@@ -8,10 +9,14 @@ import { useAllCategories } from "@/hooks/useAllCategories"
 type Props = {
   open: boolean
   onClose: () => void
-  onCreated: () => void
+  // Recibe el ID del producto creado, si quiere configurar receta y si pidió IA.
+  onCreated: (productId: number, configureStock: boolean, useAi: boolean) => void
 }
 
 export function CreateProductDialog({ open, onClose, onCreated }: Props) {
+  const [configureStock, setConfigureStock] = useState(false)
+  const [useAi, setUseAi] = useState(false)
+
   const {
     productName, setProductName,
     productDescription, setProductDescription,
@@ -32,9 +37,11 @@ export function CreateProductDialog({ open, onClose, onCreated }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (loading) return
-    const ok = await createProduct()
-    if (ok) {
-      onCreated()
+    const newId = await createProduct()
+    if (newId) {
+      onCreated(newId, configureStock, configureStock && useAi)
+      setConfigureStock(false)
+      setUseAi(false)
       onClose()
     }
   }
@@ -107,6 +114,46 @@ export function CreateProductDialog({ open, onClose, onCreated }: Props) {
           onOptionImageChange={setOptionImage}
           onOptionRemoveBgChange={setOptionRemoveBg}
         />
+
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={configureStock}
+              disabled={loading}
+              onChange={(e) => setConfigureStock(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-orange-500 focus:ring-orange-300 disabled:opacity-50"
+            />
+            <span>
+              <span className="block text-xs font-semibold text-stone-800">
+                Configurar receta de stock al crear
+              </span>
+              <span className="block text-[11px] text-stone-500">
+                Al guardar, abriremos la receta para asignar los insumos que descuenta este producto.
+              </span>
+            </span>
+          </label>
+
+          {configureStock && (
+            <label className="mt-2.5 flex cursor-pointer items-start gap-2.5 border-t border-stone-200 pt-2.5">
+              <input
+                type="checkbox"
+                checked={useAi}
+                disabled={loading}
+                onChange={(e) => setUseAi(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-violet-500 focus:ring-violet-300 disabled:opacity-50"
+              />
+              <span>
+                <span className="block text-xs font-semibold text-violet-700">
+                  ✨ Generar receta con IA
+                </span>
+                <span className="block text-[11px] text-stone-500">
+                  Gemini propondrá los insumos del producto. Podrás revisarlos antes de guardar.
+                </span>
+              </span>
+            </label>
+          )}
+        </div>
 
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">

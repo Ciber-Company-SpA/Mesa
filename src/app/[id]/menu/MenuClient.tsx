@@ -41,7 +41,10 @@ type ProductCardProps = {
 function ProductCard({ item, isPopular, onOpenDetail }: ProductCardProps) {
   const variants = item.product_variants ?? []
   const hasVariants = variants.length > 0
-  const isAgotado = item.status_id === 2
+  // Agotado por stock: si tiene variantes, cuando todas están sin stock; si no,
+  // el flag del producto. Se combina con el toggle manual (status_id === 2).
+  const stockAgotado = hasVariants ? variants.every((v) => v.stock_out) : !!item.stock_out
+  const isAgotado = item.status_id === 2 || stockAgotado
   const isNew = isNewProduct(item.created_at)
 
   function open() {

@@ -12,6 +12,8 @@ export type Product = {
   category_id: number
   restaurant_id: number
   status_id: number
+  // Agotado automático por receta (insumo insuficiente). Lo expone get_public_menu.
+  stock_out?: boolean
   created_at: string
   // true si la imagen es un recorte sin fondo (PNG transparente). Lo fija el
   // admin con el toggle "quitar fondo"; el menú lo usa para NO aplicar el

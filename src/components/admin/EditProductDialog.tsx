@@ -1,18 +1,46 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Modal } from "@/components/ui/Modal"
 import { ProductOptionsEditor } from "@/components/admin/ProductOptionsEditor"
+import { ProductRecipeEditor } from "@/components/admin/ProductRecipeEditor"
 import { useEditProduct } from "@/hooks/useEditProduct"
 import { useAllCategories } from "@/hooks/useAllCategories"
+
+type Tab = "datos" | "receta"
 
 type Props = {
   open: boolean
   productId: number | null
   onClose: () => void
   onSaved: () => void
+  // Pestaña en la que abrir el diálogo (default "datos").
+  initialTab?: Tab
+  // Si es true, la pestaña Receta dispara la sugerencia con IA automáticamente.
+  autoSuggestAI?: boolean
 }
 
-export function EditProductDialog({ open, productId, onClose, onSaved }: Props) {
+export function EditProductDialog({
+  open,
+  productId,
+  onClose,
+  onSaved,
+  initialTab = "datos",
+  autoSuggestAI = false,
+}: Props) {
+  const [tab, setTab] = useState<Tab>("datos")
+  // Para que la IA solo se auto-dispare una vez, no al revisitar la pestaña.
+  const [autoConsumed, setAutoConsumed] = useState(false)
+
+  // Al abrir o cambiar de producto, posicionar en la pestaña indicada.
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al abrir el modal
+      setTab(initialTab)
+      setAutoConsumed(false)
+    }
+  }, [open, productId, initialTab])
+
   const {
     productName, setProductName,
     productDescription, setProductDescription,
@@ -50,7 +78,30 @@ export function EditProductDialog({ open, productId, onClose, onSaved }: Props) 
       title="Editar producto"
       description="Modifica los datos, precios o variantes del producto."
     >
-      {loading ? (
+      <div className="mb-4 flex gap-1 rounded-xl bg-stone-100 p-1">
+        {(["datos", "receta"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              tab === t ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+            }`}
+          >
+            {t === "datos" ? "Datos" : "Receta e inventario"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "receta" ? (
+        productId ? (
+          <ProductRecipeEditor
+            productId={productId}
+            autoSuggestAI={autoSuggestAI && !autoConsumed}
+            onAutoSuggested={() => setAutoConsumed(true)}
+          />
+        ) : null
+      ) : loading ? (
         <p className="py-6 text-center text-sm text-stone-500">Cargando producto...</p>
       ) : loadError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

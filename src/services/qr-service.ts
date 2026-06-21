@@ -12,11 +12,12 @@ export async function createTableQR(): Promise<Result<CreatedQRCode>> {
 
   const qrCode = nanoid(32)
 
-  const { data, error } = await supabase
-    .from("table_qr_codes")
-    .insert({ qr_code: qrCode, qr_active: true })
-    .select("id, qr_code")
-    .single()
+  // Vía RPC SECURITY DEFINER: el INSERT ... RETURNING no puede leerse con la
+  // policy de SELECT (el QR aún no está ligado a una mesa), así que el insert
+  // directo fallaba. La RPC ignora RLS en el RETURNING.
+  const { data, error } = await supabase.rpc("admin_create_table_qr", {
+    p_qr_code: qrCode,
+  })
 
   if (error || !data) {
     return fail("Error al crear el codigo QR")

@@ -6,4 +6,6 @@ export type ProductVariant = {
   variant_image: string | null
   variant_image_public_id: string | null
   created_at: string
+  // Agotado automático por receta (insumo insuficiente). Lo expone get_public_menu.
+  stock_out?: boolean
 }
