@@ -6,6 +6,7 @@ import { Pagination } from "@/components/ui/Pagination"
 import { useProductList } from "@/hooks/useProductList"
 import { CreateProductDialog } from "@/components/admin/CreateProductDialog"
 import { EditProductDialog } from "@/components/admin/EditProductDialog"
+import { BulkRecipeDialog } from "@/components/admin/BulkRecipeDialog"
 
 const statusLabels: Record<number, string> = {
   1: "Disponible",
@@ -49,6 +50,7 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editInitialTab, setEditInitialTab] = useState<"datos" | "receta">("datos")
   const [editAutoAI, setEditAutoAI] = useState(false)
+  const [showBulkRecipe, setShowBulkRecipe] = useState(false)
   const {
     products,
     totalProducts,
@@ -99,6 +101,7 @@ export default function ProductsPage() {
         }}
         onSaved={refresh}
       />
+      <BulkRecipeDialog open={showBulkRecipe} onClose={() => setShowBulkRecipe(false)} />
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -123,6 +126,13 @@ export default function ProductsPage() {
             </svg>
             Importar carta
           </Link>
+          <button
+            type="button"
+            onClick={() => setShowBulkRecipe(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-violet-100"
+          >
+            <span>✨ Generar recetas</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowCreate(true)}

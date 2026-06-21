@@ -12,6 +12,8 @@ import {
   listMovements as listMovementsService,
   getProductRecipe as getProductRecipeService,
   setProductRecipe as setProductRecipeService,
+  listProductsWithoutRecipe as listProductsWithoutRecipeService,
+  applyRecipesBulk as applyRecipesBulkService,
   type ImportMode,
 } from "@/services/inventory-service"
 import { suggestProductRecipe as suggestProductRecipeService } from "@/services/recipe-ai-service"
@@ -30,7 +32,13 @@ import type {
 } from "@/lib/validation/inventory"
 import type { Result } from "@/services/result"
 import type { Ingredient, IngredientWithFlag, ImportIngredientsSummary } from "@/types/ingredient"
-import type { ProductRecipeData, SuggestedRecipeItem } from "@/types/product-recipe"
+import type {
+  ProductRecipeData,
+  SuggestedRecipeItem,
+  ProductLite,
+  BulkRecipeEntry,
+  BulkRecipeSummary,
+} from "@/types/product-recipe"
 import type { StockMovementWithIngredient } from "@/types/stock-movement"
 
 export async function listIngredientsAction(): Promise<Result<IngredientWithFlag[]>> {
@@ -117,4 +125,16 @@ export async function suggestRecipeAction(
   productId: number
 ): Promise<Result<SuggestedRecipeItem[]>> {
   return suggestProductRecipeService(productId)
+}
+
+export async function listProductsWithoutRecipeAction(): Promise<Result<ProductLite[]>> {
+  return listProductsWithoutRecipeService()
+}
+
+export async function applyRecipesBulkAction(
+  entries: BulkRecipeEntry[]
+): Promise<Result<BulkRecipeSummary>> {
+  const result = await applyRecipesBulkService(entries)
+  if (result.ok) updateTag("menu")
+  return result
 }

@@ -10,6 +10,7 @@ import {
   type ImportSummary,
 } from "@/services/menu-import-service"
 import { invalidateCategoryCaches, invalidateProductCaches } from "@/lib/cache-invalidation"
+import { BulkRecipeDialog } from "@/components/admin/BulkRecipeDialog"
 
 type UploadedImage = { file: File; mimeType: string; base64: string; previewUrl: string }
 
@@ -63,6 +64,7 @@ export default function ImportMenuPage() {
   const [error, setError] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedMenu | null>(null)
   const [summary, setSummary] = useState<ImportSummary | null>(null)
+  const [showBulkRecipe, setShowBulkRecipe] = useState(false)
 
   // Picker de alternativas de Pexels por producto.
   const [pickerOpenIdx, setPickerOpenIdx] = useState<number | null>(null)
@@ -478,7 +480,14 @@ export default function ImportMenuPage() {
               </ul>
             </div>
           )}
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowBulkRecipe(true)}
+              className="inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-violet-700"
+            >
+              ✨ Generar recetas para los productos importados
+            </button>
             <Link
               href="/admin/products"
               className="inline-flex rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-stone-800"
@@ -488,6 +497,8 @@ export default function ImportMenuPage() {
           </div>
         </section>
       )}
+
+      <BulkRecipeDialog open={showBulkRecipe} onClose={() => setShowBulkRecipe(false)} />
     </div>
   )
 }

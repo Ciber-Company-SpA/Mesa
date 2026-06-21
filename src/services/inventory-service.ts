@@ -20,7 +20,13 @@ import {
 } from "@/lib/validation/inventory"
 import type { Ingredient, IngredientWithFlag, ImportIngredientsSummary } from "@/types/ingredient"
 import type { StockMovement, StockMovementWithIngredient } from "@/types/stock-movement"
-import type { ProductRecipeData, RecipeItem } from "@/types/product-recipe"
+import type {
+  ProductRecipeData,
+  RecipeItem,
+  ProductLite,
+  BulkRecipeEntry,
+  BulkRecipeSummary,
+} from "@/types/product-recipe"
 
 const INGREDIENT_COLS = "id, restaurant_id, name, unit, stock_actual, stock_minimo, created_at"
 const MOVEMENTS_LIMIT = 100
@@ -315,4 +321,78 @@ export async function setProductRecipe(
   if (error) return fail(error.message)
   revalidateMenu(restaurantId)
   return ok({ ok: true })
+}
+
+// Productos del restaurante que aún no tienen receta (ni a nivel producto ni
+// en ninguna de sus variantes). Útil para el generador masivo con IA.
+export async function listProductsWithoutRecipe(): Promise<Result<ProductLite[]>> {
+  const guard = await requireCurrentAdmin()
+  if (!guard.ok) return fail(guard.error)
+  const { supabase, restaurantId } = guard.data
+
+  const [prodRes, recipeRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, product_name")
+      .eq("restaurant_id", restaurantId)
+      .order("id", { ascending: true }),
+    supabase.from("product_recipes").select("product_id, variant_id").eq("restaurant_id", restaurantId),
+  ])
+  if (prodRes.error) return fail(prodRes.error.message)
+  if (recipeRes.error) return fail(recipeRes.error.message)
+
+  const products: ProductLite[] = (prodRes.data ?? []).map((p) => ({
+    id: p.id as number,
+    name: p.product_name as string,
+  }))
+
+  const withRecipe = new Set<number>()
+  const variantRecipeIds: number[] = []
+  for (const r of recipeRes.data ?? []) {
+    if (r.product_id != null) withRecipe.add(r.product_id as number)
+    else if (r.variant_id != null) variantRecipeIds.push(r.variant_id as number)
+  }
+
+  if (variantRecipeIds.length > 0) {
+    const { data: vData, error: vErr } = await supabase
+      .from("product_variants")
+      .select("id, product_id")
+      .in("id", variantRecipeIds)
+    if (vErr) return fail(vErr.message)
+    for (const v of vData ?? []) withRecipe.add(v.product_id as number)
+  }
+
+  return ok(products.filter((p) => !withRecipe.has(p.id)))
+}
+
+// Aplica en lote las recetas sugeridas por la IA (deduplicando insumos y
+// creando los que falten a stock 0). Una sola RPC atómica.
+export async function applyRecipesBulk(
+  entries: BulkRecipeEntry[]
+): Promise<Result<BulkRecipeSummary>> {
+  const guard = await requireCurrentAdmin()
+  if (!guard.ok) return fail(guard.error)
+  const { supabase, restaurantId } = guard.data
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return fail("Sin productos para procesar")
+  }
+  if (entries.length > 500) {
+    return fail("Demasiados productos (máx 500)")
+  }
+
+  const payload = entries.map((e) => ({
+    product_id: e.productId,
+    items: (e.items ?? []).map((it) => ({
+      ingredient_id: it.existingId,
+      name: it.name,
+      unit: it.unit,
+      cantidad: it.cantidad,
+    })),
+  }))
+
+  const { data, error } = await supabase.rpc("apply_recipes_bulk", { p_entries: payload })
+  if (error) return fail(error.message)
+  revalidateMenu(restaurantId)
+  return ok(data as BulkRecipeSummary)
 }

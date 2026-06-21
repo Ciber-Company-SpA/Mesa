@@ -43,7 +43,10 @@ export function ProductDetailSheet({
   const activeVariant = variants[Math.min(activeVariantIndex, variants.length - 1)] ?? null
   const activePrice = activeVariant?.variant_price ?? product.product_price
   const activeImage = activeVariant?.variant_image ?? product.product_image
-  const isAgotado = product.status_id === 2
+  // Agotado = toggle manual (status_id 2) o sin stock por receta. Con variantes,
+  // se evalúa la variante seleccionada; si no, el producto.
+  const stockOut = activeVariant ? !!activeVariant.stock_out : !!product.stock_out
+  const isAgotado = product.status_id === 2 || stockOut
 
   // Deslizar sobre la imagen para cambiar de variante (además de los chips).
   function handleTouchStart(e: React.TouchEvent) {

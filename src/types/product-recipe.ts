@@ -26,6 +26,19 @@ export type SuggestedRecipeItem = {
   existingId: number | null
 }
 
+// Producto mínimo para listar los que no tienen receta.
+export type ProductLite = { id: number; name: string }
+
+// Una entrada del generador masivo: producto + insumos sugeridos por la IA.
+export type BulkRecipeEntry = { productId: number; items: SuggestedRecipeItem[] }
+
+// Resultado del generador masivo de recetas.
+export type BulkRecipeSummary = {
+  productsProcessed: number
+  ingredientsCreated: number
+  recipesSaved: number
+}
+
 // Datos que necesita la pestaña "Receta" del producto: insumos disponibles,
 // las variantes del producto y la receta actual por destino.
 export type ProductRecipeData = {
