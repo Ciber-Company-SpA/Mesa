@@ -155,6 +155,10 @@ export default function ImportMenuPage() {
       setSummary(result.data)
       invalidateCategoryCaches()
       invalidateProductCaches()
+      // Tras importar, ofrecer generar recetas de una (se abre el diálogo solo).
+      if (result.data.productsCreated > 0) {
+        setShowBulkRecipe(true)
+      }
     } catch (err) {
       setError(
         err instanceof Error ? `Error inesperado: ${err.message}` : "Error inesperado importando"

@@ -9,7 +9,21 @@ import {
 } from "@/app/actions/inventory-actions"
 import type { ProductLite, BulkRecipeEntry, BulkRecipeSummary } from "@/types/product-recipe"
 
-const CONCURRENCY = 4
+const CONCURRENCY = 2
+
+// Sugerencia con reintentos y backoff. Gemini (free tier) limita por minuto, y
+// como procesamos varios productos, los últimos (los recién importados, con id
+// más alto) son los que más chocan con el límite. El backoff les da tiempo.
+async function suggestWithRetry(productId: number) {
+  let res = await suggestRecipeAction(productId)
+  let delay = 1500
+  for (let attempt = 0; attempt < 3 && !res.ok; attempt++) {
+    await new Promise((r) => setTimeout(r, delay))
+    delay *= 2
+    res = await suggestRecipeAction(productId)
+  }
+  return res
+}
 
 type Props = {
   open: boolean
@@ -68,7 +82,7 @@ export function BulkRecipeDialog({ open, onClose, onDone }: Props) {
     async function worker() {
       while (idx < total) {
         const p = products[idx++]
-        const res = await suggestRecipeAction(p.id)
+        const res = await suggestWithRetry(p.id)
         if (res.ok && res.data.length > 0) {
           entries.push({ productId: p.id, items: res.data })
         } else {
@@ -181,6 +195,17 @@ export function BulkRecipeDialog({ open, onClose, onDone }: Props) {
                 receta. La IA propondrá insumos para cada uno y los creará en inventario (stock 0)
                 para que los revises y cargues.
               </p>
+
+              <div className="max-h-40 overflow-y-auto rounded-xl border border-stone-200 bg-stone-50 p-2">
+                <ul className="space-y-0.5 text-xs text-stone-600">
+                  {products.map((p) => (
+                    <li key={p.id} className="truncate">
+                      • {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
