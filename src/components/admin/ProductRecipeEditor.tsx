@@ -348,6 +348,20 @@ function TargetEditor({ title, lines, ingredients, ingredientById, disabled, onC
     onChange(lines.filter((_, i) => i !== idx))
   }
 
+  // Costo de la receta: suma de precio(por base) × cantidad. Solo se muestra si
+  // TODOS los insumos asignados tienen precio (y ninguno es un insumo nuevo aún
+  // sin crear, que arranca en precio 0).
+  const costedLines = lines.filter((l) => l.ingredientId !== "" && Number(l.cantidad) > 0)
+  const hasPendingNew = lines.some((l) => l.ingredientId === "" && l.newName && Number(l.cantidad) > 0)
+  let recipeCost = 0
+  let allPriced = costedLines.length > 0 && !hasPendingNew
+  for (const l of costedLines) {
+    const precio = ingredientById.get(Number(l.ingredientId))?.precio ?? 0
+    if (precio <= 0) allPriced = false
+    recipeCost += precio * Number(l.cantidad)
+  }
+  const hasItems = costedLines.length > 0 || hasPendingNew
+
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-3">
       {title && <p className="mb-2 text-xs font-bold text-stone-700">{title}</p>}
@@ -421,14 +435,27 @@ function TargetEditor({ title, lines, ingredients, ingredientById, disabled, onC
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={addLine}
-        disabled={disabled}
-        className="mt-2 rounded-lg border border-stone-200 px-2.5 py-1.5 text-[11px] font-bold text-stone-700 transition hover:bg-stone-50 disabled:opacity-50"
-      >
-        + Agregar insumo
-      </button>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={addLine}
+          disabled={disabled}
+          className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-[11px] font-bold text-stone-700 transition hover:bg-stone-50 disabled:opacity-50"
+        >
+          + Agregar insumo
+        </button>
+        {hasItems &&
+          (allPriced ? (
+            <span className="text-[11px] font-bold text-stone-700">
+              Costo receta:{" "}
+              <span className="text-emerald-700">
+                ${recipeCost.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
+              </span>
+            </span>
+          ) : (
+            <span className="text-[11px] text-stone-400">Asigna precio a todos los insumos</span>
+          ))}
+      </div>
     </div>
   )
 }
