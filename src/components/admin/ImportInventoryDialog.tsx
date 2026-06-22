@@ -10,7 +10,7 @@ import {
   downloadInventoryTemplate,
   type ParsedIngredientRow,
 } from "@/lib/inventory/csv"
-import { formatStock } from "@/lib/inventory/units"
+import { formatStock, formatUnitPrice } from "@/lib/inventory/units"
 import type { ImportIngredientsSummary } from "@/types/ingredient"
 
 type Props = {
@@ -201,7 +201,7 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
             <p className="text-xs text-stone-600">
               Columnas:{" "}
               <span className="font-semibold">
-                {isCompra ? "Nombre, Unidad, Cantidad" : "Nombre, Unidad, Stock, Mínimo"}
+                {isCompra ? "Nombre, Unidad, Cantidad, Precio" : "Nombre, Unidad, Stock, Mínimo, Precio"}
               </span>
               . Unidad: unidad, g, kg, ml, L.
             </p>
@@ -272,6 +272,7 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
                       <th className="px-3 py-2 font-bold">Insumo</th>
                       <th className="px-3 py-2 font-bold">{isCompra ? "Cantidad" : "Stock"}</th>
                       {!isCompra && <th className="px-3 py-2 font-bold">Mínimo</th>}
+                      <th className="px-3 py-2 font-bold">Precio</th>
                       <th className="px-3 py-2 font-bold">Estado</th>
                     </tr>
                   </thead>
@@ -287,6 +288,9 @@ export function ImportInventoryDialog({ open, onClose, onImported }: Props) {
                             {r.valid && r.base ? formatStock(r.baseMin, r.base) : "—"}
                           </td>
                         )}
+                        <td className="px-3 py-1.5 tabular-nums text-stone-700">
+                          {r.valid && r.base && r.precio > 0 ? formatUnitPrice(r.precio, r.base) : "—"}
+                        </td>
                         <td className="px-3 py-1.5">
                           {r.valid ? (
                             <span className="text-emerald-700">Listo</span>

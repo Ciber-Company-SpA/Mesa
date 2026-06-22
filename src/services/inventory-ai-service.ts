@@ -3,7 +3,13 @@ import { z } from "zod"
 import { ok, fail, type Result } from "@/services/result"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 
-export type HeaderColumnMap = { name: number; unit: number; stock: number; min: number }
+export type HeaderColumnMap = {
+  name: number
+  unit: number
+  stock: number
+  min: number
+  price: number
+}
 
 const SYSTEM_PROMPT = `Eres un asistente que mapea columnas de un CSV de inventario de insumos de un restaurante.
 Te dan los encabezados (con su índice basado en 0) y filas de ejemplo. Identifica qué columna corresponde a cada campo:
@@ -11,6 +17,7 @@ Te dan los encabezados (con su índice basado en 0) y filas de ejemplo. Identifi
 - unit: unidad de medida (ej: "unidad", "kg", "g", "ml", "L")
 - stock: cantidad o existencia actual
 - min: stock mínimo de alerta
+- price: precio o costo del insumo (ej: "precio", "costo", "valor")
 
 Devuelve el índice (basado en 0) de cada campo. Usa -1 si el campo no está presente.
 'name' y 'unit' son obligatorios; si no puedes identificarlos, devuélvelos igual con tu mejor estimación.`
@@ -20,6 +27,7 @@ const ResultSchema = z.object({
   unitIdx: z.number().int(),
   stockIdx: z.number().int(),
   minIdx: z.number().int(),
+  priceIdx: z.number().int(),
 })
 
 export async function mapInventoryHeaders(
@@ -59,8 +67,9 @@ export async function mapInventoryHeaders(
             unitIdx: { type: SchemaType.INTEGER },
             stockIdx: { type: SchemaType.INTEGER },
             minIdx: { type: SchemaType.INTEGER },
+            priceIdx: { type: SchemaType.INTEGER },
           },
-          required: ["nameIdx", "unitIdx", "stockIdx", "minIdx"],
+          required: ["nameIdx", "unitIdx", "stockIdx", "minIdx", "priceIdx"],
         },
       },
     })
@@ -78,7 +87,13 @@ export async function mapInventoryHeaders(
     if (name < 0 || unit < 0) {
       return fail("La IA no pudo identificar las columnas de Nombre y Unidad.")
     }
-    return ok({ name, unit, stock: inRange(v.data.stockIdx), min: inRange(v.data.minIdx) })
+    return ok({
+      name,
+      unit,
+      stock: inRange(v.data.stockIdx),
+      min: inRange(v.data.minIdx),
+      price: inRange(v.data.priceIdx),
+    })
   } catch (err) {
     return fail(err instanceof Error ? `Error de la IA: ${err.message}` : "Error al mapear columnas")
   }

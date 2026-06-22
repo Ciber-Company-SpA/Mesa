@@ -93,6 +93,7 @@ export const ImportIngredientRowSchema = z.object({
   unit: IngredientUnitSchema,
   stockInicial: StockAmountSchema.default(0),
   stockMinimo: StockAmountSchema.default(0),
+  precio: StockAmountSchema.default(0),
 })
 
 export const ImportIngredientsSchema = z

@@ -1,4 +1,4 @@
-import { toBaseAmount, type DisplayUnit } from "@/lib/inventory/units"
+import { toBaseAmount, DISPLAY_UNIT_OPTIONS, type DisplayUnit } from "@/lib/inventory/units"
 import type { IngredientUnit } from "@/types/ingredient"
 
 // ---------------------------------------------------------------------------
@@ -84,6 +84,7 @@ export type ParsedIngredientRow = {
   base: IngredientUnit | null
   baseStock: number
   baseMin: number
+  precio: number // costo por unidad base (0 = sin precio)
   valid: boolean
   error?: string
 }
@@ -95,6 +96,7 @@ export type ColumnMap = {
   unit: number
   stock: number
   min: number
+  price: number
 }
 
 export type ParseResult = {
@@ -128,11 +130,12 @@ function parseNumber(raw: string): number {
 }
 
 // Encabezados aceptados por columna (normalizados, sin acentos).
-const HEADER_ALIASES: Record<"name" | "unit" | "stock" | "min", string[]> = {
+const HEADER_ALIASES: Record<"name" | "unit" | "stock" | "min" | "price", string[]> = {
   name: ["nombre", "insumo", "producto", "item", "articulo"],
   unit: ["unidad", "medida", "unidad de medida", "um"],
   stock: ["stock", "cantidad", "existencia", "stock inicial", "inicial"],
   min: ["minimo", "min", "stock minimo", "alerta", "minimo de alerta"],
+  price: ["precio", "costo", "coste", "price", "valor", "$"],
 }
 
 function findColumn(headers: string[], aliases: string[]): number {
@@ -146,6 +149,7 @@ export function detectInventoryColumns(normalizedHeaders: string[]): ColumnMap {
     unit: findColumn(normalizedHeaders, HEADER_ALIASES.unit),
     stock: findColumn(normalizedHeaders, HEADER_ALIASES.stock),
     min: findColumn(normalizedHeaders, HEADER_ALIASES.min),
+    price: findColumn(normalizedHeaders, HEADER_ALIASES.price),
   }
 }
 
@@ -154,10 +158,12 @@ function buildRow(cols: string[], map: ColumnMap): ParsedIngredientRow {
   const rawUnit = (cols[map.unit] ?? "").trim()
   const stockStr = map.stock >= 0 ? (cols[map.stock] ?? "").trim() : ""
   const minStr = map.min >= 0 ? (cols[map.min] ?? "").trim() : ""
+  const priceStr = map.price >= 0 ? (cols[map.price] ?? "").trim() : ""
 
   const displayUnit = parseUnit(rawUnit)
   const stock = stockStr === "" ? 0 : parseNumber(stockStr)
   const min = minStr === "" ? 0 : parseNumber(minStr)
+  const priceVal = priceStr === "" ? 0 : parseNumber(priceStr)
 
   let error: string | undefined
   if (!name) error = "Falta el nombre"
@@ -166,12 +172,19 @@ function buildRow(cols: string[], map: ColumnMap): ParsedIngredientRow {
   else if (Number.isNaN(min) || min < 0) error = "Mínimo inválido"
 
   if (error || !displayUnit) {
-    return { name, rawUnit, displayUnit, base: null, baseStock: 0, baseMin: 0, valid: false, error }
+    return {
+      name, rawUnit, displayUnit, base: null,
+      baseStock: 0, baseMin: 0, precio: 0, valid: false, error,
+    }
   }
 
   const { base, amount: baseStock } = toBaseAmount(stock, displayUnit)
   const { amount: baseMin } = toBaseAmount(min, displayUnit)
-  return { name, rawUnit, displayUnit, base, baseStock, baseMin, valid: true }
+  // El precio del CSV es por la medida de la columna Unidad; lo pasamos a /base.
+  const factor = DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)?.factor ?? 1
+  const precio = !Number.isNaN(priceVal) && priceVal > 0 ? priceVal / factor : 0
+
+  return { name, rawUnit, displayUnit, base, baseStock, baseMin, precio, valid: true }
 }
 
 // Construye las filas a partir de la tabla cruda y un mapeo de columnas
@@ -212,6 +225,7 @@ export function toImportPayload(rows: ParsedIngredientRow[]) {
       unit: r.base as IngredientUnit,
       stockInicial: r.baseStock,
       stockMinimo: r.baseMin,
+      precio: r.precio,
     }))
 }
 
@@ -219,11 +233,11 @@ export function toImportPayload(rows: ParsedIngredientRow[]) {
 // Plantilla descargable
 // ---------------------------------------------------------------------------
 export const INVENTORY_TEMPLATE_CSV = [
-  "Nombre,Unidad,Stock,Minimo",
-  "Pan de hamburguesa,unidad,100,20",
-  "Carne de vacuno,kg,15,3",
-  "Bebida lata,unidad,48,12",
-  "Aceite,L,10,2",
+  "Nombre,Unidad,Stock,Minimo,Precio",
+  "Pan de hamburguesa,unidad,100,20,150",
+  "Carne de vacuno,kg,15,3,8000",
+  "Bebida lata,unidad,48,12,600",
+  "Aceite,L,10,2,3500",
 ].join("\n")
 
 export function downloadInventoryTemplate() {
