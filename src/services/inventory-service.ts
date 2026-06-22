@@ -28,7 +28,7 @@ import type {
   BulkRecipeSummary,
 } from "@/types/product-recipe"
 
-const INGREDIENT_COLS = "id, restaurant_id, name, unit, stock_actual, stock_minimo, created_at"
+const INGREDIENT_COLS = "id, restaurant_id, name, unit, stock_actual, stock_minimo, precio, created_at"
 const MOVEMENTS_LIMIT = 100
 
 // La disponibilidad por stock (stock_out) viaja en el menú; al cambiar recetas
@@ -77,6 +77,7 @@ export async function createIngredient(
     p_unit: parsed.data.unit,
     p_stock_inicial: parsed.data.stockInicial,
     p_stock_minimo: parsed.data.stockMinimo,
+    p_precio: parsed.data.precio,
   })
 
   if (error) return fail(error.message)
@@ -104,6 +105,7 @@ export async function updateIngredient(
       name: parsed.data.name,
       unit: parsed.data.unit,
       stock_minimo: parsed.data.stockMinimo,
+      precio: parsed.data.precio,
     })
     .eq("id", parsed.data.id)
 

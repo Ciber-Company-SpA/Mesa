@@ -39,6 +39,8 @@ export const CreateIngredientSchema = z.object({
   unit: IngredientUnitSchema,
   stockInicial: StockAmountSchema.default(0),
   stockMinimo: StockAmountSchema.default(0),
+  // Costo por unidad base (0 = sin precio).
+  precio: StockAmountSchema.default(0),
 })
 
 export const UpdateIngredientSchema = z.object({
@@ -46,6 +48,7 @@ export const UpdateIngredientSchema = z.object({
   name: NameSchema,
   unit: IngredientUnitSchema,
   stockMinimo: StockAmountSchema,
+  precio: StockAmountSchema.default(0),
 })
 
 export const DeleteIngredientSchema = z.object({

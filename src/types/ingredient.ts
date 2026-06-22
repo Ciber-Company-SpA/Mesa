@@ -10,6 +10,9 @@ export type Ingredient = {
   unit: IngredientUnit
   stock_actual: number
   stock_minimo: number
+  // Costo por unidad base (por g, por ml o por unidad). La UI lo muestra por
+  // medida natural ($/kg, $/L). 0 = sin precio.
+  precio: number
   created_at: string
 }
 

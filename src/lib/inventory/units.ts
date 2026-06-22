@@ -32,6 +32,22 @@ function fmt(n: number): string {
   return n.toLocaleString("es-CL", { maximumFractionDigits: 2 })
 }
 
+// Unidad de PRECIO natural según la base (g→kg, ml→L, unidad→u) y su factor
+// (cuántas unidades base hay en esa medida).
+export function priceUnitFor(unit: IngredientUnit): { label: string; factor: number } {
+  if (unit === "g") return { label: "kg", factor: 1000 }
+  if (unit === "ml") return { label: "L", factor: 1000 }
+  return { label: "u", factor: 1 }
+}
+
+// Formatea el costo (por unidad base) a "$X / kg".
+export function formatUnitPrice(precioPerBase: number, unit: IngredientUnit): string {
+  const n = Number(precioPerBase)
+  if (!Number.isFinite(n) || n <= 0) return "—"
+  const { label, factor } = priceUnitFor(unit)
+  return `$${(n * factor).toLocaleString("es-CL", { maximumFractionDigits: 2 })} / ${label}`
+}
+
 // Formatea una cantidad en unidad base a texto legible, subiendo a kg/L cuando
 // el valor es grande (1500 g -> "1,5 kg", 1500 ml -> "1,5 L").
 export function formatStock(amount: number, unit: IngredientUnit): string {

@@ -6,7 +6,7 @@ import { IngredientFormDialog } from "@/components/admin/IngredientFormDialog"
 import { StockActionDialog } from "@/components/admin/StockActionDialog"
 import { StockHistoryDialog } from "@/components/admin/StockHistoryDialog"
 import { ImportInventoryDialog } from "@/components/admin/ImportInventoryDialog"
-import { formatStock } from "@/lib/inventory/units"
+import { formatStock, formatUnitPrice } from "@/lib/inventory/units"
 import type { IngredientWithFlag } from "@/types/ingredient"
 
 export default function InventoryPage() {
@@ -154,6 +154,12 @@ export default function InventoryPage() {
                     <span className="text-stone-400">
                       {" · "}mín {formatStock(ing.stock_minimo, ing.unit)}
                     </span>
+                    {ing.precio > 0 && (
+                      <span className="text-stone-400">
+                        {" · "}
+                        {formatUnitPrice(ing.precio, ing.unit)}
+                      </span>
+                    )}
                   </p>
                 </div>
 

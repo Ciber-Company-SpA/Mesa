@@ -6,6 +6,7 @@ import {
   DISPLAY_UNIT_OPTIONS,
   toBaseAmount,
   baseUnitLabel,
+  priceUnitFor,
   type DisplayUnit,
 } from "@/lib/inventory/units"
 import type { IngredientWithFlag } from "@/types/ingredient"
@@ -29,13 +30,32 @@ const inputClass =
   "w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100 disabled:opacity-50"
 const labelClass = "mb-1.5 block text-xs font-semibold text-stone-700"
 
+// Etiqueta corta por unidad de display (para "Precio por __").
+const DISPLAY_SHORT: Record<DisplayUnit, string> = {
+  unidad: "unidad",
+  g: "g",
+  kg: "kg",
+  ml: "ml",
+  l: "L",
+}
+
 export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate, onUpdate }: Props) {
   const [name, setName] = useState("")
   const [displayUnit, setDisplayUnit] = useState<DisplayUnit>("unidad")
   const [stockInicial, setStockInicial] = useState("")
   const [stockMinimo, setStockMinimo] = useState("")
+  const [precio, setPrecio] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+
+  // Factor y etiqueta del precio: en edición según la unidad del insumo, en
+  // creación según la unidad de medida seleccionada.
+  const priceFactor =
+    mode === "edit" && ingredient
+      ? priceUnitFor(ingredient.unit).factor
+      : DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)?.factor ?? 1
+  const priceLabel =
+    mode === "edit" && ingredient ? priceUnitFor(ingredient.unit).label : DISPLAY_SHORT[displayUnit]
 
   // Prefill al abrir.
   useEffect(() => {
@@ -45,11 +65,17 @@ export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate
     if (mode === "edit" && ingredient) {
       setName(ingredient.name)
       setStockMinimo(String(ingredient.stock_minimo))
+      setPrecio(
+        ingredient.precio > 0
+          ? String(ingredient.precio * priceUnitFor(ingredient.unit).factor)
+          : ""
+      )
     } else {
       setName("")
       setDisplayUnit("unidad")
       setStockInicial("")
       setStockMinimo("")
+      setPrecio("")
     }
   }, [open, mode, ingredient])
 
@@ -64,13 +90,15 @@ export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate
       return
     }
 
+    const precioPerBase = (Number(precio) || 0) / (priceFactor || 1)
+
     setSaving(true)
     try {
       let res: MutationResult
       if (mode === "edit" && ingredient) {
         const min = Number(stockMinimo) || 0
-        if (min < 0) {
-          setError("El stock mínimo no puede ser negativo")
+        if (min < 0 || precioPerBase < 0) {
+          setError("Los valores no pueden ser negativos")
           return
         }
         res = await onUpdate({
@@ -78,12 +106,13 @@ export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate
           name: trimmed,
           unit: ingredient.unit, // la unidad base no se cambia tras crear
           stockMinimo: min,
+          precio: precioPerBase,
         })
       } else {
         const inicial = Number(stockInicial) || 0
         const min = Number(stockMinimo) || 0
-        if (inicial < 0 || min < 0) {
-          setError("El stock no puede ser negativo")
+        if (inicial < 0 || min < 0 || precioPerBase < 0) {
+          setError("Los valores no pueden ser negativos")
           return
         }
         const { base, amount: inicialBase } = toBaseAmount(inicial, displayUnit)
@@ -93,6 +122,7 @@ export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate
           unit: base,
           stockInicial: inicialBase,
           stockMinimo: minBase,
+          precio: precioPerBase,
         })
       }
 
@@ -203,6 +233,28 @@ export function IngredientFormDialog({ open, mode, ingredient, onClose, onCreate
             </p>
           </div>
         )}
+
+        <div>
+          <label className={labelClass}>Precio (por {priceLabel}) — opcional</label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+              $
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              disabled={saving}
+              placeholder="0"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              className={`${inputClass} pl-7`}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-stone-500">
+            Costo de compra del insumo por {priceLabel}.
+          </p>
+        </div>
 
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">

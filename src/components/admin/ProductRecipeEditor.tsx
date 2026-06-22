@@ -190,6 +190,7 @@ export function ProductRecipeEditor({
           unit: info.unit,
           stockInicial: 0,
           stockMinimo: 0,
+          precio: 0,
         })
         if (!res.ok) {
           setError(`No se pudo crear el insumo "${info.name}": ${res.error}`)
