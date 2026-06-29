@@ -10,13 +10,14 @@ import {
   updateMenuTemplate,
   updateOrderDestination,
   updateOutputMode,
+  updateReservationConfig,
   updateRestaurantCity,
   updateRestaurantLogo,
   updateRestaurantName,
 } from "@/services/restaurant-service"
 import { LogoUploader } from "@/components/admin/LogoUploader"
 import { MENU_TEMPLATES, getTemplateDesign } from "@/lib/menu/templates"
-import type { MenuTemplate, OrderDestination, OutputMode, Restaurant } from "@/types/restaurant"
+import type { MenuTemplate, OrderDestination, OutputMode, ReservationContactType, Restaurant } from "@/types/restaurant"
 import type { Category } from "@/types/category"
 import type { Product } from "@/types/product"
 
@@ -888,6 +889,157 @@ function OutputModeSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
   )
 }
 
+const RESERVATION_OPTIONS: Array<{ id: ReservationContactType; title: string; description: string }> = [
+  {
+    id: "none",
+    title: "Ninguna",
+    description: "No se aceptan reservas. Las mesas no se bloquean por horario.",
+  },
+  {
+    id: "whatsapp",
+    title: "WhatsApp",
+    description: "El cliente coordina la reserva por WhatsApp y el local la registra. La mesa se bloquea durante la reserva.",
+  },
+]
+
+function ReservationSection({ restaurant, onSaved }: OrderHandlingSectionProps) {
+  const initialType: ReservationContactType = restaurant?.reservation_contact_type ?? "none"
+  const initialWhatsapp = restaurant?.reservation_whatsapp ?? ""
+  const initialDuration = restaurant?.reservation_duration_minutes ?? 120
+
+  const [typeOverride, setTypeOverride] = useState<ReservationContactType | null>(null)
+  const [whatsappOverride, setWhatsappOverride] = useState<string | null>(null)
+  const [durationOverride, setDurationOverride] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  const contactType = typeOverride ?? initialType
+  const whatsapp = whatsappOverride ?? initialWhatsapp
+  const duration = durationOverride ?? initialDuration
+  const isDirty =
+    contactType !== initialType ||
+    (contactType === "whatsapp" &&
+      ((whatsappOverride !== null && whatsappOverride.trim() !== initialWhatsapp.trim()) ||
+        (durationOverride !== null && durationOverride !== initialDuration)))
+
+  async function handleSave() {
+    if (saving || !isDirty) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const result = await updateReservationConfig({
+        contactType,
+        whatsapp: contactType === "whatsapp" ? whatsapp.trim() : null,
+        durationMinutes: duration,
+      })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      onSaved()
+      setTypeOverride(null)
+      setWhatsappOverride(null)
+      setDurationOverride(null)
+      setFeedback({ kind: "ok", message: "Cambios guardados" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Reservas de mesas</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Elegí cómo se coordinan las reservas. Cuando una mesa está reservada, se bloquea su QR durante el horario.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {RESERVATION_OPTIONS.map((option) => {
+          const selected = contactType === option.id
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setTypeOverride(option.id)}
+              className={`rounded-2xl border p-4 text-left transition ${
+                selected ? "border-orange-500 ring-2 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+              }`}
+            >
+              <p className="text-sm font-bold text-stone-900">{option.title}</p>
+              <p className="mt-1 text-xs leading-5 text-stone-500">{option.description}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {contactType === "whatsapp" && (
+        <div className="mt-6 grid max-w-md gap-5">
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
+              Número de WhatsApp
+            </label>
+            <input
+              type="tel"
+              value={whatsapp}
+              onChange={(e) => setWhatsappOverride(e.target.value)}
+              placeholder="+56912345678"
+              maxLength={20}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+            <p className="mt-2 text-[11px] leading-4 text-stone-500">
+              Formato internacional, con código de país. Ej. <span className="font-mono">+56912345678</span>.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
+              Duración por defecto (minutos)
+            </label>
+            <input
+              type="number"
+              min={15}
+              max={720}
+              step={15}
+              value={duration}
+              onChange={(e) => setDurationOverride(Number(e.target.value))}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+            <p className="mt-2 text-[11px] leading-4 text-stone-500">
+              Cuánto dura una reserva (y el bloqueo de la mesa) salvo que se indique otra cosa. Ej. 120 = 2 horas.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {feedback && (
+        <p
+          className={`mt-5 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
+
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+        {!isDirty && !saving && (
+          <span className="text-xs font-medium text-stone-400">Sin cambios.</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export default function AdminSettingsPage() {
   const { restaurant, loading, refresh } = useRestaurant()
   const { categories } = useCategories({ page: 1, pageSize: 4 })
@@ -978,6 +1130,14 @@ export default function AdminSettingsPage() {
       />
 
       <OutputModeSection
+        restaurant={restaurant ?? null}
+        onSaved={() => {
+          if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)
+          refresh()
+        }}
+      />
+
+      <ReservationSection
         restaurant={restaurant ?? null}
         onSaved={() => {
           if (restaurant) invalidateCache(`restaurant-${restaurant.id}`)

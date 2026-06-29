@@ -4,6 +4,8 @@ export type OrderDestination = "waiter" | "kitchen"
 
 export type OutputMode = "none" | "printer" | "screen"
 
+export type ReservationContactType = "none" | "whatsapp"
+
 export type PublicRestaurant = {
   id: number
   restaurant_name: string
@@ -18,4 +20,7 @@ export type Restaurant = PublicRestaurant & {
   restaurant_city: string | null
   delivery_enabled: boolean
   delivery_slug: string | null
+  reservation_contact_type: ReservationContactType
+  reservation_whatsapp: string | null
+  reservation_duration_minutes: number
 }

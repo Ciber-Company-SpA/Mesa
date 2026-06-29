@@ -105,6 +105,71 @@ export async function updateOutputMode(
   return ok(null)
 }
 
+const WhatsappNumberSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s()-]/g, ""))
+  .pipe(
+    z
+      .string()
+      .regex(/^\+?[0-9]{8,15}$/, "Número de WhatsApp inválido (usá formato internacional, ej. +56912345678)")
+  )
+
+const UpdateReservationConfigSchema = z
+  .object({
+    contactType: z.enum(["none", "whatsapp"]),
+    whatsapp: z.string().trim().optional().nullable(),
+    durationMinutes: z
+      .number()
+      .int()
+      .min(15, "La duración mínima es 15 minutos")
+      .max(720, "La duración máxima es 720 minutos"),
+  })
+  .refine(
+    (data) =>
+      data.contactType !== "whatsapp" ||
+      WhatsappNumberSchema.safeParse(data.whatsapp ?? "").success,
+    {
+      path: ["whatsapp"],
+      message: "Número de WhatsApp inválido (usá formato internacional, ej. +56912345678)",
+    }
+  )
+
+export type UpdateReservationConfigInput = z.infer<typeof UpdateReservationConfigSchema>
+
+export async function updateReservationConfig(
+  input: UpdateReservationConfigInput
+): Promise<Result<null>> {
+  const parsed = UpdateReservationConfigSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase, restaurantId } = auth.data
+  const { contactType, whatsapp, durationMinutes } = parsed.data
+
+  const normalizedWhatsapp =
+    contactType === "whatsapp"
+      ? WhatsappNumberSchema.parse(whatsapp ?? "")
+      : null
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      reservation_contact_type: contactType,
+      reservation_whatsapp: normalizedWhatsapp,
+      reservation_duration_minutes: durationMinutes,
+    })
+    .eq("id", restaurantId)
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  return ok(null)
+}
+
 const UpdateRestaurantNameSchema = z.object({
   name: z.string().trim().min(1, "El nombre no puede estar vacío").max(60, "Máximo 60 caracteres"),
 })

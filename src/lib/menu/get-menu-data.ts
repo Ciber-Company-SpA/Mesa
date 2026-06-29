@@ -11,6 +11,7 @@ type PublicMenuRpcResult = {
   products: Product[] | null
   tableId: number | null
   tableNumber: number | null
+  reservation: { ends_at: string } | null
 }
 
 async function fetchMenuData(qrCode: string): Promise<MenuData> {
@@ -32,6 +33,7 @@ async function fetchMenuData(qrCode: string): Promise<MenuData> {
     categories: menu.categories ?? [],
     tableId: menu.tableId ?? null,
     tableNumber: menu.tableNumber ?? null,
+    reservation: menu.reservation ?? null,
   }
 }
 

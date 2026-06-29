@@ -9,4 +9,7 @@ export interface MenuData {
   products: Product[]
   tableId: number | null
   tableNumber: number | null
+  // Reserva activa de la mesa (hint inicial desde SSR; el cliente la reconfirma
+  // en vivo con check_table_reservation porque este payload está cacheado 5 min).
+  reservation: { ends_at: string } | null
 }

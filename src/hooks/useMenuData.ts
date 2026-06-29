@@ -11,6 +11,7 @@ const EMPTY_MENU: MenuData = {
   products: [],
   tableId: null,
   tableNumber: null,
+  reservation: null,
 }
 
 export function useMenuData(qrCode: string) {
@@ -62,6 +63,7 @@ export function useMenuData(qrCode: string) {
       categories: (categoriesRes.data ?? []) as Category[],
       tableId: tableData.id,
       tableNumber: table_number,
+      reservation: null,
     }
   }, [qrCode])
 

@@ -15,9 +15,58 @@ import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableOrders } from "@/hooks/useTableOrders"
 import { getTemplateDesign } from "@/lib/menu/templates"
+import { supabase } from "@/lib/supabase"
 import type { MenuData } from "@/types/menu"
 import type { Product } from "@/types/product"
 import { useTableCartStore } from "@/store/tableCartStore"
+
+function formatEndTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+}
+
+type ReservedScreenProps = {
+  restaurantName: string | undefined
+  restaurantLogo: string | null | undefined
+  tableNumber: number | null
+  endsAt: string
+}
+
+function ReservedScreen({ restaurantName, restaurantLogo, tableNumber, endsAt }: ReservedScreenProps) {
+  return (
+    <main className="min-h-screen bg-black font-[family-name:var(--font-manrope)] text-[#fafafa] sm:py-4">
+      <section className="relative mx-auto flex min-h-screen w-full flex-col items-center justify-center overflow-clip bg-[#0a0a0b] px-6 text-center shadow-[0_30px_80px_rgba(0,0,0,0.5)] sm:min-h-[calc(100vh-32px)] sm:max-w-[440px] sm:rounded-[38px] sm:border-[10px] sm:border-[#050506]">
+        <div className="flex items-center gap-2.5">
+          {restaurantLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={restaurantLogo}
+              alt={restaurantName ?? "Logo"}
+              className="h-9 w-9 shrink-0 rounded-full border border-[#fb923c]/60 object-cover"
+            />
+          ) : (
+            <span className="text-lg" aria-hidden="true">🍽️</span>
+          )}
+          <h1 className="truncate font-[family-name:var(--font-grotesk)] text-[19px] font-extrabold tracking-[-0.02em]">
+            {restaurantName}
+          </h1>
+        </div>
+
+        <div className="mt-10 flex h-20 w-20 items-center justify-center rounded-full bg-[#fb923c]/12 text-4xl ring-1 ring-[#fb923c]/25">
+          🔒
+        </div>
+
+        <h2 className="mt-6 font-[family-name:var(--font-grotesk)] text-[24px] font-extrabold tracking-[-0.01em]">
+          Mesa {tableNumber} reservada
+        </h2>
+        <p className="mt-2 max-w-[18rem] text-[14px] leading-relaxed text-[#a1a1aa]">
+          Esta mesa está reservada hasta las{" "}
+          <span className="font-bold text-[#fb923c]">{formatEndTime(endsAt)}</span>. No se pueden hacer
+          pedidos en este momento. Si llegaste para tu reserva, avisá a un mesero.
+        </p>
+      </section>
+    </main>
+  )
+}
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
@@ -155,9 +204,36 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
   const [toast, setToast] = useState<string | null>(null)
   const [detailProduct, setDetailProduct] = useState<Product | null>(null)
+  const [reservation, setReservation] = useState<{ ends_at: string } | null>(menu.reservation ?? null)
 
   const searchParams = useSearchParams()
   const cameFromScan = searchParams.get("from") === "scan"
+
+  // Check EN VIVO de reserva (el payload SSR está cacheado 5 min). Si la mesa
+  // está reservada se bloquea el pedido; el server igual lo rechaza.
+  useEffect(() => {
+    if (!qrCode) return
+    let cancelled = false
+
+    async function check() {
+      const { data, error } = await supabase.rpc("check_table_reservation", { p_qr_token: qrCode })
+      if (cancelled || error || !data) return
+      const r = data as { reserved: boolean; ends_at: string | null }
+      setReservation(r.reserved && r.ends_at ? { ends_at: r.ends_at } : null)
+    }
+
+    check()
+    const interval = window.setInterval(check, 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [qrCode])
 
   useEffect(() => {
     if (!toast) return
@@ -283,6 +359,19 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     if (effectiveCat === "all") return availableProducts
     return availableProducts.filter((p) => p.category_id === effectiveCat)
   }, [isSearching, searchedProducts, availableProducts, effectiveCat])
+
+  // Mesa reservada: bloqueamos el menú por completo (el server también rechaza
+  // pedidos/carrito). Va después de todos los hooks para no romper su orden.
+  if (reservation) {
+    return (
+      <ReservedScreen
+        restaurantName={restaurant?.restaurant_name}
+        restaurantLogo={restaurant?.restaurant_logo}
+        tableNumber={tableNumber}
+        endsAt={reservation.ends_at}
+      />
+    )
+  }
 
   return (
     <main className="min-h-screen bg-black font-[family-name:var(--font-manrope)] text-[#fafafa] sm:py-4">
