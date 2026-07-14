@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { requireStaffForRestaurant } from "@/services/auth-guard"
 import { ok, fail, type Result } from "@/services/result"
 
 export type DinerSlot = {
@@ -39,7 +40,20 @@ export async function payDinerOrders(
   if (!tableId || tableId <= 0) return fail("Mesa inválida")
   if (!dinerSlot || dinerSlot <= 0) return fail("Comensal inválido")
 
+  // Guard de sesión: solo personal del restaurante de la mesa. La RLS de
+  // tables ya oculta la fila a anon y a staff de otros restaurantes.
   const supabase = await createSupabaseServerClient()
+  const { data: tableRow, error: tableError } = await supabase
+    .from("tables")
+    .select("restaurant_id")
+    .eq("id", tableId)
+    .single()
+
+  if (tableError || !tableRow) return fail("No autorizado")
+
+  const auth = await requireStaffForRestaurant(tableRow.restaurant_id)
+  if (!auth.ok) return fail(auth.error)
+
   const { data, error } = await supabase.rpc("pay_diner_orders", {
     p_table_id: tableId,
     p_diner_slot: dinerSlot,

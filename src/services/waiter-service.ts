@@ -2,6 +2,7 @@ import "server-only"
 import { randomBytes } from "node:crypto"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
+import { requireCurrentAdmin } from "@/services/auth-guard"
 import { sendWaiterCredentialsEmail } from "@/lib/email/send-waiter-credentials"
 import {
   CreateWaiterSchema,
@@ -135,7 +136,9 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
 // ============ LIST (admin) ============
 
 export async function listWaiters(): Promise<Result<WaiterListItem[]>> {
-  const supabase = await createSupabaseServerClient()
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
 
   const { data, error } = await supabase.rpc("list_waiters_for_admin")
 
@@ -163,7 +166,9 @@ export async function listWaiters(): Promise<Result<WaiterListItem[]>> {
 export async function deleteWaiter(waiterId: number): Promise<Result<{ id: number }>> {
   if (!waiterId || waiterId <= 0) return fail("ID inválido")
 
-  const supabase = await createSupabaseServerClient()
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
 
   const { error } = await supabase.rpc("delete_waiter_as_admin", {
     p_waiter_id: waiterId,
