@@ -28,7 +28,6 @@ export async function GET(
     table_id: number
     table_number: number | null
     restaurant_id: number
-    current_waiter_id: number | null
   } | null
 
   if (!tableRow) {
@@ -49,13 +48,23 @@ export async function GET(
 
     if (profile?.role_id === 1 && profile.id && sameRestaurant) {
 
-      if (tableRow.current_waiter_id == null) {
+      // El waiter id ya no viaja en la RPC pública del QR; el staff lo lee
+      // de tables con su sesión (la RLS se lo permite para su restaurante).
+      const { data: waiterRow } = await supabase
+        .from("tables")
+        .select("current_waiter_id")
+        .eq("id", tableRow.table_id)
+        .maybeSingle()
+
+      const currentWaiterId = waiterRow?.current_waiter_id ?? null
+
+      if (currentWaiterId == null) {
         await supabase
           .from("tables")
           .update({ current_waiter_id: profile.id })
           .eq("id", tableRow.table_id)
           .is("current_waiter_id", null)
-      } else if (tableRow.current_waiter_id !== profile.id) {
+      } else if (currentWaiterId !== profile.id) {
         const res = NextResponse.redirect(
           buildRedirect(`/waiter/busy?tableNumber=${tableRow.table_number ?? ""}`)
         )
