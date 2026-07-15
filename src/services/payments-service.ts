@@ -23,10 +23,10 @@ export type PaymentAccount = {
 const TaxProfileSchema = z.object({
   rut: z.string().trim().max(20, "Máximo 20 caracteres"),
   razonSocial: z.string().trim().max(120, "Máximo 120 caracteres"),
-  giro: z.string().trim().max(120, "Máximo 120 caracteres"),
+  giro: z.string().trim().max(200, "Máximo 200 caracteres"),
   direccion: z.string().trim().max(160, "Máximo 160 caracteres"),
   comuna: z.string().trim().max(80, "Máximo 80 caracteres"),
-  actividadEconomica: z.string().trim().max(120, "Máximo 120 caracteres"),
+  actividadEconomica: z.string().trim().max(200, "Máximo 200 caracteres"),
   regimenIva: z.string().trim().max(40, "Máximo 40 caracteres"),
 })
 

@@ -7,6 +7,10 @@ import {
   getPaymentAccount,
   type TaxProfile,
 } from "@/services/payments-service"
+import {
+  useSiiActividades,
+  SiiActividadCombobox,
+} from "@/components/admin/SiiActividadCombobox"
 
 const EMPTY_PROFILE: TaxProfile = {
   rut: "",
@@ -31,6 +35,7 @@ function TaxProfileSection() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+  const { items: actividades, loading: catLoading } = useSiiActividades()
 
   useEffect(() => {
     let active = true
@@ -112,25 +117,26 @@ function TaxProfileSection() {
 
             <div>
               <label className={LABEL_CLASS}>Giro</label>
-              <input
-                type="text"
+              <SiiActividadCombobox
+                items={actividades}
+                loading={catLoading}
                 value={profile.giro}
-                onChange={(e) => update("giro", e.target.value)}
-                maxLength={120}
-                placeholder="Restaurante / Servicios de comida"
-                className={INPUT_CLASS}
+                placeholder="Buscá el giro (código o nombre del SII)"
+                onSelect={(it) => update("giro", it.glosa)}
               />
             </div>
 
             <div>
               <label className={LABEL_CLASS}>Actividad económica</label>
-              <input
-                type="text"
+              <SiiActividadCombobox
+                items={actividades}
+                loading={catLoading}
                 value={profile.actividadEconomica}
-                onChange={(e) => update("actividadEconomica", e.target.value)}
-                maxLength={120}
-                placeholder="561000 - Restaurantes"
-                className={INPUT_CLASS}
+                placeholder="Buscá por código o nombre (SII)"
+                onSelect={(it) => {
+                  update("actividadEconomica", `${it.codigo} - ${it.glosa}`)
+                  if (!profile.giro.trim()) update("giro", it.glosa)
+                }}
               />
             </div>
 
