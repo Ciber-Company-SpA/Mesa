@@ -12,12 +12,17 @@ import {
 } from "recharts"
 import {
   getSalesReport,
+  getProductMargins,
+  getPeakHours,
   type ReportRange,
   type SalesSummary,
   type TopProduct,
   type SalesByTable,
   type TimeBucket,
+  type ProductMargin,
+  type PeakHour,
 } from "@/services/report-service"
+import { useMyPlan } from "@/hooks/useMyPlan"
 
 type PresetId = "today" | "week" | "month" | "3m" | "year" | "custom"
 
@@ -102,6 +107,26 @@ function formatCLP(n: number) {
   return `$${Math.round(n).toLocaleString("es-CL")}`
 }
 
+type PeakDatum = { label: string; revenue: number; orders: number }
+
+function PeakTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload: PeakDatum }>
+}) {
+  if (!active || !payload || payload.length === 0) return null
+  const d = payload[0].payload
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs shadow-sm">
+      <p className="font-bold text-stone-900">{d.label}</p>
+      <p className="mt-1 text-orange-600">Ventas: {formatCLP(d.revenue)}</p>
+      <p className="text-stone-600">Pedidos: {d.orders}</p>
+    </div>
+  )
+}
+
 function formatBucket(bucket: string, granularity: ReportRange["granularity"]) {
   const d = new Date(bucket)
   if (granularity === "hour") {
@@ -124,6 +149,11 @@ export default function ReportsPage() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
   const [salesByTable, setSalesByTable] = useState<SalesByTable[]>([])
   const [timeline, setTimeline] = useState<TimeBucket[]>([])
+  const [productMargins, setProductMargins] = useState<ProductMargin[]>([])
+  const [peakHours, setPeakHours] = useState<PeakHour[]>([])
+
+  const { plan } = useMyPlan()
+  const canAdvanced = !plan || plan.has_reports_advanced
 
   const range = useMemo<ReportRange | null>(() => {
     if (presetId === "custom") {
@@ -144,17 +174,23 @@ export default function ReportsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de reporte al cambiar el rango
     setLoading(true)
     setError(null)
-    getSalesReport(range)
-      .then((res) => {
+    Promise.all([
+      getSalesReport(range),
+      canAdvanced ? getProductMargins(range) : Promise.resolve(null),
+      canAdvanced ? getPeakHours(range) : Promise.resolve(null),
+    ])
+      .then(([salesRes, marginsRes, peakRes]) => {
         if (cancelled) return
-        if (!res.ok) {
-          setError(res.error)
+        if (!salesRes.ok) {
+          setError(salesRes.error)
           return
         }
-        setSummary(res.data.summary)
-        setTopProducts(res.data.topProducts)
-        setSalesByTable(res.data.salesByTable)
-        setTimeline(res.data.timeline)
+        setSummary(salesRes.data.summary)
+        setTopProducts(salesRes.data.topProducts)
+        setSalesByTable(salesRes.data.salesByTable)
+        setTimeline(salesRes.data.timeline)
+        setProductMargins(marginsRes && marginsRes.ok ? marginsRes.data : [])
+        setPeakHours(peakRes && peakRes.ok ? peakRes.data : [])
       })
       .catch(() => {
         if (!cancelled) setError("Error inesperado")
@@ -165,13 +201,29 @@ export default function ReportsPage() {
     return () => {
       cancelled = true
     }
-  }, [range])
+  }, [range, canAdvanced])
 
   const chartData = timeline.map((t) => ({
     bucket: range ? formatBucket(t.bucket, range.granularity) : t.bucket,
     revenue: t.revenue,
     orderCount: t.orderCount,
   }))
+
+  const peakChartData = Array.from({ length: 24 }, (_, hour) => {
+    const found = peakHours.find((p) => p.hour === hour)
+    return {
+      hour,
+      label: `${String(hour).padStart(2, "0")}:00`,
+      revenue: found ? found.revenue : 0,
+      orders: found ? found.orders : 0,
+    }
+  })
+
+  function marginPctClass(pct: number) {
+    if (pct >= 50) return "text-green-600"
+    if (pct >= 20) return "text-amber-600"
+    return "text-red-600"
+  }
 
   return (
     <div className="space-y-6">
@@ -369,6 +421,101 @@ export default function ReportsPage() {
               </div>
             )}
           </section>
+
+          {/* ADVANCED REPORTS (gated) */}
+          {!canAdvanced ? (
+            <section className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-200 text-2xl">
+                🔒
+              </div>
+              <h3 className="mt-3 text-lg font-bold text-stone-900">
+                Reportes avanzados y horas peak
+              </h3>
+              <p className="mt-1 text-sm text-stone-500">disponible en Plan 50+</p>
+            </section>
+          ) : (
+            <>
+              {/* PRODUCT MARGINS */}
+              <section className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm">
+                <h3 className="text-lg font-bold text-stone-900">Margen por producto</h3>
+                {productMargins.length === 0 ? (
+                  <p className="mt-3 text-sm text-stone-500">Sin datos en el período.</p>
+                ) : (
+                  <>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-stone-100 text-left text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                            <th className="pb-2 pr-4">Producto</th>
+                            <th className="pb-2 pr-4 text-right">Unidades</th>
+                            <th className="pb-2 pr-4 text-right">Ingreso</th>
+                            <th className="pb-2 pr-4 text-right">Costo</th>
+                            <th className="pb-2 pr-4 text-right">Margen</th>
+                            <th className="pb-2 text-right">Margen %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productMargins.map((m) => (
+                            <tr
+                              key={m.productName}
+                              className="border-b border-stone-50 last:border-b-0"
+                            >
+                              <td className="py-2.5 pr-4 font-semibold text-stone-900">
+                                {m.productName}
+                              </td>
+                              <td className="py-2.5 pr-4 text-right tabular-nums text-stone-700">
+                                {m.units}
+                              </td>
+                              <td className="py-2.5 pr-4 text-right tabular-nums text-stone-700">
+                                {formatCLP(m.revenue)}
+                              </td>
+                              <td className="py-2.5 pr-4 text-right tabular-nums text-stone-700">
+                                {formatCLP(m.totalCost)}
+                              </td>
+                              <td className="py-2.5 pr-4 text-right font-semibold tabular-nums text-stone-900">
+                                {formatCLP(m.margin)}
+                              </td>
+                              <td
+                                className={`py-2.5 text-right font-bold tabular-nums ${marginPctClass(
+                                  m.marginPct,
+                                )}`}
+                              >
+                                {Math.round(m.marginPct)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="mt-3 text-xs text-stone-400">
+                      El costo se calcula desde las recetas; productos sin receta muestran costo 0.
+                    </p>
+                  </>
+                )}
+              </section>
+
+              {/* PEAK HOURS */}
+              <section className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm">
+                <h3 className="text-lg font-bold text-stone-900">Horas peak</h3>
+                <p className="mt-1 text-xs text-stone-500">Ingreso por hora del día</p>
+                {peakHours.length === 0 ? (
+                  <p className="mt-6 text-center text-sm text-stone-500">Sin datos en el período.</p>
+                ) : (
+                  <div className="mt-4 h-64 w-full">
+                    <ResponsiveContainer>
+                      <BarChart data={peakChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#78716c" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="#78716c" />
+                        <Tooltip content={<PeakTooltip />} />
+                        <Bar dataKey="revenue" name="revenue" fill="#F97316" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </>
       )}
     </div>

@@ -11,6 +11,7 @@ import { useOrderList } from "@/hooks/useOrderList"
 import { useProductList } from "@/hooks/useProductList"
 import { useCategoryList } from "@/hooks/useCategoryList"
 import { useWaiters } from "@/hooks/useWaiters"
+import { useMyPlan } from "@/hooks/useMyPlan"
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed"
 
@@ -30,6 +31,7 @@ export function AdminSidebar() {
   const { totalCategories, loading: loadingCategories } = useCategoryList()
   const { activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 50 })
   const { waiters, loading: loadingWaiters } = useWaiters()
+  const { plan } = useMyPlan()
 
   const [collapsed, setCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
@@ -196,6 +198,37 @@ export function AdminSidebar() {
         </svg>
       ),
     },
+    {
+      label: "Mi plan",
+      href: "/admin/plan",
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      label: "API",
+      href: "/admin/api",
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      ),
+    },
+    ...(plan?.has_multi_branch
+      ? [
+          {
+            label: "Sucursales",
+            href: "/admin/sucursales",
+            icon: (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-14h10M7 11h10m-8 4h6" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
   ]
 
   const width = collapsed ? "w-16" : "w-60"

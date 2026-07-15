@@ -7,6 +7,7 @@ import { useWaiters } from "@/hooks/useWaiters"
 import { useDeleteWaiter } from "@/hooks/useDeleteWaiter"
 import { useAdminProfile } from "@/hooks/useAdminProfile"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
+import { useMyPlan } from "@/hooks/useMyPlan"
 import type { WaiterListItem } from "@/services/waiter-service"
 
 const AVATAR_GRADIENTS = [
@@ -34,6 +35,9 @@ function getInitials(name: string) {
 export default function WaitersPage() {
   const [search, setSearch] = useState("")
   const [showCreateModal, setShowCreateModal] = useState(false)
+
+  const { plan } = useMyPlan()
+  const waiterMgmtLocked = Boolean(plan && !plan.has_full_waiter_mgmt)
 
   const { profile: adminProfile } = useAdminProfile()
   const restaurantId = adminProfile?.restaurantId ?? null
@@ -110,12 +114,35 @@ export default function WaitersPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
-        >
-          <span>+ Agregar Mesero</span>
-        </button>
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <button
+            onClick={() => {
+              if (waiterMgmtLocked) return
+              setShowCreateModal(true)
+            }}
+            disabled={waiterMgmtLocked}
+            aria-disabled={waiterMgmtLocked}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition ${
+              waiterMgmtLocked
+                ? "cursor-not-allowed opacity-50"
+                : "hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-orange-500/35"
+            }`}
+          >
+            <span>+ Agregar Mesero</span>
+          </button>
+
+          {waiterMgmtLocked && (
+            <a
+              href="/admin/plan"
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-stone-500 transition hover:text-stone-700"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>La gestión completa de meseros está disponible en Plan 50+.</span>
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

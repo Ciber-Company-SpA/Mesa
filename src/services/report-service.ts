@@ -45,6 +45,22 @@ export type SalesReport = {
   timeline: TimeBucket[]
 }
 
+export type ProductMargin = {
+  productName: string
+  units: number
+  revenue: number
+  unitCost: number
+  totalCost: number
+  margin: number
+  marginPct: number
+}
+
+export type PeakHour = {
+  hour: number
+  orders: number
+  revenue: number
+}
+
 type RpcResult = {
   summary: { totalRevenue: number | string; orderCount: number; averageTicket: number | string }
   topProducts: Array<{
@@ -109,4 +125,78 @@ export async function getSalesReport(range: ReportRange): Promise<Result<SalesRe
       revenue: toNum(b.revenue),
     })),
   })
+}
+
+type ProductMarginRow = {
+  product_name: string | null
+  units: number | string
+  revenue: number | string
+  unit_cost: number | string
+  total_cost: number | string
+  margin: number | string
+  margin_pct: number | string
+}
+
+export async function getProductMargins(range: ReportRange): Promise<Result<ProductMargin[]>> {
+  const parsed = RangeSchema.safeParse(range)
+  if (!parsed.success) return fail("Rango inválido")
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase, restaurantId } = auth.data
+
+  const { data, error } = await supabase.rpc("get_product_margins", {
+    p_restaurant_id: restaurantId,
+    p_from: parsed.data.from,
+    p_to: parsed.data.to,
+  })
+
+  if (error || !data) return fail("Error al cargar el reporte")
+
+  const rows = data as ProductMarginRow[]
+
+  return ok(
+    (rows ?? []).map((r) => ({
+      productName: r.product_name ?? "Producto",
+      units: toNum(r.units),
+      revenue: toNum(r.revenue),
+      unitCost: toNum(r.unit_cost),
+      totalCost: toNum(r.total_cost),
+      margin: toNum(r.margin),
+      marginPct: toNum(r.margin_pct),
+    })),
+  )
+}
+
+type PeakHourRow = {
+  hour: number | string
+  orders: number | string
+  revenue: number | string
+}
+
+export async function getPeakHours(range: ReportRange): Promise<Result<PeakHour[]>> {
+  const parsed = RangeSchema.safeParse(range)
+  if (!parsed.success) return fail("Rango inválido")
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase, restaurantId } = auth.data
+
+  const { data, error } = await supabase.rpc("get_peak_hours", {
+    p_restaurant_id: restaurantId,
+    p_from: parsed.data.from,
+    p_to: parsed.data.to,
+  })
+
+  if (error || !data) return fail("Error al cargar el reporte")
+
+  const rows = data as PeakHourRow[]
+
+  return ok(
+    (rows ?? []).map((r) => ({
+      hour: toNum(r.hour),
+      orders: toNum(r.orders),
+      revenue: toNum(r.revenue),
+    })),
+  )
 }
