@@ -5,15 +5,17 @@ import { useEffect, useMemo, useRef, useState } from "react"
 export type SiiActividad = {
   codigo: string
   glosa: string
+  vigente?: boolean
   categoria?: number
   afecto_iva?: boolean
 }
 
 /**
  * Carga diferida del catálogo oficial de actividades económicas del SII
- * (CIIU4.CL). El JSON solo se descarga cuando se monta la página de pagos,
- * así no infla el resto de la app. El módulo queda cacheado por el bundler,
- * de modo que dos comboboxes comparten una sola descarga.
+ * (CIIU4.CL 2012 + códigos anteriores homologados que el SII sigue
+ * reconociendo). El JSON solo se descarga al montar la página de pagos, así
+ * no infla el resto de la app. El módulo queda cacheado por el bundler, de
+ * modo que dos comboboxes comparten una sola descarga.
  */
 export function useSiiActividades() {
   const [items, setItems] = useState<SiiActividad[]>([])
@@ -49,6 +51,7 @@ function normalize(value: string): string {
 }
 
 const MAX_RESULTS = 60
+const SCAN_LIMIT = 500
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
@@ -56,8 +59,9 @@ const INPUT_CLASS =
 /**
  * Buscador (combobox) sobre el catálogo del SII. No acepta texto libre: el
  * valor final siempre proviene de un ítem del listado, para no arriesgar un
- * código o glosa inválidos en un dato tributario. Al perder el foco, el input
- * vuelve a mostrar exactamente el valor guardado.
+ * código o glosa inválidos en un dato tributario. Los códigos vigentes se
+ * muestran primero; los anteriores (aún reconocidos por el SII) se marcan.
+ * Al perder el foco, el input vuelve a mostrar exactamente el valor guardado.
  */
 export function SiiActividadCombobox({
   items,
@@ -86,24 +90,25 @@ export function SiiActividadCombobox({
   const results = useMemo(() => {
     if (!open) return []
     const q = normalize(query)
-    const out: SiiActividad[] = []
-    if (!q) {
-      for (const it of items) {
-        out.push(it)
-        if (out.length >= MAX_RESULTS) break
-      }
-      return out
-    }
-    // Prioriza coincidencias por código y por comienzo de glosa.
-    const starts: SiiActividad[] = []
-    const contains: SiiActividad[] = []
+    // Cuatro cubetas: prioriza coincidencia por inicio sobre coincidencia
+    // interna, y dentro de cada una, vigentes antes que anteriores.
+    const startVig: SiiActividad[] = []
+    const startOld: SiiActividad[] = []
+    const contVig: SiiActividad[] = []
+    const contOld: SiiActividad[] = []
+    let scanned = 0
     for (const it of items) {
       const g = normalize(it.glosa)
-      if (it.codigo.startsWith(q) || g.startsWith(q)) starts.push(it)
-      else if (g.includes(q)) contains.push(it)
-      if (starts.length >= MAX_RESULTS) break
+      const isStart = q === "" || it.codigo.startsWith(q) || g.startsWith(q)
+      const isContain = q !== "" && g.includes(q)
+      if (!isStart && !isContain) continue
+      const vig = it.vigente !== false
+      if (isStart) (vig ? startVig : startOld).push(it)
+      else (vig ? contVig : contOld).push(it)
+      scanned++
+      if (scanned >= SCAN_LIMIT) break
     }
-    return [...starts, ...contains].slice(0, MAX_RESULTS)
+    return [...startVig, ...startOld, ...contVig, ...contOld].slice(0, MAX_RESULTS)
   }, [items, query, open])
 
   function choose(item: SiiActividad) {
@@ -164,9 +169,14 @@ export function SiiActividadCombobox({
                     <span className="mt-0.5 shrink-0 font-mono text-xs font-bold text-orange-600 tabular-nums">
                       {it.codigo}
                     </span>
-                    <span className="text-xs font-medium leading-5 text-stone-700">
+                    <span className="flex-1 text-xs font-medium leading-5 text-stone-700">
                       {it.glosa}
                     </span>
+                    {it.vigente === false ? (
+                      <span className="mt-0.5 shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500">
+                        anterior
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}
