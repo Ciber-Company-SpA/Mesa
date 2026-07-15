@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { RecommendationsModal } from "@/components/customer/RecommendationsModal"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
+import { GroupBillSummary } from "@/components/customer/GroupBillSummary"
 import { ProductDetailSheet } from "@/components/customer/ProductDetailSheet"
 import { ProductImage } from "@/components/customer/ProductImage"
 import { getTopProductsTodayAction } from "@/app/actions/recommendation-actions"
-import { requestBillAction } from "@/app/actions/service-call-actions"
+import { requestServiceCallAction } from "@/app/actions/service-call-actions"
 import type { RecommendedProduct } from "@/services/recommendation-service"
 import { useCartSync } from "@/hooks/useCartSync"
 import { useDinerSlot } from "@/hooks/useDinerSlot"
@@ -202,6 +203,9 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCat, setActiveCat] = useState<number | "all">("all")
   const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
+  const [waiterStatus, setWaiterStatus] = useState<"idle" | "sending" | "requested">("idle")
+  const [showTipSelector, setShowTipSelector] = useState(false)
+  const [selectedTipPct, setSelectedTipPct] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
   const [detailProduct, setDetailProduct] = useState<Product | null>(null)
   const [reservation, setReservation] = useState<{ ends_at: string } | null>(menu.reservation ?? null)
@@ -292,14 +296,45 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     setToast("Agregado al pedido")
   }
 
-  async function handleRequestBill() {
+  // Total de la mesa: suma de los totales de los pedidos activos. Base para
+  // calcular la propina sugerida.
+  const tableTotal = useMemo(
+    () => tableOrders.reduce((sum, o) => sum + (o.total ?? 0), 0),
+    [tableOrders]
+  )
+
+  const TIP_OPTIONS: Array<{ label: string; pct: number }> = [
+    { label: "Sin propina", pct: 0 },
+    { label: "10%", pct: 10 },
+    { label: "15%", pct: 15 },
+    { label: "20%", pct: 20 },
+  ]
+
+  const suggestedTip = Math.round((tableTotal * selectedTipPct) / 100)
+
+  function openTipSelector() {
+    if (billStatus !== "idle") return
+    setShowTipSelector((v) => !v)
+  }
+
+  async function handleRequestBill(tip: number) {
     if (!qrCode || billStatus !== "idle") return
     setBillStatus("sending")
+    setShowTipSelector(false)
     try {
-      const res = await requestBillAction(qrCode, dinerInfo?.token ?? null)
+      const res = await requestServiceCallAction(
+        qrCode,
+        dinerInfo?.token ?? null,
+        "bill",
+        tip
+      )
       if (res.ok) {
         setBillStatus("requested")
-        setToast("Pedimos tu cuenta · un mesero irá a tu mesa")
+        setToast(
+          tip > 0
+            ? `Pedimos tu cuenta con ${formatPrice(tip)} de propina · un mesero irá a tu mesa`
+            : "Pedimos tu cuenta · un mesero irá a tu mesa"
+        )
       } else {
         setBillStatus("idle")
         setToast("No se pudo pedir la cuenta")
@@ -307,6 +342,29 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     } catch {
       setBillStatus("idle")
       setToast("No se pudo pedir la cuenta")
+    }
+  }
+
+  async function handleCallWaiter() {
+    if (!qrCode || waiterStatus !== "idle") return
+    setWaiterStatus("sending")
+    try {
+      const res = await requestServiceCallAction(
+        qrCode,
+        dinerInfo?.token ?? null,
+        "waiter",
+        0
+      )
+      if (res.ok) {
+        setWaiterStatus("requested")
+        setToast("Llamamos al mesero · irá a tu mesa")
+      } else {
+        setWaiterStatus("idle")
+        setToast("No se pudo llamar al mesero")
+      }
+    } catch {
+      setWaiterStatus("idle")
+      setToast("No se pudo llamar al mesero")
     }
   }
 
@@ -395,23 +453,96 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
               </h1>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRequestBill}
-              disabled={billStatus !== "idle"}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-bold transition active:scale-95 ${
-                billStatus === "requested"
-                  ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
-                  : "bg-[#fb923c] text-[#1a1a1a] disabled:opacity-70"
-              }`}
-            >
-              {billStatus === "requested"
-                ? "Cuenta pedida ✓"
-                : billStatus === "sending"
-                  ? "Pidiendo..."
-                  : "🧾 Pedir la cuenta"}
-            </button>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <button
+                type="button"
+                onClick={handleCallWaiter}
+                disabled={waiterStatus !== "idle"}
+                className={`flex w-full items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-bold transition active:scale-95 ${
+                  waiterStatus === "requested"
+                    ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+                    : "border border-[#3f3f46] bg-[#18181b] text-[#fafafa] disabled:opacity-70"
+                }`}
+              >
+                {waiterStatus === "requested"
+                  ? "Mesero en camino ✓"
+                  : waiterStatus === "sending"
+                    ? "Llamando..."
+                    : "🙋 Llamar al mesero"}
+              </button>
+
+              <button
+                type="button"
+                onClick={openTipSelector}
+                disabled={billStatus !== "idle"}
+                aria-expanded={showTipSelector}
+                className={`flex w-full items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-bold transition active:scale-95 ${
+                  billStatus === "requested"
+                    ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+                    : "bg-[#fb923c] text-[#1a1a1a] disabled:opacity-70"
+                }`}
+              >
+                {billStatus === "requested"
+                  ? "Cuenta pedida ✓"
+                  : billStatus === "sending"
+                    ? "Pidiendo..."
+                    : "🧾 Pedir la cuenta"}
+              </button>
+            </div>
           </div>
+
+          {/* ── Selector de propina (E2) ── */}
+          {showTipSelector && billStatus === "idle" && (
+            <div className="mt-3 rounded-2xl border border-[#232327] bg-[#131315] p-3">
+              <p className="text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-[#fafafa]">
+                ¿Agregar propina?
+              </p>
+              {tableTotal > 0 && (
+                <p className="mt-1 text-[12px] text-[#a1a1aa]">
+                  Total mesa {formatPrice(tableTotal)}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {TIP_OPTIONS.map((opt) => {
+                  const active = opt.pct === selectedTipPct
+                  const amount = Math.round((tableTotal * opt.pct) / 100)
+                  return (
+                    <button
+                      key={opt.pct}
+                      type="button"
+                      onClick={() => setSelectedTipPct(opt.pct)}
+                      className={`rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition active:scale-95 ${
+                        active
+                          ? "bg-[#fb923c] text-[#1a1a1a]"
+                          : "border border-[#27272a] bg-[#18181b] text-[#d4d4d8]"
+                      }`}
+                    >
+                      {opt.label}
+                      {opt.pct > 0 && amount > 0 ? ` · ${formatPrice(amount)}` : ""}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTipSelector(false)}
+                  className="rounded-full border border-[#27272a] bg-[#18181b] px-4 py-2 text-[12.5px] font-bold text-[#d4d4d8] transition active:scale-95"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRequestBill(suggestedTip)}
+                  className="flex-1 rounded-full bg-[#fb923c] px-4 py-2 text-[12.5px] font-extrabold text-[#1a1a1a] transition active:scale-95"
+                >
+                  {suggestedTip > 0
+                    ? `Pedir la cuenta · +${formatPrice(suggestedTip)}`
+                    : "Pedir la cuenta sin propina"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ── Tira de mesa ── */}
           <div className="mt-3 flex items-center gap-1.5">
@@ -428,6 +559,9 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
           {/* ── Pedidos en curso ── */}
           <TableOrdersHeader qrCode={qrCode} />
+
+          {/* ── Cuenta grupal (E4) ── */}
+          <GroupBillSummary orders={tableOrders} />
         </div>
 
         {/* ── Buscador + categorías (sticky) ── */}

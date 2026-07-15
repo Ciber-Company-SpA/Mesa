@@ -4,12 +4,16 @@ import { logger } from "@/lib/logger"
 import { playNewOrderSound } from "@/lib/notification-sound"
 import { showOrderNotification } from "@/lib/order-notifications"
 
+export type ServiceCallType = "bill" | "waiter"
+
 export type ServiceCall = {
   id: number
   tableId: number
   tableNumber: number | null
   dinerLabel: string | null
   createdAt: string
+  callType: ServiceCallType
+  tip: number | null
 }
 
 type ServiceCallRow = {
@@ -17,6 +21,8 @@ type ServiceCallRow = {
   table_id: number
   diner_label: string | null
   created_at: string
+  call_type: ServiceCallType | null
+  tip: number | null
   tables: { table_number: number | null } | { table_number: number | null }[] | null
 }
 
@@ -29,6 +35,8 @@ function mapRow(row: ServiceCallRow): ServiceCall {
     tableNumber: table?.table_number ?? null,
     dinerLabel: row.diner_label ?? null,
     createdAt: row.created_at,
+    callType: row.call_type ?? "bill",
+    tip: row.tip ?? null,
   }
 }
 
@@ -48,7 +56,7 @@ export function useServiceCalls(restaurantId: number | null) {
     if (!restaurantId) return
     const { data, error } = await supabase
       .from("service_calls")
-      .select("id, table_id, diner_label, created_at, tables(table_number)")
+      .select("id, table_id, diner_label, created_at, call_type, tip, tables(table_number)")
       .eq("restaurant_id", restaurantId)
       .eq("status", "pending")
       .order("created_at", { ascending: true })
@@ -66,8 +74,12 @@ export function useServiceCalls(restaurantId: number | null) {
         playNewOrderSound()
         for (const c of newlyArrived) {
           const tableLabel = c.tableNumber != null ? `Mesa ${c.tableNumber}` : `Mesa #${c.tableId}`
+          const title =
+            c.callType === "waiter"
+              ? `🙋 ${tableLabel} llama al mesero`
+              : `🧾 ${tableLabel} pide la cuenta`
           showOrderNotification({
-            title: `🧾 ${tableLabel} pide la cuenta`,
+            title,
             body: c.dinerLabel ? `Lo pidió ${c.dinerLabel}` : "Acércate cuando puedas",
             tag: `service-call-${c.id}`,
           })

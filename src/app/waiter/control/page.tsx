@@ -374,8 +374,15 @@ function WaiterControlSystem() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-stone-900">
-                        🧾 {callTableLabel} pide la cuenta
+                        {call.callType === "waiter"
+                          ? `🙋 ${callTableLabel} llama al mesero`
+                          : `🧾 ${callTableLabel} pide la cuenta`}
                       </p>
+                      {call.callType === "bill" && call.tip != null && call.tip > 0 && (
+                        <p className="mt-0.5 text-xs font-semibold text-emerald-600">
+                          Propina sugerida: ${call.tip.toLocaleString("es-CL")}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-xs font-semibold text-stone-500">
                         {call.dinerLabel ? <>{call.dinerLabel} · </> : null}
                         <span className="text-stone-400 tabular-nums">

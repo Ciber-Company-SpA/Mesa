@@ -18,6 +18,8 @@ export type TableOrder = {
   statusName: string | null
   createdAt: string
   readyAt: string | null
+  dinerSlot: number | null
+  dinerLabel: string | null
   items: TableOrderItem[]
 }
 
@@ -27,6 +29,8 @@ type OrderRow = {
   status_id: number | null
   created_at: string
   ready_at: string | null
+  diner_slot: number | null
+  diner_label: string | null
   order_status: { status_name: string | null } | { status_name: string | null }[] | null
   order_items: Array<{
     id: number
@@ -67,6 +71,8 @@ function mapRow(row: OrderRow): TableOrder {
     statusName: pickStatusName(row.order_status),
     createdAt: row.created_at,
     readyAt: row.ready_at,
+    dinerSlot: row.diner_slot ?? null,
+    dinerLabel: row.diner_label ?? null,
     items: (row.order_items ?? []).map((it) => ({
       id: it.id,
       productName: it.product_name ?? "",
