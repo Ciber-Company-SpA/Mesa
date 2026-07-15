@@ -328,6 +328,13 @@ function WaiterControlSystem() {
             >
               🧾 Caja
             </Link>
+            <Link
+              href="/waiter/soporte"
+              className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm backdrop-blur-md transition hover:border-stone-300 hover:text-stone-900 active:scale-95"
+              title="Soporte MESA"
+            >
+              🛟 Soporte
+            </Link>
             <div className="flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 shadow-sm text-xs font-semibold text-stone-700 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
               <div className={`h-5 w-5 rounded-full bg-gradient-to-tr ${loggedInStaff.avatar_color} flex items-center justify-center text-white text-[8px] font-bold`}>
