@@ -18,15 +18,32 @@ type Branch = {
   is_current: boolean
 }
 
+type OrgProfile = {
+  name: string
+  legal_name: string | null
+  rut: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  address: string | null
+  city: string | null
+  branches_count: number
+}
+
 export default function SucursalesPage() {
   const [branches, setBranches] = useState<Branch[]>([])
+  const [org, setOrg] = useState<OrgProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
-    supabase.rpc("get_my_organization_branches").then(({ data }) => {
+    Promise.all([
+      supabase.rpc("get_my_organization_branches"),
+      supabase.rpc("get_my_organization"),
+    ]).then(([{ data }, { data: orgData }]) => {
       if (!active) return
       setBranches((data ?? []) as Branch[])
+      setOrg((orgData ?? null) as OrgProfile | null)
       setLoading(false)
     })
     return () => {
@@ -62,6 +79,50 @@ export default function SucursalesPage() {
           <p className="mt-1 text-sm text-stone-500">
             Esta vista es para cadenas (plan Personalizado).
           </p>
+        </section>
+      )}
+
+      {/* DATOS DEL GRUPO (ficha gestionada por MESA, siempre al día) */}
+      {!loading && org && (
+        <section className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-lg font-bold text-stone-900">{org.name}</h3>
+            {org.rut && (
+              <span className="text-sm font-semibold tabular-nums text-stone-500">RUT {org.rut}</span>
+            )}
+          </div>
+          <dl className="mt-3 grid gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2">
+            {org.legal_name && (
+              <div className="flex gap-2">
+                <dt className="font-bold text-stone-400">Razón social:</dt>
+                <dd className="text-stone-700">{org.legal_name}</dd>
+              </div>
+            )}
+            {org.contact_name && (
+              <div className="flex gap-2">
+                <dt className="font-bold text-stone-400">Contacto:</dt>
+                <dd className="text-stone-700">{org.contact_name}</dd>
+              </div>
+            )}
+            {org.contact_email && (
+              <div className="flex gap-2">
+                <dt className="font-bold text-stone-400">Correo:</dt>
+                <dd className="text-stone-700">{org.contact_email}</dd>
+              </div>
+            )}
+            {org.contact_phone && (
+              <div className="flex gap-2">
+                <dt className="font-bold text-stone-400">Teléfono:</dt>
+                <dd className="text-stone-700">{org.contact_phone}</dd>
+              </div>
+            )}
+            {(org.address || org.city) && (
+              <div className="flex gap-2">
+                <dt className="font-bold text-stone-400">Dirección:</dt>
+                <dd className="text-stone-700">{[org.address, org.city].filter(Boolean).join(", ")}</dd>
+              </div>
+            )}
+          </dl>
         </section>
       )}
 
