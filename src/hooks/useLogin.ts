@@ -52,6 +52,13 @@ export function useLogin() {
         return
       }
 
+      // Primer ingreso con contraseña temporal: forzar el cambio antes de entrar.
+      const { data: mustChange } = await supabase.rpc("get_my_must_change_password")
+      if (mustChange === true) {
+        router.push("/cambiar-contrasena")
+        return
+      }
+
       router.push("/admin")
     } catch (err: unknown) {
       logger.error("Error en login", err)

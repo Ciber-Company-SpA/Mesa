@@ -71,6 +71,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: updErr?.message ?? "No se pudo actualizar la contraseña" }, 400);
   }
 
+  // Un reset por el operador entrega una contraseña temporal: forzar que el
+  // usuario la cambie en su próximo ingreso.
+  await admin.from("users").update({ must_change_password: true }).eq("auth_user_id", authUserId);
+
   // 5) Auditoría (no bloquea el resultado si falla)
   try {
     await asOperator.rpc("platform_audit_event", {

@@ -57,8 +57,8 @@ export default function WaiterLoginPage() {
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const mustChange = user.user_metadata?.must_change_password === true
-        if (mustChange) {
+        const { data: mustChange } = await supabase.rpc("get_my_must_change_password")
+        if (mustChange === true) {
           setView("change-password")
         } else {
           const { data: profile } = await supabase
@@ -125,8 +125,8 @@ export default function WaiterLoginPage() {
         return
       }
 
-      const mustChange = user.user_metadata?.must_change_password === true
-      if (mustChange) {
+      const { data: mustChange } = await supabase.rpc("get_my_must_change_password")
+      if (mustChange === true) {
         setView("change-password")
         setPassword("") // limpiamos para que no aparezca prellenado
         return
@@ -149,8 +149,8 @@ export default function WaiterLoginPage() {
     e.preventDefault()
     if (loading) return
 
-    if (newPassword.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
+    if (newPassword.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres")
       return
     }
     if (newPassword !== confirmPassword) {
@@ -162,13 +162,14 @@ export default function WaiterLoginPage() {
       setLoading(true)
       setError("")
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword,
-        data: { must_change_password: false },
+      // El cambio + limpieza del flag ocurre server-side (service_role); el
+      // cliente no puede limpiar must_change_password por su cuenta.
+      const { data, error: fnError } = await supabase.functions.invoke("change-my-password", {
+        body: { newPassword },
       })
 
-      if (updateError) {
-        setError(updateError.message)
+      if (fnError || !data?.ok) {
+        setError(data?.error ?? "No se pudo cambiar la contraseña")
         return
       }
 
@@ -310,7 +311,7 @@ export default function WaiterLoginPage() {
                   id="new-password"
                   type={showNewPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  minLength={8}
                   disabled={loading}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -349,7 +350,7 @@ export default function WaiterLoginPage() {
                   id="confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  minLength={8}
                   disabled={loading}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
