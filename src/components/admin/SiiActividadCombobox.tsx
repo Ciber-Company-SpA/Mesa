@@ -8,6 +8,7 @@ export type SiiActividad = {
   vigente?: boolean
   categoria?: number
   afecto_iva?: boolean
+  rubro?: string
 }
 
 /**
@@ -27,6 +28,32 @@ export function useSiiActividades() {
       .then((mod) => {
         if (!active) return
         setItems(((mod.default ?? []) as SiiActividad[]))
+        setLoading(false)
+      })
+      .catch(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return { items, loading }
+}
+
+export type SiiRubro = { codigo: string; nombre: string }
+
+/** Carga diferida del listado oficial de rubros (secciones) del SII. */
+export function useSiiRubros() {
+  const [items, setItems] = useState<SiiRubro[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    import("@/data/sii-rubros.json")
+      .then((mod) => {
+        if (!active) return
+        setItems(((mod.default ?? []) as SiiRubro[]))
         setLoading(false)
       })
       .catch(() => {

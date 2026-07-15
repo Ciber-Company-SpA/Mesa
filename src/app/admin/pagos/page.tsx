@@ -9,6 +9,7 @@ import {
 } from "@/services/payments-service"
 import {
   useSiiActividades,
+  useSiiRubros,
   SiiActividadCombobox,
 } from "@/components/admin/SiiActividadCombobox"
 
@@ -36,6 +37,7 @@ function TaxProfileSection() {
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
   const { items: actividades, loading: catLoading } = useSiiActividades()
+  const { items: rubros } = useSiiRubros()
 
   useEffect(() => {
     let active = true
@@ -116,14 +118,22 @@ function TaxProfileSection() {
             </div>
 
             <div>
-              <label className={LABEL_CLASS}>Giro</label>
-              <SiiActividadCombobox
-                items={actividades}
-                loading={catLoading}
+              <label className={LABEL_CLASS}>Giro (rubro SII)</label>
+              <select
                 value={profile.giro}
-                placeholder="Buscá el giro (código o nombre del SII)"
-                onSelect={(it) => update("giro", it.glosa)}
-              />
+                onChange={(e) => update("giro", e.target.value)}
+                className={INPUT_CLASS}
+              >
+                <option value="">Seleccioná un rubro…</option>
+                {profile.giro && !rubros.some((r) => r.nombre === profile.giro) ? (
+                  <option value={profile.giro}>{profile.giro}</option>
+                ) : null}
+                {rubros.map((r) => (
+                  <option key={r.codigo} value={r.nombre}>
+                    {r.codigo} — {r.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -135,7 +145,8 @@ function TaxProfileSection() {
                 placeholder="Buscá por código o nombre (SII)"
                 onSelect={(it) => {
                   update("actividadEconomica", `${it.codigo} - ${it.glosa}`)
-                  if (!profile.giro.trim()) update("giro", it.glosa)
+                  const rubroNombre = rubros.find((r) => r.codigo === it.rubro)?.nombre
+                  if (rubroNombre && !profile.giro.trim()) update("giro", rubroNombre)
                 }}
               />
             </div>

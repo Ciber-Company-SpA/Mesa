@@ -1,0 +1,86 @@
+[
+  {
+    "codigo": "A",
+    "nombre": "AGRICULTURA, GANADERÍA, SILVICULTURA Y PESCA"
+  },
+  {
+    "codigo": "B",
+    "nombre": "EXPLOTACIÓN DE MINAS Y CANTERAS"
+  },
+  {
+    "codigo": "C",
+    "nombre": "INDUSTRIA MANUFACTURERA"
+  },
+  {
+    "codigo": "D",
+    "nombre": "SUMINISTRO DE ELECTRICIDAD, GAS, VAPOR Y AIRE ACONDICIONADO"
+  },
+  {
+    "codigo": "E",
+    "nombre": "SUMINISTRO DE AGUA; EVACUACIÓN DE AGUAS RESIDUALES, GESTIÓN DE DESECHOS Y DESCONTAMINACIÓN"
+  },
+  {
+    "codigo": "F",
+    "nombre": "CONSTRUCCIÓN"
+  },
+  {
+    "codigo": "G",
+    "nombre": "COMERCIO AL POR MAYOR Y AL POR MENOR; REPARACIÓN DE VEHÍCULOS AUTOMOTORES Y MOTOCICLETAS"
+  },
+  {
+    "codigo": "H",
+    "nombre": "TRANSPORTE Y ALMACENAMIENTO"
+  },
+  {
+    "codigo": "I",
+    "nombre": "ACTIVIDADES DE ALOJAMIENTO Y DE SERVICIO DE COMIDAS"
+  },
+  {
+    "codigo": "J",
+    "nombre": "INFORMACIÓN Y COMUNICACIONES"
+  },
+  {
+    "codigo": "K",
+    "nombre": "ACTIVIDADES FINANCIERAS Y DE SEGUROS"
+  },
+  {
+    "codigo": "L",
+    "nombre": "ACTIVIDADES INMOBILIARIAS"
+  },
+  {
+    "codigo": "M",
+    "nombre": "ACTIVIDADES PROFESIONALES, CIENTÍFICAS Y TÉCNICAS"
+  },
+  {
+    "codigo": "N",
+    "nombre": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO"
+  },
+  {
+    "codigo": "O",
+    "nombre": "ADMINISTRACIÓN PÚBLICA Y DEFENSA; PLANES DE SEGURIDAD SOCIAL DE AFILIACIÓN OBLIGATORIA"
+  },
+  {
+    "codigo": "P",
+    "nombre": "ENSEÑANZA"
+  },
+  {
+    "codigo": "Q",
+    "nombre": "ACTIVIDADES DE ATENCIÓN DE LA SALUD HUMANA Y DE ASISTENCIA SOCIAL"
+  },
+  {
+    "codigo": "R",
+    "nombre": "ACTIVIDADES ARTÍSTICAS, DE ENTRETENIMIENTO Y RECREATIVAS"
+  },
+  {
+    "codigo": "S",
+    "nombre": "OTRAS ACTIVIDADES DE SERVICIOS"
+  },
+  {
+    "codigo": "T",
+    "nombre": "ACTIVIDADES DE LOS HOGARES COMO EMPLEADORES; ACTIVIDADES NO DIFERENCIADAS DE LOS HOGARES COMO PRODUCTORES DE BIENES Y SERVICIOS PARA USO PROPIO"
+  },
+  {
+    "codigo": "U",
+    "nombre": "ACTIVIDADES DE ORGANIZACIONES Y ÓRGANOS EXTRATERRITORIALES"
+  }
+]
