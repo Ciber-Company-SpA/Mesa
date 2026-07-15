@@ -12,6 +12,28 @@ import { useProductList } from "@/hooks/useProductList"
 import { useCategoryList } from "@/hooks/useCategoryList"
 import { useWaiters } from "@/hooks/useWaiters"
 import { useMyPlan } from "@/hooks/useMyPlan"
+import { useVisibleModules } from "@/hooks/useVisibleModules"
+
+// Clave de módulo (portal Plataforma) por ruta; sin clave = siempre visible.
+const MODULE_BY_HREF: Record<string, string> = {
+  "/admin": "dashboard",
+  "/admin/categories": "categories",
+  "/admin/products": "products",
+  "/admin/inventory": "inventory",
+  "/admin/tables": "tables",
+  "/admin/reservations": "reservations",
+  "/admin/orders": "orders",
+  "/admin/waiters": "waiters",
+  "/admin/reports": "reports",
+  "/admin/printer": "printer",
+  "/screen": "screen",
+  "/admin/settings": "settings",
+  "/admin/plan": "plan",
+  "/admin/pagos": "pagos",
+  "/admin/api": "api",
+  "/admin/soporte": "soporte",
+  "/admin/sucursales": "sucursales",
+}
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed"
 
@@ -32,6 +54,7 @@ export function AdminSidebar() {
   const { activeOrdersCount, loading: loadingOrders } = useOrderList({ limit: 50 })
   const { waiters, loading: loadingWaiters } = useWaiters()
   const { plan } = useMyPlan()
+  const { isVisible } = useVisibleModules()
 
   const [collapsed, setCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
@@ -302,7 +325,10 @@ export function AdminSidebar() {
 
       {/* NAV */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {tabs.map((tab) => {
+        {tabs.filter((tab) => {
+          const moduleKey = MODULE_BY_HREF[tab.href]
+          return !moduleKey || isVisible("admin", moduleKey)
+        }).map((tab) => {
           const isActive = pathname === tab.href
           return (
             <Link
