@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
-import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
+import { getHomeRouteForRole, isAdminRole, roleIdToRole } from "@/lib/waiter-session"
 import { clearUserScopedCache } from "@/lib/session-cache"
 import { InstallPwaButton } from "@/components/InstallPwaButton"
 
@@ -68,7 +68,7 @@ export default function WaiterLoginPage() {
             .single()
           const role = roleIdToRole(profile?.role_id ?? 1)
           if (!isAdminRole(role)) {
-            router.replace("/waiter/control")
+            router.replace(getHomeRouteForRole(role))
             return
           }
         }
@@ -132,7 +132,7 @@ export default function WaiterLoginPage() {
         return
       }
 
-      router.replace("/waiter/control")
+      router.replace(getHomeRouteForRole(role))
     } catch (err) {
       if (isNetworkError(err)) {
         setError("Sin conexión. Verifica tu internet.")

@@ -270,12 +270,12 @@ export function useWaiterOrders(restaurantId: number | null) {
 
   const [payingTableId, setPayingTableId] = useState<number | null>(null)
   const markTablePaid = useCallback(
-    async (tableId: number): Promise<{ ok: boolean; paidCount: number }> => {
+    async (tableId: number, tip: number = 0): Promise<{ ok: boolean; paidCount: number }> => {
       if (payingTableId != null) return { ok: false, paidCount: 0 }
       try {
         setPayingTableId(tableId)
         setError("")
-        const result = await markTableOrdersAsPaidAction(tableId)
+        const result = await markTableOrdersAsPaidAction(tableId, tip)
         if (!result.ok) {
           setError(result.error)
           return { ok: false, paidCount: 0 }

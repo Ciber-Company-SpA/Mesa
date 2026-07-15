@@ -6,6 +6,7 @@ import {
   advanceOrderStatus as advanceOrderStatusService,
   markOrderAsPaid as markOrderAsPaidService,
   markTableOrdersAsPaid as markTableOrdersAsPaidService,
+  reassignTable as reassignTableService,
   type CreatedOrder,
   type WaiterOrder,
 } from "@/services/order-service"
@@ -49,7 +50,15 @@ export async function markOrderAsPaidAction(
 }
 
 export async function markTableOrdersAsPaidAction(
-  tableId: number
+  tableId: number,
+  tip: number = 0
 ): Promise<Result<{ tableId: number; paidIds: number[]; tableReleased: boolean }>> {
-  return markTableOrdersAsPaidService(tableId)
+  return markTableOrdersAsPaidService(tableId, tip)
+}
+
+export async function reassignTableAction(
+  tableId: number,
+  newWaiterId: number | null
+): Promise<Result<{ tableId: number }>> {
+  return reassignTableService(tableId, newWaiterId)
 }

@@ -40,6 +40,7 @@ export function roleIdToRole(roleId: number): Staff["role"] {
 // de mandarlo al login y entrar en loop.
 export function getHomeRouteForRole(role: Staff["role"]): string {
   if (role === "admin" || role === "manager") return "/admin"
+  if (role === "kitchen") return "/screen"
   return "/waiter/control"
 }
 

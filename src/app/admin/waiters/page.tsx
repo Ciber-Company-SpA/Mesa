@@ -9,6 +9,21 @@ import { useAdminProfile } from "@/hooks/useAdminProfile"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
 import { useMyPlan } from "@/hooks/useMyPlan"
 import type { WaiterListItem } from "@/services/waiter-service"
+import { getStaffRoleLabel, roleIdToRole } from "@/lib/waiter-session"
+
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  waiter: "border-orange-200 bg-orange-50 text-orange-700",
+  kitchen: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  cashier: "border-emerald-200 bg-emerald-50 text-emerald-700",
+}
+
+function getRoleBadge(roleId: number) {
+  const role = roleIdToRole(roleId)
+  return {
+    label: getStaffRoleLabel(role),
+    className: ROLE_BADGE_STYLES[role] ?? "border-stone-200 bg-stone-50 text-stone-700",
+  }
+}
 
 const AVATAR_GRADIENTS = [
   "bg-gradient-to-tr from-orange-500 to-amber-500 text-white",
@@ -69,6 +84,8 @@ export default function WaitersPage() {
     setWaiterName,
     waiterEmail,
     setWaiterEmail,
+    waiterRole,
+    setWaiterRole,
     loading: creating,
     error: createError,
     created,
@@ -199,7 +216,19 @@ export default function WaitersPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-bold text-stone-900">{waiter.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate font-bold text-stone-900">{waiter.name}</h3>
+                    {(() => {
+                      const badge = getRoleBadge(waiter.roleId)
+                      return (
+                        <span
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
+                  </div>
                   <p className="truncate text-xs text-stone-500">{waiter.email ?? "Sin correo"}</p>
                 </div>
               </div>
@@ -335,6 +364,23 @@ export default function WaitersPage() {
                     placeholder="camila@restaurante.com"
                     className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100 disabled:opacity-50"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="waiter-role" className="mb-1.5 block text-xs font-semibold text-stone-700">
+                    Rol
+                  </label>
+                  <select
+                    id="waiter-role"
+                    disabled={creating}
+                    value={waiterRole}
+                    onChange={(e) => setWaiterRole(e.target.value as typeof waiterRole)}
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100 disabled:opacity-50"
+                  >
+                    <option value="waiter">Mesero</option>
+                    <option value="kitchen">Cocina</option>
+                    <option value="cashier">Caja</option>
+                  </select>
                 </div>
 
                 {createError && (

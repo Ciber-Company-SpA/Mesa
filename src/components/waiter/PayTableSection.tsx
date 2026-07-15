@@ -11,7 +11,7 @@ type Props = {
   orders: WaiterOrder[]
   payingTableId: number | null
   payingDinerKey?: string | null
-  onPayTable: (tableId: number) => Promise<{ ok: boolean; paidCount: number }>
+  onPayTable: (tableId: number, tip?: number) => Promise<{ ok: boolean; paidCount: number }>
   onPayDiner?: (
     tableId: number,
     dinerSlot: number
@@ -57,6 +57,7 @@ export function PayTableSection({
   onSuccess,
 }: Props) {
   const [confirmTable, setConfirmTable] = useState<TableSummary | null>(null)
+  const [tips, setTips] = useState<Record<number, number>>({})
 
   const summaries = useMemo<TableSummary[]>(() => {
     const map = new Map<number, TableSummary>()
@@ -111,7 +112,7 @@ export function PayTableSection({
 
   async function handleConfirmedPay(summary: TableSummary) {
     setConfirmTable(null)
-    const result = await onPayTable(summary.tableId)
+    const result = await onPayTable(summary.tableId, tips[summary.tableId] ?? 0)
     if (result.ok) {
       onSuccess?.(summary.tableLabel, result.paidCount)
     }
@@ -216,6 +217,28 @@ export function PayTableSection({
                     })}
                   </div>
                 )}
+
+                <div className="mt-3">
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    Propina (opcional)
+                  </label>
+                  <div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 px-2.5 py-1.5">
+                    <span className="text-xs font-semibold text-stone-400">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={tips[s.tableId] ? String(tips[s.tableId]) : ""}
+                      onChange={(e) => {
+                        const v = Math.max(0, Math.floor(Number(e.target.value) || 0))
+                        setTips((prev) => ({ ...prev, [s.tableId]: v }))
+                      }}
+                      disabled={isPaying || payingTableId != null}
+                      className="w-full bg-transparent text-sm font-semibold text-stone-800 outline-none tabular-nums"
+                    />
+                  </div>
+                </div>
 
                 <button
                   type="button"

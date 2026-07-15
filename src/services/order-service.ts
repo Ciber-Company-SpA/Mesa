@@ -223,7 +223,8 @@ export async function markOrderAsPaid(
 
 
 export async function markTableOrdersAsPaid(
-  tableId: number
+  tableId: number,
+  tip: number = 0
 ): Promise<Result<{ tableId: number; paidIds: number[]; tableReleased: boolean }>> {
   if (!tableId || tableId <= 0) return fail("Mesa inválida")
 
@@ -245,6 +246,14 @@ export async function markTableOrdersAsPaid(
 
   const paidIds = (updated ?? []).map((row) => row.id)
 
+  // Propina (D3): se registra una sola vez por cobro de mesa, en la última
+  // orden pagada, para que los reportes de propinas no la cuenten duplicada.
+  const tipAmount = Number.isFinite(tip) && tip > 0 ? Math.round(tip) : 0
+  if (tipAmount > 0 && paidIds.length > 0) {
+    const targetId = Math.max(...paidIds)
+    await supabase.from("orders").update({ tip_amount: tipAmount }).eq("id", targetId)
+  }
+
   let tableReleased = false
   const { count } = await supabase
     .from("orders")
@@ -264,6 +273,25 @@ export async function markTableOrdersAsPaid(
   return ok({ tableId, paidIds, tableReleased })
 }
 
+
+
+// D4: transferir una mesa a otro mesero (o liberar con null). La validación
+// de restaurante/mesero vive en la RPC reassign_table (SECURITY DEFINER).
+export async function reassignTable(
+  tableId: number,
+  newWaiterId: number | null
+): Promise<Result<{ tableId: number }>> {
+  if (!tableId || tableId <= 0) return fail("Mesa inválida")
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.rpc("reassign_table", {
+    p_table_id: tableId,
+    p_new_waiter_id: newWaiterId,
+  })
+
+  if (error) return fail(error.message ?? "No se pudo transferir la mesa")
+  return ok({ tableId })
+}
 
 
 export type CreatedOrder = {

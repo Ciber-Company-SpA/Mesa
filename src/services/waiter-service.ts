@@ -55,7 +55,7 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
     return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
   }
 
-  const { name, email, restaurantId } = validation.data
+  const { name, email, restaurantId, role } = validation.data
   if (!email) {
     return fail("El correo es obligatorio para crear un mesero")
   }
@@ -108,7 +108,7 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
   // ===== BLOQUE NUEVO: ligar el mesero al restaurante vía RPC validada =====
   // El trigger creó al usuario como "mesero pendiente" (role 1, sin
   // restaurante). Como admin ya validado, lo asignamos a nuestro restaurante.
-  const { error: assignError } = await serverClient.rpc("assign_waiter", {
+  const { data: assignedUserId, error: assignError } = await serverClient.rpc("assign_waiter", {
     p_waiter_email: email,
     p_restaurant_id: restaurantId,
   })
@@ -117,6 +117,19 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
     return fail(assignError.message ?? "Error al asignar el mesero al restaurante")
   }
   // ===== FIN BLOQUE NUEVO =====
+
+  // Si el rol elegido no es mesero, ajustamos users.role_id vía RPC admin.
+  // assign_waiter devolvió el id (bigint) del usuario recién ligado.
+  if (role !== "waiter" && assignedUserId != null) {
+    const { error: roleError } = await serverClient.rpc("admin_set_staff_role", {
+      p_user_id: assignedUserId,
+      p_role_id: role === "kitchen" ? 3 : 4,
+    })
+
+    if (roleError) {
+      return fail(roleError.message ?? "Error al asignar el rol al personal")
+    }
+  }
 
  
 

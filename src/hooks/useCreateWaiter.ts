@@ -20,6 +20,7 @@ export function useCreateWaiter() {
 
   const [waiterName, setWaiterName] = useState("")
   const [waiterEmail, setWaiterEmail] = useState("")
+  const [waiterRole, setWaiterRole] = useState<CreateWaiterInput["role"]>("waiter")
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -60,6 +61,7 @@ export function useCreateWaiter() {
         name: waiterName.trim(),
         email: waiterEmail.trim(),
         restaurantId,
+        role: waiterRole,
       })
 
       if (!validation.success) {
@@ -75,6 +77,7 @@ export function useCreateWaiter() {
       setCreated(summary)
       setWaiterName("")
       setWaiterEmail("")
+      setWaiterRole("waiter")
       return summary
     } catch (err: unknown) {
       handleMutationError(err, {
@@ -98,6 +101,8 @@ export function useCreateWaiter() {
     setWaiterName,
     waiterEmail,
     setWaiterEmail,
+    waiterRole,
+    setWaiterRole,
     loading: loading || isPending,
     error,
     created,

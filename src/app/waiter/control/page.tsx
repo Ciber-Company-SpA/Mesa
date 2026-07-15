@@ -1,6 +1,7 @@
 "use client"
 
 import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
@@ -8,9 +9,11 @@ import { ScanQrButton } from "@/components/ScanQrButton"
 import { PayTableSection } from "@/components/waiter/PayTableSection"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
+import { useWaiters } from "@/hooks/useWaiters"
 import { useServiceCalls } from "@/hooks/useServiceCalls"
 import { useRestaurantTables } from "@/hooks/useRestaurantTables"
 import { usePushRegistration } from "@/hooks/usePushRegistration"
+import { reassignTableAction } from "@/app/actions/order-actions"
 import { supabase } from "@/lib/supabase"
 import type { WaiterOrder } from "@/services/order-service"
 
@@ -111,8 +114,11 @@ function WaiterControlSystem() {
     payingDinerKey,
     advancingId,
   } = useWaiterOrders(restaurantId)
-  const { tables: allTables } = useRestaurantTables(restaurantId)
+  const { tables: allTables, refresh: refreshTables } = useRestaurantTables(restaurantId)
   const { calls: serviceCalls, attend: attendServiceCall } = useServiceCalls(restaurantId)
+  // Nota: useWaiters() lee el restaurantId internamente (useRestaurantId), no
+  // recibe argumentos; pasarle uno rompería el tipado.
+  const { waiters } = useWaiters()
 
   // Derivamos del listado global: mías, libres y ocupadas por otros.
   const assignedTables = useMemo(
@@ -136,8 +142,17 @@ function WaiterControlSystem() {
     [assignedTables]
   )
 
+  // Meseros a los que se puede transferir: solo rol mesero (roleId === 1) y
+  // distintos al actual (excluye cocina/caja/admin y a uno mismo).
+  const otherWaiters = useMemo(
+    () => waiters.filter((w) => w.roleId === 1 && w.id !== staffId),
+    [waiters, staffId]
+  )
+
   const [selectedOrder, setSelectedOrder] = useState<WaiterOrder | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [transferTableId, setTransferTableId] = useState<number | null>(null)
+  const [transferBusy, setTransferBusy] = useState(false)
 
   // Tick para refrescar los "minutos transcurridos" cada 30s.
   // Exponemos `nowMs` para que useMemo del promedio recompute con el tick.
@@ -228,6 +243,24 @@ function WaiterControlSystem() {
     [attendServiceCall, staffId, triggerToast]
   )
 
+  const handleTransfer = useCallback(
+    async (tableId: number, newWaiterId: number, waiterName: string) => {
+      setTransferBusy(true)
+      const res = await reassignTableAction(tableId, newWaiterId)
+      setTransferBusy(false)
+      if (!res.ok) {
+        triggerToast(res.error || "No se pudo transferir la mesa")
+        return
+      }
+      setTransferTableId(null)
+      triggerToast(`Mesa transferida a ${waiterName} ✓`)
+      // Refresco suave: revalida el listado de mesas sin recargar la página.
+      // (El hook ya escucha realtime, pero forzamos el fetch para feedback inmediato.)
+      refreshTables()
+    },
+    [triggerToast, refreshTables]
+  )
+
   // Mesero ve pedidos de TODAS las mesas que tiene asignadas, no solo la
   // ultima escaneada. La mesa escaneada (focusTableId) solo sirve para
   // resaltar/identificar en la UI; no restringe la lista.
@@ -288,6 +321,13 @@ function WaiterControlSystem() {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <ScanQrButton onError={triggerToast} />
+            <Link
+              href="/waiter/caja"
+              className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm backdrop-blur-md transition hover:border-stone-300 hover:text-stone-900 active:scale-95"
+              title="Cierre de caja / turno"
+            >
+              🧾 Caja
+            </Link>
             <div className="flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/95 px-3 py-1.5 shadow-sm text-xs font-semibold text-stone-700 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
               <div className={`h-5 w-5 rounded-full bg-gradient-to-tr ${loggedInStaff.avatar_color} flex items-center justify-center text-white text-[8px] font-bold`}>
@@ -442,21 +482,67 @@ function WaiterControlSystem() {
                     </button>
                   )
                 } else if (isMine) {
+                  const isTransferOpen = transferTableId === t.id
                   return (
-                    <button
-                      key={t.id}
-                      onClick={() => handleTableClick(t.id, t.tableNumber)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
-                        isFocused
-                          ? "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-offset-2 ring-amber-500/70"
-                          : "border-amber-200/80 bg-amber-50/70 hover:bg-amber-50 text-amber-800 hover:border-amber-300"
-                      }`}
-                      title="Mesa atendida por ti - Haz clic para filtrar"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] animate-ping absolute" style={{ width: "6px", height: "6px" }} />
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] relative" />
-                      Mesa {t.tableNumber ?? `#${t.id}`}
-                    </button>
+                    <div key={t.id} className="relative inline-flex items-center gap-1">
+                      <button
+                        onClick={() => handleTableClick(t.id, t.tableNumber)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-sm ${
+                          isFocused
+                            ? "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-offset-2 ring-amber-500/70"
+                            : "border-amber-200/80 bg-amber-50/70 hover:bg-amber-50 text-amber-800 hover:border-amber-300"
+                        }`}
+                        title="Mesa atendida por ti - Haz clic para filtrar"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] animate-ping absolute" style={{ width: "6px", height: "6px" }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] relative" />
+                        Mesa {t.tableNumber ?? `#${t.id}`}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTransferTableId(isTransferOpen ? null : t.id)
+                        }
+                        className={`rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer active:scale-95 shadow-sm ${
+                          isTransferOpen
+                            ? "border-amber-500 bg-amber-100 text-amber-900"
+                            : "border-amber-200/80 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300"
+                        }`}
+                        title="Transferir esta mesa a otro mesero"
+                        aria-expanded={isTransferOpen}
+                      >
+                        Transferir
+                      </button>
+                      {isTransferOpen && (
+                        <div className="absolute left-0 top-full z-40 mt-2 w-56 rounded-2xl border border-stone-200/80 bg-white p-2 shadow-2xl shadow-stone-900/10 backdrop-blur-xl animate-card-entrance">
+                          <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                            Transferir Mesa {t.tableNumber ?? `#${t.id}`}
+                          </p>
+                          {otherWaiters.length === 0 ? (
+                            <p className="px-2 py-2 text-xs font-medium text-stone-500 italic">
+                              No hay otros meseros disponibles
+                            </p>
+                          ) : (
+                            <div className="mt-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
+                              {otherWaiters.map((w) => (
+                                <button
+                                  key={w.id}
+                                  type="button"
+                                  disabled={transferBusy}
+                                  onClick={() => handleTransfer(t.id, w.id, w.name)}
+                                  className="flex items-center gap-2 rounded-xl px-2 py-2 text-left text-xs font-semibold text-stone-700 transition hover:bg-amber-50 disabled:opacity-50 cursor-pointer"
+                                >
+                                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[9px] font-bold text-amber-700">
+                                    {w.name.substring(0, 2).toUpperCase()}
+                                  </span>
+                                  <span className="truncate">{w.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )
                 } else {
                   return (

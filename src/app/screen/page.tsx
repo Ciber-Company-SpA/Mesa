@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRestaurant } from "@/hooks/useRestaurant"
 import { logger } from "@/lib/logger"
-import { AdminGuard } from "@/app/admin/AdminGuard"
+import { KitchenGuard } from "@/components/KitchenGuard"
 import { advanceOrderStatusAction } from "@/app/actions/order-actions"
 import { playNewOrderSound } from "@/lib/notification-sound"
 
@@ -46,9 +46,9 @@ function rowToDisplay(data: FetchedOrder): DisplayOrder {
 
 export default function ScreenPageWrapper() {
   return (
-    <AdminGuard>
+    <KitchenGuard>
       <ScreenPage />
-    </AdminGuard>
+    </KitchenGuard>
   )
 }
 
