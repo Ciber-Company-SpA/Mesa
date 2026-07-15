@@ -23,9 +23,18 @@ function json(body: unknown, status = 200): Response {
 
 function genPassword(): string {
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghjkmnpqrstuvwxyz";
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  // Muestreo por rechazo para evitar sesgo de módulo (256 no es múltiplo de 54).
+  const max = Math.floor(256 / abc.length) * abc.length; // 216
   let out = "";
-  for (const b of bytes) out += abc[b % abc.length];
+  while (out.length < 12) {
+    const buf = crypto.getRandomValues(new Uint8Array(16));
+    for (const b of buf) {
+      if (b < max) {
+        out += abc[b % abc.length];
+        if (out.length === 12) break;
+      }
+    }
+  }
   return out;
 }
 

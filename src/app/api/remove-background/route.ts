@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { checkRemoveBgLimit } from "@/lib/rate-limit"
+import { logger } from "@/lib/logger"
 
 export async function POST(request: NextRequest) {
   // 1. Exigir ADMIN (no solo sesión). Un mesero no debe gastar tu cuota
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (!guard.ok) {
     return NextResponse.json({ error: guard.error }, { status: 403 })
   }
-  const { userId, restaurantId } = guard.data
+  const { userId } = guard.data
 
   // 2. Rate limit por usuario (protege tu cuota/costos de remove.bg).
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     // Fail closed aquí: si el rate limit no responde, NO procesamos, porque
     // este endpoint cuesta dinero real. Mejor rechazar que arriesgar la cuota.
-    console.error("Rate limit no disponible en remove-background:", err)
+    logger.error("Rate limit no disponible en remove-background", err)
     return NextResponse.json(
       { error: "Servicio no disponible, intenta más tarde." },
       { status: 503 }
@@ -63,19 +64,12 @@ export async function POST(request: NextRequest) {
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error("Error de remove.bg:", response.status, errorText)
+    logger.error("Error de remove.bg", { status: response.status, body: errorText })
     return NextResponse.json(
       { error: "No se pudo procesar la imagen" },
       { status: 502 }
     )
   }
-
-  // 6. Registro de uso por restaurante (para auditar consumo/costos).
-  //    Log simple a consola. Si más adelante quieres persistirlo, puedes
-  //    insertar en una tabla de auditoría aquí.
-  console.info(
-    `[remove-bg] usado por user=${userId} restaurant=${restaurantId} bytes=${file.size}`
-  )
 
   const imageBuffer = await response.arrayBuffer()
   return new NextResponse(imageBuffer, {

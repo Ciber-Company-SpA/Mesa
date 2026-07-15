@@ -20,6 +20,14 @@ export const removeBgRatelimit = new Ratelimit({
   analytics: true,
 })
 
+
+export const apiInventoryRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, "60 s"),
+  prefix: "rl:api-inventory",
+  analytics: true,
+})
+
 export async function getClientIp(): Promise<string> {
   const h = await headers()
   const forwarded = h.get("x-forwarded-for")
@@ -37,4 +45,15 @@ export async function checkPublicOrderLimit(qrToken: string) {
 
 export async function checkRemoveBgLimit(userId: string) {
   return removeBgRatelimit.limit(`user:${userId}`)
+}
+
+/**
+ * Rate limit de la API pública de inventario. Se acota por IP + prefijo de la
+ * API key (nunca la key completa, que no debe quedar en Redis), frenando la
+ * fuerza bruta de tokens y el abuso sin exponer el secreto.
+ */
+export async function checkApiInventoryLimit(token: string) {
+  const ip = await getClientIp()
+  const keyPrefix = token.slice(0, 13)
+  return apiInventoryRatelimit.limit(`${ip}:${keyPrefix}`)
 }

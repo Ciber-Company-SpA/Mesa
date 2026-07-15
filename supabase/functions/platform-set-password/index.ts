@@ -45,14 +45,33 @@ Deno.serve(async (req: Request) => {
     return json({ error: "La contraseña es demasiado larga (máx. 72 bytes)" }, 400);
   }
 
-  // 3) Cambiar la contraseña con service_role
+  // 3) No permitir cambiar la contraseña de OTRO operador de plataforma por
+  //    esta vía (evita takeover entre operadores). Los operadores gestionan su
+  //    propia contraseña por el flujo normal de auth.
   const admin = createClient(url, svc);
+  const { data: target, error: targetErr } = await admin.auth.admin.getUserById(authUserId);
+  if (targetErr || !target?.user) {
+    return json({ error: "Usuario no encontrado" }, 404);
+  }
+  const targetEmail = (target.user.email ?? "").toLowerCase();
+  if (targetEmail) {
+    const { data: op } = await admin
+      .from("platform_admins")
+      .select("email")
+      .ilike("email", targetEmail)
+      .maybeSingle();
+    if (op) {
+      return json({ error: "No se puede cambiar la contraseña de un operador de plataforma por esta vía" }, 403);
+    }
+  }
+
+  // 4) Cambiar la contraseña con service_role
   const { data: updated, error: updErr } = await admin.auth.admin.updateUserById(authUserId, { password });
   if (updErr || !updated?.user) {
     return json({ error: updErr?.message ?? "No se pudo actualizar la contraseña" }, 400);
   }
 
-  // 4) Auditoría (no bloquea el resultado si falla)
+  // 5) Auditoría (no bloquea el resultado si falla)
   try {
     await asOperator.rpc("platform_audit_event", {
       p_action: "reset_password",

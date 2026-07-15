@@ -1,7 +1,30 @@
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
+// CSP conservadora: permite los orígenes que el cliente realmente usa
+// (Supabase REST/realtime, Cloudinary) y mantiene 'unsafe-inline'/'unsafe-eval'
+// en scripts para no romper la hidratación de Next ni librerías; el control
+// clave anti-exfiltración es connect-src acotado + frame-ancestors 'none'.
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.cloudinary.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+].join("; ")
+
 const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: csp,
+  },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",

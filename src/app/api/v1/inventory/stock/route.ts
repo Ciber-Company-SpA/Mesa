@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
+import { checkApiInventoryLimit } from "@/lib/rate-limit"
+import { logger } from "@/lib/logger"
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get("authorization")
@@ -9,6 +11,18 @@ export async function POST(req: Request) {
 
   if (!token) {
     return NextResponse.json({ error: "API key requerida" }, { status: 401 })
+  }
+
+  try {
+    const { success } = await checkApiInventoryLimit(token)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intentá de nuevo en un momento." },
+        { status: 429 }
+      )
+    }
+  } catch (err) {
+    logger.error("Rate limit no disponible en api_inventory_set_stock", err)
   }
 
   let body: unknown
@@ -42,7 +56,8 @@ export async function POST(req: Request) {
   })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    logger.error("api_inventory_set_stock error", error)
+    return NextResponse.json({ error: "API key inválida o solicitud rechazada" }, { status: 400 })
   }
 
   return NextResponse.json({ updated: data })
