@@ -80,6 +80,11 @@ Deno.serve(async (req: Request) => {
       restaurant_name: restaurantName,
       must_change_password: true,
     },
+    // Marca de aprovisionamiento legítimo: el trigger handle_new_user solo crea
+    // restaurante + admin cuando está presente (solo service_role puede ponerla).
+    app_metadata: {
+      provisioned_by_platform: true,
+    },
   });
   if (cErr || !created?.user) {
     const msg = (cErr?.message ?? "").toLowerCase().includes("already")

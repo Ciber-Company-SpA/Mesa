@@ -1,7 +1,5 @@
 import "server-only"
-import { randomBytes } from "node:crypto"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { createSupabaseAnonClient } from "@/lib/supabase/anon"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { sendWaiterCredentialsEmail } from "@/lib/email/send-waiter-credentials"
 import {
@@ -27,17 +25,6 @@ export type WaiterListItem = {
 }
 
 // ============ HELPERS ============
-
-function generatePassword(): string {
-  // 10 caracteres alfanuméricos sin ambigüedades (sin 0/O/1/l/I).
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghjkmnpqrstuvwxyz"
-  const bytes = randomBytes(10)
-  let result = ""
-  for (let i = 0; i < 10; i++) {
-    result += alphabet[bytes[i] % alphabet.length]
-  }
-  return result
-}
 
 function getAppBaseUrl(): string {
   return (
@@ -80,30 +67,32 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
     return fail("No tienes permiso sobre este restaurante")
   }
 
-  const password = generatePassword()
-
-  // signUp con cliente SIN cookies → no afecta la sesión del admin.
-  // El trigger SQL existente lee raw_user_meta_data e inserta en public.users.
-  const signupClient = createSupabaseAnonClient()
-  const { error: signupError } = await signupClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        admin_name: name,
-        role_id: 1, // waiter
-        restaurant_id: restaurantId,
-        must_change_password: true,
-      },
-    },
-  })
-
-  if (signupError) {
-    if (signupError.message?.toLowerCase().includes("registered")) {
-      return fail("Ya existe un usuario con ese correo")
+  // El alta del usuario va por la edge function provision-waiter (service_role):
+  // no depende del signup público (desactivado) y valida que el caller sea admin
+  // del restaurante. El trigger lo crea como mesero pendiente; assign_waiter lo
+  // liga después. Devuelve la contraseña temporal generada.
+  const { data: provisioned, error: provisionError } = await serverClient.functions.invoke(
+    "provision-waiter",
+    { body: { email, name, restaurantId } }
+  )
+  if (provisionError || !provisioned?.ok) {
+    let msg = "Error al crear el mesero"
+    if (provisioned?.error) {
+      msg = provisioned.error as string
+    } else if (provisionError) {
+      const ctx = (provisionError as { context?: Response }).context
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const b = await ctx.json()
+          if (b?.error) msg = b.error
+        } catch {
+          // sin cuerpo legible: se mantiene el mensaje genérico
+        }
+      }
     }
-    return fail(signupError.message ?? "Error al crear el mesero")
+    return fail(msg)
   }
+  const password = provisioned.password as string
 
   // ===== BLOQUE NUEVO: ligar el mesero al restaurante vía RPC validada =====
   // El trigger creó al usuario como "mesero pendiente" (role 1, sin
