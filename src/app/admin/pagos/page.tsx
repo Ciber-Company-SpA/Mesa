@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   getTaxProfile,
   saveTaxProfile,
@@ -66,6 +66,37 @@ function TaxProfileSection() {
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
   const { items: actividades, loading: catLoading } = useSiiActividades()
   const { items: rubros } = useSiiRubros()
+
+  // Letra de sección (rubro) del giro elegido, para filtrar las actividades.
+  const selectedRubroCodigo = useMemo(
+    () => rubros.find((r) => r.nombre === profile.giro)?.codigo,
+    [rubros, profile.giro]
+  )
+
+  // Si hay un rubro seleccionado, la actividad económica se acota a ese rubro.
+  const actividadesFiltradas = useMemo(
+    () =>
+      selectedRubroCodigo
+        ? actividades.filter((a) => a.rubro === selectedRubroCodigo)
+        : actividades,
+    [actividades, selectedRubroCodigo]
+  )
+
+  // Al cambiar el rubro, si la actividad elegida no pertenece al nuevo rubro,
+  // se limpia para forzar una selección coherente.
+  function changeGiro(nombre: string) {
+    const nuevoRubro = rubros.find((r) => r.nombre === nombre)?.codigo
+    const codigoActual = profile.actividadEconomica.split(" - ")[0]?.trim()
+    const actActual = actividades.find((a) => a.codigo === codigoActual)
+    setProfile((prev) => ({
+      ...prev,
+      giro: nombre,
+      actividadEconomica:
+        nuevoRubro && actActual && actActual.rubro !== nuevoRubro
+          ? ""
+          : prev.actividadEconomica,
+    }))
+  }
 
   useEffect(() => {
     let active = true
@@ -149,7 +180,7 @@ function TaxProfileSection() {
               <label className={LABEL_CLASS}>Giro (rubro SII)</label>
               <select
                 value={profile.giro}
-                onChange={(e) => update("giro", e.target.value)}
+                onChange={(e) => changeGiro(e.target.value)}
                 className={INPUT_CLASS}
               >
                 <option value="">Seleccioná un rubro…</option>
@@ -167,16 +198,25 @@ function TaxProfileSection() {
             <div>
               <label className={LABEL_CLASS}>Actividad económica</label>
               <SiiActividadCombobox
-                items={actividades}
+                items={actividadesFiltradas}
                 loading={catLoading}
                 value={profile.actividadEconomica}
-                placeholder="Buscá por código o nombre (SII)"
+                placeholder={
+                  selectedRubroCodigo
+                    ? "Buscá dentro del rubro elegido"
+                    : "Buscá por código o nombre (SII)"
+                }
                 onSelect={(it) => {
                   update("actividadEconomica", `${it.codigo} - ${it.glosa}`)
                   const rubroNombre = rubros.find((r) => r.codigo === it.rubro)?.nombre
                   if (rubroNombre && !profile.giro.trim()) update("giro", rubroNombre)
                 }}
               />
+              {selectedRubroCodigo ? (
+                <p className="mt-1.5 text-[11px] font-medium text-stone-400">
+                  Mostrando solo actividades del rubro seleccionado.
+                </p>
+              ) : null}
             </div>
 
             <div>
