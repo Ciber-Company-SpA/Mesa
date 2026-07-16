@@ -12,6 +12,7 @@ import {
   emitDocument,
   getDocumentForView,
   deleteDocument,
+  annulDocument,
   type TaxDocument,
 } from "@/services/dte-service"
 import { DTE_LABEL_BY_CODE } from "@/lib/dte/types"
@@ -379,6 +380,28 @@ function TaxDocumentsSection() {
   const [receptorDir, setReceptorDir] = useState("")
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [annulId, setAnnulId] = useState<number | null>(null)
+  const [annulReason, setAnnulReason] = useState("")
+  const [annulling, setAnnulling] = useState(false)
+
+  async function confirmAnnul() {
+    if (annulId == null || annulling) return
+    if (!annulReason.trim()) {
+      setFeedback({ kind: "error", message: "Indicá el motivo de la anulación." })
+      return
+    }
+    setAnnulling(true)
+    const result = await annulDocument(annulId, annulReason.trim())
+    setAnnulling(false)
+    if (!result.ok) {
+      setFeedback({ kind: "error", message: result.error })
+      return
+    }
+    setFeedback({ kind: "ok", message: "Factura anulada. Se generó la nota de crédito." })
+    setAnnulId(null)
+    setAnnulReason("")
+    await load()
+  }
 
   async function removeDoc(id: number) {
     setDeletingId(id)
@@ -597,6 +620,14 @@ function TaxDocumentsSection() {
                         Simulado
                       </span>
                     ) : null}
+                    {d.voided ? (
+                      <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                        Anulada
+                      </span>
+                    ) : null}
+                    {d.docType === 61 && d.refFolio ? (
+                      <p className="mt-0.5 text-[11px] text-stone-400">Anula factura N° {d.refFolio}</p>
+                    ) : null}
                   </td>
                   <td className="py-2.5 pr-4 tabular-nums text-stone-700">{d.folio ?? "—"}</td>
                   <td className="py-2.5 pr-4 text-right font-semibold tabular-nums text-stone-900">
@@ -639,6 +670,18 @@ function TaxDocumentsSection() {
                         >
                           Ver
                         </button>
+                        {(d.docType === 33 || d.docType === 34) && !d.voided && d.siiStatus === "accepted" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAnnulId(d.id)
+                              setAnnulReason("")
+                            }}
+                            className="text-xs font-bold text-stone-400 transition hover:text-red-600"
+                          >
+                            Anular
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(d.id)}
@@ -655,6 +698,47 @@ function TaxDocumentsSection() {
           </tbody>
         </table>
       </div>
+
+      {/* Anular factura -> generar nota de crédito */}
+      {annulId != null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4"
+          onClick={() => (annulling ? null : setAnnulId(null))}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-stone-900">Anular factura</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              Se generará automáticamente una <strong>nota de crédito</strong> que anula esta
+              factura (referenciándola). Indicá el motivo.
+            </p>
+            <textarea
+              value={annulReason}
+              onChange={(e) => setAnnulReason(e.target.value)}
+              rows={3}
+              placeholder="Ej: Anulación por error en la emisión / devolución"
+              className={INPUT_CLASS + " mt-4"}
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAnnulId(null)}
+                disabled={annulling}
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmAnnul}
+                disabled={annulling}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {annulling ? "Generando…" : "Anular y generar nota de crédito"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Vista previa del documento en modal (render directo, sin iframe) */}
       {preview ? (

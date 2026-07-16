@@ -16,6 +16,17 @@ export type DocumentViewData = {
   trackId: string | null
   emittedAt: string | null
   simulated: boolean
+  voided?: boolean
+  refDocType?: number | null
+  refFolio?: number | null
+  refCode?: number | null
+  refReason?: string | null
+}
+
+const COD_REF_LABEL: Record<number, string> = {
+  1: "Anula documento de referencia",
+  2: "Corrige texto",
+  3: "Corrige montos",
 }
 
 export type DocumentViewEmisor = {
@@ -60,6 +71,7 @@ export function DocumentView({ doc, emisor }: { doc: DocumentViewData; emisor: D
   const label = (DTE_LABEL_BY_CODE[doc.docType] ?? `Documento ${doc.docType}`).toUpperCase()
   const esFactura = doc.docType === 33 || doc.docType === 34
   const esBoleta = doc.docType === 39 || doc.docType === 41
+  const esNotaCredito = doc.docType === 61
   const ciudad = emisor.comuna?.trim() || "SANTIAGO"
 
   return (
@@ -70,6 +82,12 @@ export function DocumentView({ doc, emisor }: { doc: DocumentViewData; emisor: D
       {doc.simulated ? (
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-bold uppercase tracking-wider text-amber-700">
           Documento simulado · sin validez tributaria ante el SII
+        </div>
+      ) : null}
+
+      {doc.voided ? (
+        <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-center text-xs font-bold uppercase tracking-wider text-red-700">
+          Factura anulada por nota de crédito
         </div>
       ) : null}
 
@@ -134,6 +152,28 @@ export function DocumentView({ doc, emisor }: { doc: DocumentViewData; emisor: D
         </div>
       ) : null}
 
+      {/* Referencia (obligatoria en nota de crédito) */}
+      {esNotaCredito ? (
+        <div className="mt-4 rounded-lg border border-stone-200 px-4 py-3">
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-stone-500">Referencia</p>
+          <div className="grid gap-x-8 gap-y-0.5 sm:grid-cols-2">
+            <Field
+              label="Documento"
+              value={
+                doc.refDocType
+                  ? `${DTE_LABEL_BY_CODE[doc.refDocType] ?? `Tipo ${doc.refDocType}`} N° ${doc.refFolio ?? "—"}`
+                  : null
+              }
+            />
+            <Field
+              label="Código"
+              value={doc.refCode ? `${doc.refCode} — ${COD_REF_LABEL[doc.refCode] ?? ""}` : "1 — Anula documento de referencia"}
+            />
+            <Field label="Motivo" value={doc.refReason} />
+          </div>
+        </div>
+      ) : null}
+
       {/* Detalle */}
       <table className="mt-4 w-full text-xs">
         <thead>
@@ -146,7 +186,11 @@ export function DocumentView({ doc, emisor }: { doc: DocumentViewData; emisor: D
         </thead>
         <tbody>
           <tr className="border-b border-stone-100">
-            <td className="py-2 pr-3 text-stone-800">Consumo / Servicios</td>
+            <td className="py-2 pr-3 text-stone-800">
+              {esNotaCredito
+                ? `Anulación de ${DTE_LABEL_BY_CODE[doc.refDocType ?? 33] ?? "factura"} N° ${doc.refFolio ?? "—"}`
+                : "Consumo / Servicios"}
+            </td>
             <td className="py-2 pr-3 text-right tabular-nums text-stone-700">1</td>
             <td className="py-2 pr-3 text-right tabular-nums text-stone-700">
               {esBoleta ? clp.format(doc.total ?? 0) : clp.format(doc.net ?? 0)}

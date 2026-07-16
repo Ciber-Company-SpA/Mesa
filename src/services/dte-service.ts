@@ -23,6 +23,12 @@ export type TaxDocument = {
   emittedAt: string | null
   createdAt: string
   simulated: boolean
+  voided: boolean
+  voidedByDocId: number | null
+  refDocType: number | null
+  refFolio: number | null
+  refCode: number | null
+  refReason: string | null
 }
 
 type Row = {
@@ -42,6 +48,12 @@ type Row = {
   xml_url: string | null
   emitted_at: string | null
   created_at: string
+  voided: boolean
+  voided_by_doc_id: number | null
+  ref_doc_type: number | null
+  ref_folio: number | null
+  ref_code: number | null
+  ref_reason: string | null
 }
 
 function mapRow(r: Row): TaxDocument {
@@ -63,6 +75,12 @@ function mapRow(r: Row): TaxDocument {
     emittedAt: r.emitted_at,
     createdAt: r.created_at,
     simulated: (r.track_id ?? "").startsWith("SIM-"),
+    voided: r.voided ?? false,
+    voidedByDocId: r.voided_by_doc_id,
+    refDocType: r.ref_doc_type,
+    refFolio: r.ref_folio,
+    refCode: r.ref_code,
+    refReason: r.ref_reason,
   }
 }
 
@@ -110,6 +128,78 @@ export async function getDocumentForView(
     logoUrl: (prof?.logo_url as string) ?? null,
   }
   return ok({ doc: mapRow(row), emisor })
+}
+
+/**
+ * Anula una factura emitiendo automáticamente una nota de crédito (tipo 61) que
+ * la referencia (CodRef=1, "Anula documento"), con los mismos montos y receptor.
+ * La NC se emite por el adaptador y se registra junto con la marca de anulación
+ * de la factura en una sola transacción.
+ */
+export async function annulDocument(id: number, reason: string): Promise<Result<{ creditNoteId: number }>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
+
+  const { data, error: listErr } = await supabase.rpc("get_my_tax_documents")
+  if (listErr) return fail("No se pudo cargar el documento")
+  const original = ((data ?? []) as Row[]).map(mapRow).find((d) => d.id === id)
+  if (!original) return fail("Documento no encontrado")
+  if (original.docType !== 33 && original.docType !== 34) {
+    return fail("Solo se puede anular una factura mediante nota de crédito.")
+  }
+  if (original.voided) return fail("La factura ya fue anulada.")
+  if (original.siiStatus !== "accepted") {
+    return fail("Solo se puede anular una factura aceptada.")
+  }
+
+  // Datos del emisor para el adaptador real (el simulado los ignora).
+  const { data: prof } = await supabase.rpc("get_my_tax_profile")
+  const emisor = {
+    rut: (prof?.rut as string) ?? "",
+    razonSocial: (prof?.razon_social as string) ?? "",
+  }
+
+  const adapter = getDteAdapter()
+  let res
+  try {
+    res = await adapter.emit({
+      type: "nota_credito",
+      net: original.net ?? 0,
+      iva: original.iva ?? 0,
+      total: original.total ?? 0,
+      emisor,
+      receptor: {
+        rut: original.receptorRut,
+        razonSocial: original.receptorRazon,
+        giro: original.receptorGiro,
+        direccion: original.receptorDir,
+      },
+      reference: {
+        docType: original.docType === 34 ? "factura" : "factura",
+        folio: original.folio ?? 0,
+      },
+    })
+  } catch (err) {
+    logger.error("Fallo al emitir la nota de crédito", err)
+    return fail("No se pudo emitir la nota de crédito")
+  }
+
+  const { data: ncId, error } = await supabase.rpc("dte_annul_with_credit_note", {
+    p_original_id: id,
+    p_reason: reason,
+    p_sii_status: res.status,
+    p_folio: res.folio ?? null,
+    p_track_id: res.trackId ?? null,
+    p_pdf_url: res.pdfUrl ?? null,
+    p_xml_url: res.xmlUrl ?? null,
+  })
+  if (error) {
+    logger.error("No se pudo registrar la nota de crédito", error)
+    return fail("No se pudo anular la factura. Reintentá.")
+  }
+
+  return ok({ creditNoteId: ncId as number })
 }
 
 export async function deleteDocument(id: number): Promise<Result<null>> {
