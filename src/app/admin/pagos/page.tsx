@@ -204,23 +204,22 @@ function TaxProfileSection() {
               <SiiActividadCombobox
                 items={actividadesFiltradas}
                 loading={catLoading}
+                disabled={!profile.giro.trim()}
                 value={profile.actividadEconomica}
                 placeholder={
-                  selectedRubroCodigo
-                    ? "Buscá dentro del rubro elegido"
-                    : "Buscá por código o nombre (SII)"
+                  !profile.giro.trim()
+                    ? "Seleccioná primero un giro"
+                    : "Buscá dentro del rubro elegido"
                 }
                 onSelect={(it) => {
                   update("actividadEconomica", `${it.codigo} - ${it.glosa}`)
-                  const rubroNombre = rubros.find((r) => r.codigo === it.rubro)?.nombre
-                  if (rubroNombre && !profile.giro.trim()) update("giro", rubroNombre)
                 }}
               />
-              {selectedRubroCodigo ? (
-                <p className="mt-1.5 text-[11px] font-medium text-stone-400">
-                  Mostrando solo actividades del rubro seleccionado.
-                </p>
-              ) : null}
+              <p className="mt-1.5 text-[11px] font-medium text-stone-400">
+                {!profile.giro.trim()
+                  ? "Elegí un giro para habilitar la búsqueda de actividades."
+                  : "Mostrando solo actividades del rubro seleccionado."}
+              </p>
             </div>
 
             <div>
