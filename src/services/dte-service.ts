@@ -112,6 +112,16 @@ export async function getDocumentForView(
   return ok({ doc: mapRow(row), emisor })
 }
 
+export async function deleteDocument(id: number): Promise<Result<null>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
+
+  const { error } = await supabase.rpc("dte_delete_document", { p_id: id })
+  if (error) return fail("No se pudo borrar el documento")
+  return ok(null)
+}
+
 export type EmitInput = {
   type: DteType
   /** Monto total (con IVA) del documento. */

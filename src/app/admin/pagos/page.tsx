@@ -11,6 +11,7 @@ import {
   listTaxDocuments,
   emitDocument,
   getDocumentForView,
+  deleteDocument,
   type TaxDocument,
 } from "@/services/dte-service"
 import { DTE_LABEL_BY_CODE } from "@/lib/dte/types"
@@ -376,6 +377,20 @@ function TaxDocumentsSection() {
   const [receptorRazon, setReceptorRazon] = useState("")
   const [receptorGiro, setReceptorGiro] = useState("")
   const [receptorDir, setReceptorDir] = useState("")
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  async function removeDoc(id: number) {
+    setDeletingId(id)
+    const result = await deleteDocument(id)
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+    if (!result.ok) {
+      setFeedback({ kind: "error", message: result.error })
+      return
+    }
+    await load()
+  }
 
   async function openPreview(id: number) {
     setPreviewLoading(true)
@@ -596,14 +611,43 @@ function TaxDocumentsSection() {
                     {d.emittedAt ? new Date(d.emittedAt).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "—"}
                   </td>
                   <td className="py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openPreview(d.id)}
-                      disabled={previewLoading}
-                      className="text-xs font-bold text-orange-600 transition hover:underline disabled:opacity-50"
-                    >
-                      Ver
-                    </button>
+                    {confirmDeleteId === d.id ? (
+                      <span className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => removeDoc(d.id)}
+                          disabled={deletingId === d.id}
+                          className="text-xs font-bold text-red-600 transition hover:underline disabled:opacity-50"
+                        >
+                          {deletingId === d.id ? "Borrando…" : "Confirmar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs font-semibold text-stone-500 transition hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => openPreview(d.id)}
+                          disabled={previewLoading}
+                          className="text-xs font-bold text-orange-600 transition hover:underline disabled:opacity-50"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(d.id)}
+                          className="text-xs font-bold text-stone-400 transition hover:text-red-600"
+                        >
+                          Borrar
+                        </button>
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))
