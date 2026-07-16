@@ -357,6 +357,9 @@ function TaxDocumentsSection() {
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
   const [preview, setPreview] = useState<{ doc: TaxDocument; emisor: DocumentViewEmisor } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [docType, setDocType] = useState<"boleta" | "factura">("boleta")
+  const [receptorRut, setReceptorRut] = useState("")
+  const [receptorRazon, setReceptorRazon] = useState("")
 
   async function openPreview(id: number) {
     setPreviewLoading(true)
@@ -383,15 +386,28 @@ function TaxDocumentsSection() {
       setFeedback({ kind: "error", message: "Ingresá un monto válido." })
       return
     }
+    // La factura exige identificar al receptor; la boleta no.
+    if (docType === "factura" && (!receptorRut.trim() || !receptorRazon.trim())) {
+      setFeedback({ kind: "error", message: "Para una factura, indicá el RUT y la razón social del receptor." })
+      return
+    }
     setEmitting(true)
     setFeedback(null)
     try {
-      const result = await emitDocument({ type: "boleta", total })
+      const result = await emitDocument({
+        type: docType,
+        total,
+        receptor:
+          docType === "factura"
+            ? { rut: receptorRut.trim(), razonSocial: receptorRazon.trim() }
+            : undefined,
+      })
       if (!result.ok) {
         setFeedback({ kind: "error", message: result.error })
         return
       }
-      setFeedback({ kind: "ok", message: `Boleta simulada emitida (folio ${result.data.folio}).` })
+      const label = docType === "factura" ? "Factura" : "Boleta"
+      setFeedback({ kind: "ok", message: `${label} simulada emitida (folio ${result.data.folio}).` })
       await load()
     } finally {
       setEmitting(false)
@@ -416,6 +432,17 @@ function TaxDocumentsSection() {
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div>
+            <label className={LABEL_CLASS}>Tipo</label>
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value as "boleta" | "factura")}
+              className={INPUT_CLASS + " w-44"}
+            >
+              <option value="boleta">Boleta electrónica</option>
+              <option value="factura">Factura electrónica</option>
+            </select>
+          </div>
+          <div>
             <label className={LABEL_CLASS}>Monto total (CLP)</label>
             <input
               type="text"
@@ -425,13 +452,43 @@ function TaxDocumentsSection() {
               className={INPUT_CLASS + " w-40"}
             />
           </div>
+        </div>
+
+        {docType === "factura" ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className={LABEL_CLASS}>RUT del receptor</label>
+              <input
+                type="text"
+                value={receptorRut}
+                onChange={(e) => setReceptorRut(e.target.value)}
+                placeholder="76.543.210-K"
+                className={INPUT_CLASS}
+              />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Razón social del receptor</label>
+              <input
+                type="text"
+                value={receptorRazon}
+                onChange={(e) => setReceptorRazon(e.target.value)}
+                placeholder="Cliente Empresa SpA"
+                className={INPUT_CLASS}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-3">
           <button
             type="button"
             onClick={emitTest}
             disabled={emitting}
             className="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-700 disabled:opacity-50"
           >
-            {emitting ? "Emitiendo…" : "Emitir boleta de prueba (simulación)"}
+            {emitting
+              ? "Emitiendo…"
+              : `Emitir ${docType === "factura" ? "factura" : "boleta"} de prueba (simulación)`}
           </button>
         </div>
         {feedback && (
