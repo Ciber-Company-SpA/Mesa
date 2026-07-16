@@ -8,10 +8,35 @@ import {
   type TaxProfile,
 } from "@/services/payments-service"
 import {
+  listTaxDocuments,
+  emitDocument,
+  type TaxDocument,
+} from "@/services/dte-service"
+import { DTE_LABEL_BY_CODE } from "@/lib/dte/types"
+import {
   useSiiActividades,
   useSiiRubros,
   SiiActividadCombobox,
 } from "@/components/admin/SiiActividadCombobox"
+
+const clp = new Intl.NumberFormat("es-CL", {
+  style: "currency",
+  currency: "CLP",
+  maximumFractionDigits: 0,
+})
+
+const DTE_STATUS_BADGE: Record<string, string> = {
+  pending: "bg-amber-50 text-amber-700 ring-amber-200",
+  accepted: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  rejected: "bg-red-50 text-red-700 ring-red-200",
+  error: "bg-red-50 text-red-700 ring-red-200",
+}
+const DTE_STATUS_LABEL: Record<string, string> = {
+  pending: "En trámite",
+  accepted: "Aceptado",
+  rejected: "Rechazado",
+  error: "Error",
+}
 
 const EMPTY_PROFILE: TaxProfile = {
   rut: "",
@@ -281,6 +306,153 @@ function PaymentAccountSection() {
   )
 }
 
+function TaxDocumentsSection() {
+  const [docs, setDocs] = useState<TaxDocument[]>([])
+  const [loading, setLoading] = useState(true)
+  const [amount, setAmount] = useState("10000")
+  const [emitting, setEmitting] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  async function load() {
+    const result = await listTaxDocuments()
+    if (result.ok) setDocs(result.data)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function emitTest() {
+    if (emitting) return
+    const total = parseInt(amount.replace(/[^\d]/g, ""), 10)
+    if (!Number.isFinite(total) || total <= 0) {
+      setFeedback({ kind: "error", message: "Ingresá un monto válido." })
+      return
+    }
+    setEmitting(true)
+    setFeedback(null)
+    try {
+      const result = await emitDocument({ type: "boleta", total })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      setFeedback({ kind: "ok", message: `Boleta simulada emitida (folio ${result.data.folio}).` })
+      await load()
+    } finally {
+      setEmitting(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-stone-900">Documentos tributarios</h3>
+      <p className="mt-1 text-xs font-medium text-stone-500">
+        Historial de boletas y facturas emitidas. La emisión real se activa al
+        integrar el proveedor y certificar ante el SII.
+      </p>
+
+      {/* Panel de simulación (solo para validar el flujo) */}
+      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
+          Modo simulación
+        </p>
+        <p className="mt-1 text-xs text-amber-700/90">
+          Emite un documento de prueba para validar el circuito. NO es un documento válido ante el SII.
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div>
+            <label className={LABEL_CLASS}>Monto total (CLP)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={INPUT_CLASS + " w-40"}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={emitTest}
+            disabled={emitting}
+            className="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-700 disabled:opacity-50"
+          >
+            {emitting ? "Emitiendo…" : "Emitir boleta de prueba (simulación)"}
+          </button>
+        </div>
+        {feedback && (
+          <p
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-medium ${
+              feedback.kind === "ok"
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {feedback.message}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-stone-100 text-left text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              <th className="py-2 pr-4">Documento</th>
+              <th className="py-2 pr-4">Folio</th>
+              <th className="py-2 pr-4 text-right">Total</th>
+              <th className="py-2 pr-4">Estado</th>
+              <th className="py-2">Emitido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="py-6 text-center text-sm font-semibold text-stone-500 animate-pulse">
+                  Cargando…
+                </td>
+              </tr>
+            ) : docs.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-sm text-stone-500">
+                  Aún no hay documentos emitidos.
+                </td>
+              </tr>
+            ) : (
+              docs.map((d) => (
+                <tr key={d.id} className="border-b border-stone-50 last:border-b-0">
+                  <td className="py-2.5 pr-4">
+                    <span className="font-semibold text-stone-900">
+                      {DTE_LABEL_BY_CODE[d.docType] ?? `Tipo ${d.docType}`}
+                    </span>
+                    {d.simulated ? (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                        Simulado
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="py-2.5 pr-4 tabular-nums text-stone-700">{d.folio ?? "—"}</td>
+                  <td className="py-2.5 pr-4 text-right font-semibold tabular-nums text-stone-900">
+                    {d.total != null ? clp.format(d.total) : "—"}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${DTE_STATUS_BADGE[d.siiStatus] ?? "bg-stone-100 text-stone-600 ring-stone-200"}`}>
+                      {DTE_STATUS_LABEL[d.siiStatus] ?? d.siiStatus}
+                    </span>
+                  </td>
+                  <td className="py-2.5 text-stone-500">
+                    {d.emittedAt ? new Date(d.emittedAt).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 export default function PagosPage() {
   return (
     <div className="space-y-6">
@@ -295,6 +467,7 @@ export default function PagosPage() {
 
       <TaxProfileSection />
       <PaymentAccountSection />
+      <TaxDocumentsSection />
     </div>
   )
 }
