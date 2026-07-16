@@ -21,6 +21,7 @@ import {
   useSiiRubros,
   SiiActividadCombobox,
 } from "@/components/admin/SiiActividadCombobox"
+import { LogoUploader } from "@/components/admin/LogoUploader"
 
 const clp = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -49,6 +50,7 @@ const EMPTY_PROFILE: TaxProfile = {
   comuna: "",
   actividadEconomica: "",
   regimenIva: "Régimen general",
+  logoUrl: "",
 }
 
 const REGIMEN_OPTIONS = ["Régimen general", "Pro Pyme", "Otro"] as const
@@ -259,6 +261,18 @@ function TaxProfileSection() {
             </div>
           </div>
 
+          <div className="mt-6 border-t border-stone-100 pt-6">
+            <label className={LABEL_CLASS}>Logo del restaurante</label>
+            <p className="mb-3 text-[11px] text-stone-500">
+              Se aplica a las boletas y facturas que emitas.
+            </p>
+            <LogoUploader
+              value={profile.logoUrl || null}
+              onChange={(url) => update("logoUrl", url ?? "")}
+              disabled={saving}
+            />
+          </div>
+
           {feedback && (
             <p
               className={`mt-5 rounded-lg px-3 py-2 text-xs font-medium ${
@@ -360,6 +374,8 @@ function TaxDocumentsSection() {
   const [docType, setDocType] = useState<"boleta" | "factura">("boleta")
   const [receptorRut, setReceptorRut] = useState("")
   const [receptorRazon, setReceptorRazon] = useState("")
+  const [receptorGiro, setReceptorGiro] = useState("")
+  const [receptorDir, setReceptorDir] = useState("")
 
   async function openPreview(id: number) {
     setPreviewLoading(true)
@@ -399,7 +415,12 @@ function TaxDocumentsSection() {
         total,
         receptor:
           docType === "factura"
-            ? { rut: receptorRut.trim(), razonSocial: receptorRazon.trim() }
+            ? {
+                rut: receptorRut.trim(),
+                razonSocial: receptorRazon.trim(),
+                giro: receptorGiro.trim() || undefined,
+                direccion: receptorDir.trim() || undefined,
+              }
             : undefined,
       })
       if (!result.ok) {
@@ -473,6 +494,26 @@ function TaxDocumentsSection() {
                 value={receptorRazon}
                 onChange={(e) => setReceptorRazon(e.target.value)}
                 placeholder="Cliente Empresa SpA"
+                className={INPUT_CLASS}
+              />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Giro del receptor</label>
+              <input
+                type="text"
+                value={receptorGiro}
+                onChange={(e) => setReceptorGiro(e.target.value)}
+                placeholder="Comercio / Servicios"
+                className={INPUT_CLASS}
+              />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>Dirección del receptor</label>
+              <input
+                type="text"
+                value={receptorDir}
+                onChange={(e) => setReceptorDir(e.target.value)}
+                placeholder="Calle 123, Comuna"
                 className={INPUT_CLASS}
               />
             </div>

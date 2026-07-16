@@ -12,6 +12,7 @@ export type TaxProfile = {
   comuna: string
   actividadEconomica: string
   regimenIva: string
+  logoUrl: string
 }
 
 export type PaymentAccount = {
@@ -28,6 +29,7 @@ const TaxProfileSchema = z.object({
   comuna: z.string().trim().max(80, "Máximo 80 caracteres"),
   actividadEconomica: z.string().trim().max(200, "Máximo 200 caracteres"),
   regimenIva: z.string().trim().max(40, "Máximo 40 caracteres"),
+  logoUrl: z.string().trim().max(500, "URL demasiado larga"),
 })
 
 export type SaveTaxProfileInput = z.infer<typeof TaxProfileSchema>
@@ -40,6 +42,7 @@ type TaxProfileRow = {
   comuna?: string | null
   actividad_economica?: string | null
   regimen_iva?: string | null
+  logo_url?: string | null
 }
 
 function str(v: string | null | undefined): string {
@@ -65,6 +68,7 @@ export async function getTaxProfile(): Promise<Result<TaxProfile>> {
     comuna: str(raw.comuna),
     actividadEconomica: str(raw.actividad_economica),
     regimenIva: str(raw.regimen_iva),
+    logoUrl: str(raw.logo_url),
   })
 }
 
@@ -88,6 +92,7 @@ export async function saveTaxProfile(
     p_comuna: parsed.data.comuna,
     p_actividad: parsed.data.actividadEconomica,
     p_regimen: parsed.data.regimenIva,
+    p_logo_url: parsed.data.logoUrl || null,
   })
 
   if (error) return fail("No se pudo guardar los datos tributarios")

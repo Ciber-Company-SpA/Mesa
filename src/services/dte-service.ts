@@ -14,6 +14,8 @@ export type TaxDocument = {
   total: number | null
   receptorRut: string | null
   receptorRazon: string | null
+  receptorGiro: string | null
+  receptorDir: string | null
   siiStatus: string
   trackId: string | null
   pdfUrl: string | null
@@ -32,6 +34,8 @@ type Row = {
   total: number | null
   receptor_rut: string | null
   receptor_razon: string | null
+  receptor_giro: string | null
+  receptor_dir: string | null
   sii_status: string
   track_id: string | null
   pdf_url: string | null
@@ -50,6 +54,8 @@ function mapRow(r: Row): TaxDocument {
     total: r.total,
     receptorRut: r.receptor_rut,
     receptorRazon: r.receptor_razon,
+    receptorGiro: r.receptor_giro,
+    receptorDir: r.receptor_dir,
     siiStatus: r.sii_status,
     trackId: r.track_id,
     pdfUrl: r.pdf_url,
@@ -76,6 +82,8 @@ export type DteEmisorInfo = {
   giro: string
   direccion: string
   comuna: string
+  actividadEconomica: string
+  logoUrl: string | null
 }
 
 /** Documento + datos del emisor, para renderizar la vista previa imprimible. */
@@ -98,6 +106,8 @@ export async function getDocumentForView(
     giro: (prof?.giro as string) ?? "",
     direccion: (prof?.direccion as string) ?? "",
     comuna: (prof?.comuna as string) ?? "",
+    actividadEconomica: (prof?.actividad_economica as string) ?? "",
+    logoUrl: (prof?.logo_url as string) ?? null,
   }
   return ok({ doc: mapRow(row), emisor })
 }
@@ -106,7 +116,7 @@ export type EmitInput = {
   type: DteType
   /** Monto total (con IVA) del documento. */
   total: number
-  receptor?: { rut?: string; razonSocial?: string }
+  receptor?: { rut?: string; razonSocial?: string; giro?: string; direccion?: string }
   paymentId?: number | null
 }
 
@@ -145,7 +155,12 @@ export async function emitDocument(input: EmitInput): Promise<Result<{ id: numbe
       total,
       emisor,
       receptor: input.receptor
-        ? { rut: input.receptor.rut ?? null, razonSocial: input.receptor.razonSocial ?? null }
+        ? {
+            rut: input.receptor.rut ?? null,
+            razonSocial: input.receptor.razonSocial ?? null,
+            giro: input.receptor.giro ?? null,
+            direccion: input.receptor.direccion ?? null,
+          }
         : undefined,
     })
   } catch (err) {
@@ -160,8 +175,8 @@ export async function emitDocument(input: EmitInput): Promise<Result<{ id: numbe
     p_total: total,
     p_receptor_rut: input.receptor?.rut ?? null,
     p_receptor_razon: input.receptor?.razonSocial ?? null,
-    p_receptor_giro: null,
-    p_receptor_dir: null,
+    p_receptor_giro: input.receptor?.giro ?? null,
+    p_receptor_dir: input.receptor?.direccion ?? null,
     p_sii_status: res.status,
     p_folio: res.folio ?? null,
     p_track_id: res.trackId ?? null,
