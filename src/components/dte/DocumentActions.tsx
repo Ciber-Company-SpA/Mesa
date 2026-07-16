@@ -53,6 +53,20 @@ function buildXml(d: Props["doc"], emisor: Props["emisor"]): string {
 }
 
 export function DocumentActions({ doc, emisor }: Props) {
+  function print() {
+    // Marca el body para que el @media print muestre solo el documento
+    // (data-print-root), sirva desde la página o desde el modal de vista previa.
+    document.body.setAttribute("data-printing", "")
+    const cleanup = () => {
+      document.body.removeAttribute("data-printing")
+      window.removeEventListener("afterprint", cleanup)
+    }
+    window.addEventListener("afterprint", cleanup)
+    window.print()
+    // Respaldo por si afterprint no dispara.
+    setTimeout(cleanup, 1000)
+  }
+
   function downloadXml() {
     if (doc.xmlUrl) {
       window.open(doc.xmlUrl, "_blank", "noopener")
@@ -83,7 +97,7 @@ export function DocumentActions({ doc, emisor }: Props) {
       ) : (
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={print}
           className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
         >
           Imprimir / Guardar PDF

@@ -206,3 +206,23 @@ html, body {
   .animate-mesa-glow { animation: none; }
   .mesa-reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* Impresión de un documento tributario desde cualquier vista (modal o página):
+   al imprimir se oculta todo salvo el elemento marcado data-print-root. */
+@media print {
+  body[data-printing] * {
+    visibility: hidden !important;
+  }
+  body[data-printing] [data-print-root],
+  body[data-printing] [data-print-root] * {
+    visibility: visible !important;
+  }
+  body[data-printing] [data-print-root] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}

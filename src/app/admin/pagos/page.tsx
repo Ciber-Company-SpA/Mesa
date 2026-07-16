@@ -10,9 +10,12 @@ import {
 import {
   listTaxDocuments,
   emitDocument,
+  getDocumentForView,
   type TaxDocument,
 } from "@/services/dte-service"
 import { DTE_LABEL_BY_CODE } from "@/lib/dte/types"
+import { DocumentView, type DocumentViewEmisor } from "@/components/dte/DocumentView"
+import { DocumentActions } from "@/components/dte/DocumentActions"
 import {
   useSiiActividades,
   useSiiRubros,
@@ -312,7 +315,16 @@ function TaxDocumentsSection() {
   const [amount, setAmount] = useState("10000")
   const [emitting, setEmitting] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
-  const [previewId, setPreviewId] = useState<number | null>(null)
+  const [preview, setPreview] = useState<{ doc: TaxDocument; emisor: DocumentViewEmisor } | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  async function openPreview(id: number) {
+    setPreviewLoading(true)
+    const result = await getDocumentForView(id)
+    setPreviewLoading(false)
+    if (result.ok) setPreview(result.data)
+    else setFeedback({ kind: "error", message: result.error })
+  }
 
   async function load() {
     const result = await listTaxDocuments()
@@ -448,8 +460,9 @@ function TaxDocumentsSection() {
                   <td className="py-2.5 text-right">
                     <button
                       type="button"
-                      onClick={() => setPreviewId(d.id)}
-                      className="text-xs font-bold text-orange-600 transition hover:underline"
+                      onClick={() => openPreview(d.id)}
+                      disabled={previewLoading}
+                      className="text-xs font-bold text-orange-600 transition hover:underline disabled:opacity-50"
                     >
                       Ver
                     </button>
@@ -461,21 +474,21 @@ function TaxDocumentsSection() {
         </table>
       </div>
 
-      {/* Vista previa del documento en modal (iframe a la página imprimible) */}
-      {previewId != null ? (
+      {/* Vista previa del documento en modal (render directo, sin iframe) */}
+      {preview ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4"
-          onClick={() => setPreviewId(null)}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/60 p-4"
+          onClick={() => setPreview(null)}
         >
           <div
-            className="flex h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3 border-b border-stone-200 px-4 py-2.5 print:hidden">
               <p className="text-sm font-bold text-stone-900">Vista previa del documento</p>
               <div className="flex items-center gap-3">
                 <a
-                  href={`/documento/${previewId}`}
+                  href={`/documento/${preview.doc.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-semibold text-orange-600 hover:underline"
@@ -484,14 +497,22 @@ function TaxDocumentsSection() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => setPreviewId(null)}
+                  onClick={() => setPreview(null)}
                   className="rounded-lg px-2 py-1 text-sm font-bold text-stone-500 hover:bg-stone-100"
                 >
                   ✕
                 </button>
               </div>
             </div>
-            <iframe src={`/documento/${previewId}`} title="Documento" className="flex-1 w-full" />
+            <div className="space-y-4 p-4">
+              <DocumentView doc={preview.doc} emisor={preview.emisor} />
+              <div className="print:hidden">
+                <DocumentActions
+                  doc={preview.doc}
+                  emisor={{ rut: preview.emisor.rut, razonSocial: preview.emisor.razonSocial }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
