@@ -28,6 +28,14 @@ export const apiInventoryRatelimit = new Ratelimit({
   analytics: true,
 })
 
+
+export const leadRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "60 s"),
+  prefix: "rl:lead",
+  analytics: true,
+})
+
 export async function getClientIp(): Promise<string> {
   const h = await headers()
   const forwarded = h.get("x-forwarded-for")
@@ -56,4 +64,10 @@ export async function checkApiInventoryLimit(token: string) {
   const ip = await getClientIp()
   const keyPrefix = token.slice(0, 13)
   return apiInventoryRatelimit.limit(`${ip}:${keyPrefix}`)
+}
+
+/** Anti-spam del formulario público de leads: por IP. */
+export async function checkLeadLimit() {
+  const ip = await getClientIp()
+  return leadRatelimit.limit(`ip:${ip}`)
 }
