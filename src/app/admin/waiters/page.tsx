@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 
+import { reassignTableAction } from "@/app/actions/order-actions"
 import { useCreateWaiter } from "@/hooks/useCreateWaiter"
 import { useWaiters } from "@/hooks/useWaiters"
 import { useDeleteWaiter } from "@/hooks/useDeleteWaiter"
@@ -56,7 +57,18 @@ export default function WaitersPage() {
 
   const { profile: adminProfile } = useAdminProfile()
   const restaurantId = adminProfile?.restaurantId ?? null
-  const { tables: allTables } = useRestaurantTables(restaurantId)
+  const { tables: allTables, refresh: refreshTables } = useRestaurantTables(restaurantId)
+
+  const [assignWaiterId, setAssignWaiterId] = useState<number | null>(null)
+  const [assigningTableId, setAssigningTableId] = useState<number | null>(null)
+
+  async function toggleTable(tableId: number, assign: boolean) {
+    if (assignWaiterId == null) return
+    setAssigningTableId(tableId)
+    await reassignTableAction(tableId, assign ? assignWaiterId : null)
+    await refreshTables()
+    setAssigningTableId(null)
+  }
 
   // Mapa waiterId → mesas que está atendiendo ahora mismo. Se actualiza en
   // tiempo real porque useRestaurantTables se suscribe a `tables`.
@@ -258,7 +270,16 @@ export default function WaitersPage() {
                 )
               })()}
 
-              <div className="mt-4 flex justify-end border-t border-stone-100 pt-3">
+              <div className="mt-4 flex items-center justify-end gap-2 border-t border-stone-100 pt-3">
+                {waiter.roleId !== 3 ? (
+                  <button
+                    type="button"
+                    onClick={() => setAssignWaiterId(waiter.id)}
+                    className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-700 transition hover:bg-orange-100"
+                  >
+                    Asignar mesas
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   disabled={deleting}
@@ -272,6 +293,87 @@ export default function WaitersPage() {
           ))
         )}
       </section>
+
+      {/* Modal: asignar mesas a un mesero */}
+      {assignWaiterId != null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-4"
+          onClick={() => setAssignWaiterId(null)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-stone-200 px-5 py-3">
+              <div>
+                <h3 className="text-lg font-bold text-stone-900">Asignar mesas</h3>
+                <p className="text-xs text-stone-500">
+                  {waiters.find((w) => w.id === assignWaiterId)?.name ?? ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignWaiterId(null)}
+                aria-label="Cerrar"
+                className="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-4">
+              {allTables.length === 0 ? (
+                <p className="py-6 text-center text-sm text-stone-500">
+                  Este restaurante todavía no tiene mesas. Creá mesas en la sección Mesas.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {allTables.map((t) => {
+                    const mine = t.currentWaiterId === assignWaiterId
+                    const otherName =
+                      t.currentWaiterId != null && !mine
+                        ? waiters.find((w) => w.id === t.currentWaiterId)?.name ?? "otro mesero"
+                        : null
+                    return (
+                      <li key={t.id}>
+                        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-stone-200 px-3 py-2 text-sm transition hover:bg-stone-50">
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={mine}
+                              disabled={assigningTableId === t.id}
+                              onChange={(e) => toggleTable(t.id, e.target.checked)}
+                              className="h-4 w-4 rounded border-stone-300 text-orange-500 focus:ring-orange-200"
+                            />
+                            <span className="font-semibold text-stone-800">
+                              Mesa {t.tableNumber ?? `#${t.id}`}
+                            </span>
+                          </span>
+                          {otherName ? (
+                            <span className="text-[11px] text-stone-400">Asignada a {otherName}</span>
+                          ) : null}
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="border-t border-stone-200 px-5 py-3 text-right">
+              <button
+                type="button"
+                onClick={() => setAssignWaiterId(null)}
+                className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-stone-700"
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: crear mesero */}
       {showCreateModal && (
