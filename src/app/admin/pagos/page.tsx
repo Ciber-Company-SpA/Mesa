@@ -312,6 +312,7 @@ function TaxDocumentsSection() {
   const [amount, setAmount] = useState("10000")
   const [emitting, setEmitting] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+  const [previewId, setPreviewId] = useState<number | null>(null)
 
   async function load() {
     const result = await listTaxDocuments()
@@ -402,19 +403,20 @@ function TaxDocumentsSection() {
               <th className="py-2 pr-4">Folio</th>
               <th className="py-2 pr-4 text-right">Total</th>
               <th className="py-2 pr-4">Estado</th>
-              <th className="py-2">Emitido</th>
+              <th className="py-2 pr-4">Emitido</th>
+              <th className="py-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-sm font-semibold text-stone-500 animate-pulse">
+                <td colSpan={6} className="py-6 text-center text-sm font-semibold text-stone-500 animate-pulse">
                   Cargando…
                 </td>
               </tr>
             ) : docs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-sm text-stone-500">
+                <td colSpan={6} className="py-8 text-center text-sm text-stone-500">
                   Aún no hay documentos emitidos.
                 </td>
               </tr>
@@ -440,8 +442,17 @@ function TaxDocumentsSection() {
                       {DTE_STATUS_LABEL[d.siiStatus] ?? d.siiStatus}
                     </span>
                   </td>
-                  <td className="py-2.5 text-stone-500">
+                  <td className="py-2.5 pr-4 text-stone-500">
                     {d.emittedAt ? new Date(d.emittedAt).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                  </td>
+                  <td className="py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewId(d.id)}
+                      className="text-xs font-bold text-orange-600 transition hover:underline"
+                    >
+                      Ver
+                    </button>
                   </td>
                 </tr>
               ))
@@ -449,6 +460,41 @@ function TaxDocumentsSection() {
           </tbody>
         </table>
       </div>
+
+      {/* Vista previa del documento en modal (iframe a la página imprimible) */}
+      {previewId != null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4"
+          onClick={() => setPreviewId(null)}
+        >
+          <div
+            className="flex h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-2.5">
+              <p className="text-sm font-bold text-stone-900">Vista previa del documento</p>
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/documento/${previewId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-orange-600 hover:underline"
+                >
+                  Abrir en pestaña ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewId(null)}
+                  className="rounded-lg px-2 py-1 text-sm font-bold text-stone-500 hover:bg-stone-100"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <iframe src={`/documento/${previewId}`} title="Documento" className="flex-1 w-full" />
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

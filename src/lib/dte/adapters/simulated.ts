@@ -17,12 +17,14 @@ export class SimulatedDteAdapter implements DteAdapter {
     const trackId = `SIM-${crypto.randomUUID()}`
     // Folio ficticio de 6 dígitos (no corresponde a un CAF real).
     const folio = 100000 + Math.floor(Math.random() * 900000)
+    // Sin archivos externos: el documento simulado lo renderiza la propia app
+    // (vista previa imprimible). El adaptador real sí devolverá pdfUrl/xmlUrl.
     return {
       status: "accepted",
       folio,
       trackId,
-      pdfUrl: `https://simulado.mesa.local/dte/${trackId}.pdf`,
-      xmlUrl: `https://simulado.mesa.local/dte/${trackId}.xml`,
+      pdfUrl: null,
+      xmlUrl: null,
       error: null,
     }
   }

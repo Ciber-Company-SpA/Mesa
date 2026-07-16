@@ -1,0 +1,101 @@
+"use client"
+
+type Props = {
+  doc: {
+    id: number
+    docType: number
+    folio: number | null
+    net: number | null
+    iva: number | null
+    total: number | null
+    receptorRut: string | null
+    receptorRazon: string | null
+    trackId: string | null
+    pdfUrl: string | null
+    xmlUrl: string | null
+    emittedAt: string | null
+    simulated: boolean
+  }
+  emisor: { rut: string; razonSocial: string }
+}
+
+/** XML representativo del documento (para el modo simulado). NO es un DTE válido. */
+function buildXml(d: Props["doc"], emisor: Props["emisor"]): string {
+  const esc = (s: string | number | null) =>
+    String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string))
+  return `<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Documento SIMULADO generado por MESA. Sin validez tributaria ante el SII. -->
+<DTE version="1.0">
+  <Documento ID="MESA-${esc(d.id)}">
+    <Encabezado>
+      <IdDoc>
+        <TipoDTE>${esc(d.docType)}</TipoDTE>
+        <Folio>${esc(d.folio)}</Folio>
+        <FchEmis>${esc(d.emittedAt ? d.emittedAt.slice(0, 10) : "")}</FchEmis>
+      </IdDoc>
+      <Emisor>
+        <RUTEmisor>${esc(emisor.rut)}</RUTEmisor>
+        <RznSoc>${esc(emisor.razonSocial)}</RznSoc>
+      </Emisor>
+      <Receptor>
+        <RUTRecep>${esc(d.receptorRut)}</RUTRecep>
+        <RznSocRecep>${esc(d.receptorRazon)}</RznSocRecep>
+      </Receptor>
+      <Totales>
+        <MntNeto>${esc(d.net)}</MntNeto>
+        <IVA>${esc(d.iva)}</IVA>
+        <MntTotal>${esc(d.total)}</MntTotal>
+      </Totales>
+    </Encabezado>
+    <TrackID>${esc(d.trackId)}</TrackID>
+  </Documento>
+</DTE>`
+}
+
+export function DocumentActions({ doc, emisor }: Props) {
+  function downloadXml() {
+    if (doc.xmlUrl) {
+      window.open(doc.xmlUrl, "_blank", "noopener")
+      return
+    }
+    const blob = new Blob([buildXml(doc, emisor)], { type: "application/xml" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `documento-${doc.folio ?? doc.id}.xml`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div data-print-hide className="flex flex-wrap gap-3 print:hidden">
+      {doc.pdfUrl ? (
+        <a
+          href={doc.pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
+        >
+          Descargar PDF oficial
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
+        >
+          Imprimir / Guardar PDF
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={downloadXml}
+        className="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-50"
+      >
+        Descargar XML
+      </button>
+    </div>
+  )
+}

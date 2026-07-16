@@ -70,6 +70,38 @@ export async function listTaxDocuments(): Promise<Result<TaxDocument[]>> {
   return ok(((data ?? []) as Row[]).map(mapRow))
 }
 
+export type DteEmisorInfo = {
+  rut: string
+  razonSocial: string
+  giro: string
+  direccion: string
+  comuna: string
+}
+
+/** Documento + datos del emisor, para renderizar la vista previa imprimible. */
+export async function getDocumentForView(
+  id: number
+): Promise<Result<{ doc: TaxDocument; emisor: DteEmisorInfo }>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
+
+  const { data, error } = await supabase.rpc("get_my_tax_documents")
+  if (error) return fail("No se pudo cargar el documento")
+  const row = ((data ?? []) as Row[]).find((r) => r.id === id)
+  if (!row) return fail("Documento no encontrado")
+
+  const { data: prof } = await supabase.rpc("get_my_tax_profile")
+  const emisor: DteEmisorInfo = {
+    rut: (prof?.rut as string) ?? "",
+    razonSocial: (prof?.razon_social as string) ?? "",
+    giro: (prof?.giro as string) ?? "",
+    direccion: (prof?.direccion as string) ?? "",
+    comuna: (prof?.comuna as string) ?? "",
+  }
+  return ok({ doc: mapRow(row), emisor })
+}
+
 export type EmitInput = {
   type: DteType
   /** Monto total (con IVA) del documento. */
