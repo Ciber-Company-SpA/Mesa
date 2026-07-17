@@ -24,6 +24,7 @@ import {
   SiiActividadCombobox,
 } from "@/components/admin/SiiActividadCombobox"
 import { LogoUploader } from "@/components/admin/LogoUploader"
+import { DteCredentialsSection } from "@/components/admin/DteCredentialsSection"
 
 const clp = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -798,6 +799,7 @@ export default function PagosPage() {
       </section>
 
       <TaxProfileSection />
+      <DteCredentialsSection />
       <PaymentAccountSection />
       <TaxDocumentsSection />
     </div>
