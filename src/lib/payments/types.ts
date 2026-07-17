@@ -47,5 +47,11 @@ export type WebhookResult = {
   error?: string | null
 }
 
-/** Credenciales del proveedor (forma libre; cada adaptador sabe qué usar). */
+/**
+ * Credenciales del proveedor (forma libre; cada adaptador sabe qué usar).
+ * Convención: `environment: "production" | "test"` decide el host/base URL
+ * (Flow usa cuentas y llaves DISTINTAS por ambiente; Transbank cambia de
+ * webpay3g a webpay3gint; Mercado Pago usa las credenciales del vendedor de
+ * prueba). Si falta, los adaptadores asumen producción.
+ */
 export type GatewayCredentials = Record<string, unknown>

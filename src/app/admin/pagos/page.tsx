@@ -307,18 +307,31 @@ function TaxProfileSection() {
 }
 
 // Campos de credenciales por proveedor (lo que se pega desde el panel de la
-// pasarela). Se serializan a JSON y se guardan cifrados en Vault.
+// pasarela). Verificados contra la doc oficial de cada una (jul 2026). Se
+// serializan a JSON y se guardan cifrados en Vault.
 const GATEWAY_FIELDS: Record<string, { key: string; label: string; type?: string }[]> = {
   simulated: [],
   flow: [
     { key: "apiKey", label: "API Key" },
     { key: "secretKey", label: "Secret Key", type: "password" },
   ],
-  mercadopago: [{ key: "accessToken", label: "Access Token", type: "password" }],
+  mercadopago: [
+    { key: "accessToken", label: "Access Token (APP_USR-…)", type: "password" },
+    { key: "webhookSecret", label: "Clave secreta de webhooks", type: "password" },
+  ],
   transbank: [
     { key: "commerceCode", label: "Código de comercio" },
-    { key: "apiKey", label: "API Key", type: "password" },
+    { key: "apiKey", label: "Api Key Secret", type: "password" },
   ],
+}
+
+// Dónde encuentra el restaurante sus credenciales, según el proveedor.
+const GATEWAY_HINT: Record<string, string> = {
+  flow: "En Flow: Integraciones → Integración por API. Ojo: sandbox y producción usan cuentas y llaves distintas.",
+  mercadopago:
+    "En Mercado Pago: Tus integraciones → tu aplicación → Producción → Credenciales. La clave secreta está en Webhooks → Configurar notificaciones.",
+  transbank:
+    "El código de comercio lo entrega Transbank al contratar Webpay Plus; la Api Key Secret llega por correo al aprobar la validación de integración.",
 }
 
 function PaymentAccountSection() {
@@ -331,6 +344,7 @@ function PaymentAccountSection() {
   const [loading, setLoading] = useState(true)
   const [provider, setProvider] = useState("simulated")
   const [accountId, setAccountId] = useState("")
+  const [environment, setEnvironment] = useState("production")
   const [fields, setFields] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
@@ -363,7 +377,9 @@ function PaymentAccountSection() {
     setBusy(true)
     setFeedback(null)
     try {
-      const credentials = needed.length > 0 ? JSON.stringify(fields) : ""
+      // environment decide el host del adaptador (Flow/Transbank cambian de
+      // URL base; Flow además usa llaves distintas por ambiente).
+      const credentials = needed.length > 0 ? JSON.stringify({ environment, ...fields }) : ""
       const result = await connectPaymentAccount({ provider, accountId, credentials })
       if (!result.ok) {
         setFeedback({ kind: "error", message: result.error })
@@ -448,6 +464,15 @@ function PaymentAccountSection() {
               <label className={LABEL_CLASS}>ID de cuenta (opcional)</label>
               <input value={accountId} onChange={(e) => setAccountId(e.target.value)} className={INPUT_CLASS} />
             </div>
+            {provider !== "simulated" ? (
+              <div>
+                <label className={LABEL_CLASS}>Ambiente</label>
+                <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className={INPUT_CLASS}>
+                  <option value="production">Producción (cobros reales)</option>
+                  <option value="test">Pruebas (sandbox / integración)</option>
+                </select>
+              </div>
+            ) : null}
             {(GATEWAY_FIELDS[provider] ?? []).map((f) => (
               <div key={f.key}>
                 <label className={LABEL_CLASS}>{f.label}</label>
@@ -472,16 +497,29 @@ function PaymentAccountSection() {
           </button>
           {provider === "simulated" ? (
             <p className="mt-2 text-[11px] text-amber-600">Modo simulado: no cobra dinero real, sirve para probar el circuito.</p>
+          ) : GATEWAY_HINT[provider] ? (
+            <p className="mt-2 text-[11px] text-stone-500">{GATEWAY_HINT[provider]}</p>
           ) : null}
         </div>
       )}
 
-      {/* URL de webhook a configurar en el panel de la pasarela */}
-      <div className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">URL de notificaciones (webhook)</p>
-        <p className="mt-1 break-all font-mono text-[11px] text-stone-600">{webhookUrl}</p>
-        <p className="mt-1 text-[11px] text-stone-400">Configurá esta URL en el panel de tu pasarela para recibir la confirmación de los pagos.</p>
-      </div>
+      {/* URL de webhook a configurar en el panel de la pasarela. Transbank
+          Webpay Plus NO usa webhooks: confirma por retorno + commit. */}
+      {provider === "transbank" ? (
+        <div className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Notificaciones</p>
+          <p className="mt-1 text-[11px] text-stone-500">
+            Transbank Webpay Plus no usa webhooks: MESA confirma cada pago automáticamente cuando el
+            comensal vuelve del formulario de pago. No hay nada que configurar en Transbank.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">URL de notificaciones (webhook)</p>
+          <p className="mt-1 break-all font-mono text-[11px] text-stone-600">{webhookUrl}</p>
+          <p className="mt-1 text-[11px] text-stone-400">Configurá esta URL en el panel de tu pasarela para recibir la confirmación de los pagos.</p>
+        </div>
+      )}
 
       {feedback && (
         <p
