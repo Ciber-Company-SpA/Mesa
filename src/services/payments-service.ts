@@ -17,7 +17,9 @@ export type TaxProfile = {
 
 export type PaymentAccount = {
   provider: string | null
+  providerAccountId: string | null
   status: string
+  hasCredentials: boolean
   connectedAt: string | null
 }
 
@@ -102,7 +104,9 @@ export async function saveTaxProfile(
 
 type PaymentAccountRow = {
   provider?: string | null
+  provider_account_id?: string | null
   status?: string | null
+  has_credentials?: boolean | null
   connected_at?: string | null
 }
 
@@ -119,7 +123,43 @@ export async function getPaymentAccount(): Promise<Result<PaymentAccount>> {
 
   return ok({
     provider: raw.provider ?? null,
+    providerAccountId: raw.provider_account_id ?? null,
     status: raw.status ?? "disconnected",
+    hasCredentials: raw.has_credentials ?? false,
     connectedAt: raw.connected_at ?? null,
   })
+}
+
+/**
+ * Conecta la pasarela de pago del restaurante. Las credenciales se pasan como
+ * JSON (según el proveedor) y se guardan CIFRADAS en Vault (nunca se devuelven).
+ */
+export async function connectPaymentAccount(input: {
+  provider: string
+  accountId: string
+  credentials: string
+}): Promise<Result<null>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
+
+  if (!input.provider) return fail("Elegí un proveedor")
+  if (input.credentials.length > 20_000) return fail("Credenciales demasiado grandes")
+
+  const { error } = await supabase.rpc("payment_connect_account", {
+    p_provider: input.provider,
+    p_account_id: input.accountId || null,
+    p_credentials: input.credentials || null,
+  })
+  if (error) return fail("No se pudo conectar la cuenta de cobro")
+  return ok(null)
+}
+
+export async function disconnectPaymentAccount(): Promise<Result<null>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const { supabase } = auth.data
+  const { error } = await supabase.rpc("payment_disconnect_account")
+  if (error) return fail("No se pudo desconectar la cuenta")
+  return ok(null)
 }

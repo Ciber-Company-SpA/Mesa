@@ -5,8 +5,11 @@ import {
   getTaxProfile,
   saveTaxProfile,
   getPaymentAccount,
+  connectPaymentAccount,
+  disconnectPaymentAccount,
   type TaxProfile,
 } from "@/services/payments-service"
+import { PAYMENT_PROVIDER_LABEL } from "@/lib/payments/types"
 import {
   listTaxDocuments,
   emitDocument,
@@ -303,24 +306,88 @@ function TaxProfileSection() {
   )
 }
 
+// Campos de credenciales por proveedor (lo que se pega desde el panel de la
+// pasarela). Se serializan a JSON y se guardan cifrados en Vault.
+const GATEWAY_FIELDS: Record<string, { key: string; label: string; type?: string }[]> = {
+  simulated: [],
+  flow: [
+    { key: "apiKey", label: "API Key" },
+    { key: "secretKey", label: "Secret Key", type: "password" },
+  ],
+  mercadopago: [{ key: "accessToken", label: "Access Token", type: "password" }],
+  transbank: [
+    { key: "commerceCode", label: "Código de comercio" },
+    { key: "apiKey", label: "API Key", type: "password" },
+  ],
+}
+
 function PaymentAccountSection() {
-  const [status, setStatus] = useState<string | null>(null)
+  const [account, setAccount] = useState<{
+    provider: string | null
+    status: string
+    hasCredentials: boolean
+    connectedAt: string | null
+  } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [provider, setProvider] = useState("simulated")
+  const [accountId, setAccountId] = useState("")
+  const [fields, setFields] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
+
+  async function load() {
+    const result = await getPaymentAccount()
+    if (result.ok) {
+      setAccount(result.data)
+      if (result.data.provider) setProvider(result.data.provider)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
-    let active = true
-    ;(async () => {
-      const result = await getPaymentAccount()
-      if (!active) return
-      if (result.ok) setStatus(result.data.status)
-      setLoading(false)
-    })()
-    return () => {
-      active = false
-    }
+    load()
   }, [])
 
-  const isConnected = status === "connected"
+  const webhookBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
+  const webhookUrl = `${webhookBase}/functions/v1/payment-webhook?provider=${provider}`
+  const isConnected = account?.status === "connected"
+
+  async function handleConnect() {
+    if (busy) return
+    const needed = GATEWAY_FIELDS[provider] ?? []
+    const missing = needed.filter((f) => !fields[f.key]?.trim())
+    if (missing.length > 0) {
+      setFeedback({ kind: "error", message: `Completá: ${missing.map((f) => f.label).join(", ")}.` })
+      return
+    }
+    setBusy(true)
+    setFeedback(null)
+    try {
+      const credentials = needed.length > 0 ? JSON.stringify(fields) : ""
+      const result = await connectPaymentAccount({ provider, accountId, credentials })
+      if (!result.ok) {
+        setFeedback({ kind: "error", message: result.error })
+        return
+      }
+      setFeedback({ kind: "ok", message: "Cuenta de cobro conectada." })
+      setFields({})
+      await load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDisconnect() {
+    setBusy(true)
+    const result = await disconnectPaymentAccount()
+    setBusy(false)
+    if (!result.ok) {
+      setFeedback({ kind: "error", message: result.error })
+      return
+    }
+    setFeedback({ kind: "ok", message: "Cuenta desconectada." })
+    await load()
+  }
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -328,39 +395,105 @@ function PaymentAccountSection() {
         <div>
           <h3 className="text-lg font-bold text-stone-900">Cobros en línea</h3>
           <p className="mt-1 text-xs font-medium text-stone-500">
-            Conectá tu cuenta para recibir pagos directo desde MESA.
+            Conectá tu pasarela de pago para cobrar directo desde MESA.
           </p>
         </div>
         <span
           className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ring-1 ${
-            isConnected
-              ? "bg-green-50 text-green-700 ring-green-200"
-              : "bg-amber-50 text-amber-700 ring-amber-200"
+            isConnected ? "bg-green-50 text-green-700 ring-green-200" : "bg-amber-50 text-amber-700 ring-amber-200"
           }`}
         >
-          {loading ? "Cargando..." : isConnected ? "Conectado" : "Próximamente"}
+          {loading ? "Cargando..." : isConnected ? "Conectado" : "Sin conectar"}
         </span>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 p-5">
-        <p className="text-sm font-bold text-stone-900">Pendiente de configuración</p>
-        <p className="mt-2 text-sm leading-6 text-stone-600">
-          El cobro en línea a través de MESA estará disponible próximamente. Aquí podrás
-          conectar tu cuenta para recibir pagos directo, con la boleta/factura emitida a tu
-          nombre.
-        </p>
-
-        <div className="mt-5">
+      {isConnected ? (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-green-50 px-5 py-4 ring-1 ring-green-200">
+          <div className="text-sm">
+            <p className="font-bold text-green-800">
+              {PAYMENT_PROVIDER_LABEL[account!.provider ?? ""] ?? account!.provider} conectado ✓
+            </p>
+            <p className="text-xs text-green-700/90">
+              {account!.hasCredentials ? "Credenciales guardadas (cifradas)." : "Sin credenciales."}
+            </p>
+          </div>
           <button
             type="button"
-            disabled
-            title="Disponible pronto"
-            className="cursor-not-allowed rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white opacity-50 shadow"
+            onClick={handleDisconnect}
+            disabled={busy}
+            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
           >
-            Conectar
+            Desconectar
           </button>
         </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={LABEL_CLASS}>Proveedor</label>
+              <select
+                value={provider}
+                onChange={(e) => {
+                  setProvider(e.target.value)
+                  setFields({})
+                }}
+                className={INPUT_CLASS}
+              >
+                {Object.entries(PAYMENT_PROVIDER_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>ID de cuenta (opcional)</label>
+              <input value={accountId} onChange={(e) => setAccountId(e.target.value)} className={INPUT_CLASS} />
+            </div>
+            {(GATEWAY_FIELDS[provider] ?? []).map((f) => (
+              <div key={f.key}>
+                <label className={LABEL_CLASS}>{f.label}</label>
+                <input
+                  type={f.type ?? "text"}
+                  autoComplete="off"
+                  value={fields[f.key] ?? ""}
+                  onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                  className={INPUT_CLASS}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleConnect}
+            disabled={busy}
+            className="mt-4 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-50"
+          >
+            {busy ? "Conectando…" : "Conectar cuenta"}
+          </button>
+          {provider === "simulated" ? (
+            <p className="mt-2 text-[11px] text-amber-600">Modo simulado: no cobra dinero real, sirve para probar el circuito.</p>
+          ) : null}
+        </div>
+      )}
+
+      {/* URL de webhook a configurar en el panel de la pasarela */}
+      <div className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">URL de notificaciones (webhook)</p>
+        <p className="mt-1 break-all font-mono text-[11px] text-stone-600">{webhookUrl}</p>
+        <p className="mt-1 text-[11px] text-stone-400">Configurá esta URL en el panel de tu pasarela para recibir la confirmación de los pagos.</p>
       </div>
+
+      {feedback && (
+        <p
+          className={`mt-4 rounded-lg px-3 py-2 text-xs font-medium ${
+            feedback.kind === "ok"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
     </section>
   )
 }

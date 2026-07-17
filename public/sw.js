@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mesa-offline-v19"
+const CACHE_VERSION = "mesa-offline-v20"
 const PAGE_CACHE = `${CACHE_VERSION}-pages`
 const ASSET_CACHE = `${CACHE_VERSION}-assets`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
