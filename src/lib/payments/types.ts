@@ -14,12 +14,20 @@ export const PAYMENT_PROVIDER_LABEL: Record<string, string> = {
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled"
 
 export type CreateChargeInput = {
+  /** Monto de la cuenta SIN propina (CLP entero). El adaptador cobra amount + tip. */
   amount: number
   tip?: number
   currency: string
   description: string
+  /**
+   * Id único del cobro en MESA (ej. payments.id). Viaja a la pasarela como
+   * commerceOrder (Flow) / external_reference (MP) / buy_order (Transbank),
+   * para conciliar. Si falta, el adaptador genera uno.
+   */
+  reference?: string | null
   orderIds?: number[]
   tableId?: number | null
+  /** Email del pagador. Flow lo EXIGE; MP lo usa si está. */
   payerEmail?: string | null
   /** URL a la que la pasarela devuelve al pagador tras completar. */
   returnUrl?: string
