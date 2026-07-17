@@ -16,6 +16,7 @@ import { useDinerSlot } from "@/hooks/useDinerSlot"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableOrders } from "@/hooks/useTableOrders"
 import { getTemplateDesign } from "@/lib/menu/templates"
+import { PAYMENT_PROVIDER_LABEL } from "@/lib/payments/types"
 import { supabase } from "@/lib/supabase"
 import type { MenuData } from "@/types/menu"
 import type { Product } from "@/types/product"
@@ -203,6 +204,10 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCat, setActiveCat] = useState<number | "all">("all")
   const [billStatus, setBillStatus] = useState<"idle" | "sending" | "requested">("idle")
+  // Pago en línea: proveedor conectado del restaurante (null = no disponible).
+  const [payProvider, setPayProvider] = useState<string | null>(null)
+  const [payStatus, setPayStatus] = useState<"idle" | "paying">("idle")
+  const [payerEmail, setPayerEmail] = useState("")
   const [waiterStatus, setWaiterStatus] = useState<"idle" | "sending" | "requested">("idle")
   const [showTipSelector, setShowTipSelector] = useState(false)
   const [selectedTipPct, setSelectedTipPct] = useState(0)
@@ -244,6 +249,59 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
     const t = window.setTimeout(() => setToast(null), 1900)
     return () => window.clearTimeout(t)
   }, [toast])
+
+  // ¿El restaurante tiene pasarela de pago conectada? (fail-closed: si la RPC
+  // falla, el botón de pago en línea no se muestra y todo sigue igual).
+  useEffect(() => {
+    if (!qrCode) return
+    let cancelled = false
+    supabase
+      .rpc("qr_payment_available", { p_qr_token: qrCode })
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        setPayProvider(typeof data === "string" && data.length > 0 ? data : null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [qrCode])
+
+  // Iniciar el pago en línea: el monto lo calcula el servidor (nunca el
+  // cliente); acá solo viajan el QR, la propina elegida y el email.
+  async function handlePayOnline() {
+    if (!qrCode || payStatus !== "idle") return
+    if (payProvider === "flow" && !payerEmail.trim()) {
+      setToast("Ingresá tu email para el comprobante")
+      return
+    }
+    setPayStatus("paying")
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/payment-create-charge`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            qrToken: qrCode,
+            tip: suggestedTip,
+            payerEmail: payerEmail.trim() || undefined,
+          }),
+        }
+      )
+      const body = (await res.json().catch(() => null)) as
+        | { checkoutUrl?: string; error?: string }
+        | null
+      if (res.ok && body?.checkoutUrl) {
+        window.location.assign(body.checkoutUrl)
+        return
+      }
+      setToast(body?.error ?? "No se pudo iniciar el pago")
+      setPayStatus("idle")
+    } catch {
+      setToast("No se pudo iniciar el pago")
+      setPayStatus("idle")
+    }
+  }
 
   useEffect(() => {
     const restaurantId = restaurant?.id
@@ -541,6 +599,36 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
                     : "Pedir la cuenta sin propina"}
                 </button>
               </div>
+
+              {/* ── Pago en línea (solo si el restaurante tiene pasarela conectada) ── */}
+              {payProvider && tableTotal > 0 && (
+                <div className="mt-3 border-t border-[#232327] pt-3">
+                  {payProvider === "flow" && (
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={payerEmail}
+                      onChange={(e) => setPayerEmail(e.target.value)}
+                      placeholder="Tu email (para el comprobante)"
+                      className="mb-2 w-full rounded-full border border-[#27272a] bg-[#18181b] px-4 py-2 text-[12.5px] text-[#fafafa] placeholder:text-[#71717a] focus:border-[#fb923c] focus:outline-none"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={handlePayOnline}
+                    disabled={payStatus !== "idle"}
+                    className="w-full rounded-full bg-emerald-500 px-4 py-2.5 text-[12.5px] font-extrabold text-[#0a0a0a] transition active:scale-95 disabled:opacity-60"
+                  >
+                    {payStatus === "paying"
+                      ? "Conectando con la pasarela..."
+                      : `💳 Pagar en línea · ${formatPrice(tableTotal + suggestedTip)}`}
+                  </button>
+                  <p className="mt-1.5 text-center text-[10.5px] text-[#71717a]">
+                    Pago seguro procesado por {PAYMENT_PROVIDER_LABEL[payProvider] ?? payProvider}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

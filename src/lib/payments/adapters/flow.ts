@@ -146,7 +146,7 @@ export class FlowPaymentAdapter implements PaymentGatewayAdapter {
       paymentMethod: "9", // todos los medios contratados
       subject: sanitizeSubject(input.description) || "Pago MESA",
       timeout: String(CHARGE_TIMEOUT_SECONDS),
-      urlConfirmation: `${supabaseUrl}/functions/v1/payment-webhook?provider=flow`,
+      urlConfirmation: `${supabaseUrl}/functions/v1/payment-webhook?provider=flow&ref=${encodeURIComponent(commerceOrder)}`,
       urlReturn: input.returnUrl,
     }
 

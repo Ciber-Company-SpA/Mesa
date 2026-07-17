@@ -155,7 +155,7 @@ export class MercadoPagoAdapter implements PaymentGatewayAdapter {
         failure: input.returnUrl,
       },
       auto_return: "approved",
-      notification_url: `${supabaseUrl}/functions/v1/payment-webhook?provider=mercadopago`,
+      notification_url: `${supabaseUrl}/functions/v1/payment-webhook?provider=mercadopago&ref=${encodeURIComponent(reference)}`,
       expires: true,
       expiration_date_to: new Date(Date.now() + CHARGE_TTL_MS).toISOString().replace("Z", "+00:00"),
     }

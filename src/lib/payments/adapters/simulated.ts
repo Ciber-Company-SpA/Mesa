@@ -16,7 +16,7 @@ export class SimulatedPaymentAdapter implements PaymentGatewayAdapter {
     return {
       status: "pending",
       providerPaymentId,
-      checkoutUrl: `${input.returnUrl ?? ""}?sim_payment=${providerPaymentId}`,
+      checkoutUrl: `${input.returnUrl ?? ""}${(input.returnUrl ?? "").includes("?") ? "&" : "?"}sim_payment=${providerPaymentId}`,
       error: null,
     }
   }
