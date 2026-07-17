@@ -22,10 +22,18 @@ export interface PaymentGatewayAdapter {
   /** Consulta el estado de un cobro en la pasarela (conciliación / respaldo). */
   getStatus(providerPaymentId: string, credentials: GatewayCredentials): Promise<StatusResult>
 
-  /** Valida y parsea una notificación (webhook) de la pasarela. */
+  /**
+   * Valida y parsea una notificación de la pasarela.
+   * - Mercado Pago: webhook firmado (x-signature sobre el query param data.id
+   *   → por eso se recibe `query`).
+   * - Flow: webhook con token sin firma (se valida re-consultando getStatus).
+   * - Transbank: NO tiene webhooks — este método procesa el RETORNO del
+   *   pagador (token_ws/TBK_*) y ejecuta el commit.
+   */
   parseWebhook(
     headers: Record<string, string>,
     rawBody: string,
-    credentials: GatewayCredentials
+    credentials: GatewayCredentials,
+    query?: Record<string, string>
   ): Promise<WebhookResult>
 }

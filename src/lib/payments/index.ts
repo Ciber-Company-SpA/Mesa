@@ -1,6 +1,8 @@
 import type { PaymentGatewayAdapter } from "./adapter"
 import { SimulatedPaymentAdapter } from "./adapters/simulated"
 import { FlowPaymentAdapter } from "./adapters/flow"
+import { MercadoPagoAdapter } from "./adapters/mercadopago"
+import { TransbankAdapter } from "./adapters/transbank"
 
 /**
  * Devuelve el adaptador de la pasarela por su nombre (el proveedor conectado
@@ -11,8 +13,10 @@ export function getPaymentAdapter(provider: string | null | undefined): PaymentG
   switch (provider) {
     case "flow":
       return new FlowPaymentAdapter()
-    // case "mercadopago": return new MercadoPagoAdapter()
-    // case "transbank":   return new TransbankAdapter()
+    case "mercadopago":
+      return new MercadoPagoAdapter()
+    case "transbank":
+      return new TransbankAdapter()
     case "simulated":
     default:
       return new SimulatedPaymentAdapter()

@@ -9,8 +9,21 @@ opera normalmente **sin** cobro en línea; nada de esto bloquea la operación.
 - Modelo de datos completo: `restaurant_tax_profile`, `restaurant_payment_account`,
   `payments`, `tax_documents`, `payment_events`, y `orders.payment_id`.
 - **Capa de abstracción de pasarelas** (`src/lib/payments/`): interfaz
-  `PaymentGatewayAdapter` (createCharge / getStatus / parseWebhook) + adaptador
-  simulado + fábrica por proveedor. Agregar una pasarela real = 1 archivo + 1 case.
+  `PaymentGatewayAdapter` (createCharge / getStatus / parseWebhook) + fábrica.
+- **Los 3 adaptadores reales IMPLEMENTADOS** (spec-verificados, jul 2026):
+  - `adapters/flow.ts` — firma HMAC de cada request, webhook validado por
+    re-consulta firmada. Smoke: `scripts/flow-sandbox-smoke.mts`.
+  - `adapters/mercadopago.ts` — Checkout Pro, validación de firma x-signature
+    (manifest oficial, HMAC, comparación tiempo constante), getStatus por id o
+    por external_reference. Smoke: `scripts/mp-sandbox-smoke.mts`.
+  - `adapters/transbank.ts` — Webpay Plus v1.2; parseWebhook procesa el
+    RETORNO (4 flujos) y ejecuta el commit con fallback anti doble-commit;
+    credenciales públicas de integración precargadas en ambiente test.
+    Smoke: `scripts/tbk-integration-smoke.mts` (corre E2E real HOY, sin cuenta).
+  - Probado sin credenciales: TBK E2E real contra integración (crear + status +
+    commit), firma MP validada localmente con HMAC conocido, tuberías Flow/MP
+    contra API real con error controlado. Falta E2E con credenciales reales:
+    Flow sandbox (cuenta en sandbox.flow.cl) y MP (cuentas de prueba).
 - **Conexión por restaurante en `/admin/pagos`**: cada restaurante elige su
   proveedor (Flow, Mercado Pago, Transbank), pega sus 2 credenciales y quedan
   **cifradas en Supabase Vault** (RPC `payment_connect_account`). El dinero va
@@ -104,20 +117,25 @@ Las tres pasarelas calzan con el modelo "cada restaurante = su propia cuenta,
 - Prueba: VISA 4051 8856 0044 6623 aprueba, MC 5186 0595 5959 0568 rechaza,
   débito 4051 8842 3993 7763; RUT 11.111.111-1 clave 123.
 
-### Qué falta construir al activar cobros (con credenciales sandbox)
+### Qué falta construir al activar cobros (próximo hito: flujo del comensal)
 
-- [ ] Adaptadores reales `adapters/flow.ts`, `adapters/mercadopago.ts`,
-  `adapters/transbank.ts` (firma/HMAC según cada uno; REST directo con fetch,
-  sin SDKs).
+Los adaptadores ya están; lo que falta es el circuito de producto que los usa:
+
+- [ ] **Botón "Pagar en línea"** del comensal → server-side crea el cobro
+  (adapter.createCharge con las credenciales del restaurante desde Vault —
+  requiere contexto service_role, patrón edge function tipo provision-waiter)
+  y persiste vía `payment_record`.
 - [ ] **Ruta pública de retorno** (GET+POST) para Flow y Transbank; en Transbank
-  ejecuta el commit con las credenciales del restaurante dueño del token.
-- [ ] Conciliación en `payment-webhook`: validar firma MP / re-consultar Flow y
-  actualizar `payments` vía `payment_update_status`.
-- [ ] Job de reconciliación de pagos pendientes (obligatorio Transbank, red de
-  seguridad Flow/MP).
-- [ ] Botón "Pagar en línea" en el flujo del comensal.
-- Regla de oro: nunca confiar en el navegador del comensal; comparar monto y
-  orden contra lo persistido antes de marcar `paid`.
+  llama a `adapter.parseWebhook` (que hace el commit) con candado por token.
+- [ ] Conciliación en `payment-webhook`: resolver restaurante por
+  provider_payment_id → credenciales de Vault → `adapter.parseWebhook` →
+  `payment_update_status`.
+- [ ] Job de reconciliación de pagos pendientes con `getStatus` (obligatorio
+  Transbank — 7 días de ventana —, red de seguridad Flow/MP).
+- Regla de oro (ya implementada en los adaptadores): nunca confiar en el
+  navegador del comensal; los adaptadores confirman contra la API firmada de
+  cada pasarela. Al conciliar, comparar además monto y orden contra lo
+  persistido antes de marcar `paid`.
 
 ---
 
