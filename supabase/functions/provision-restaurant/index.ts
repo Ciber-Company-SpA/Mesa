@@ -69,7 +69,8 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(url, svc);
 
-  // 3) Crear el usuario admin -> el trigger handle_new_user crea restaurante + admin + dueño
+  // 3) Crear el usuario admin (Admin API). El trigger NO crea el restaurante:
+  //    eso lo hace platform_provision_admin abajo, de forma explícita.
   const password = genPassword();
   const { data: created, error: cErr } = await admin.auth.admin.createUser({
     email: adminEmail,
@@ -77,13 +78,7 @@ Deno.serve(async (req: Request) => {
     email_confirm: true,
     user_metadata: {
       admin_name: adminName || "Administrador",
-      restaurant_name: restaurantName,
       must_change_password: true,
-    },
-    // Marca de aprovisionamiento legítimo: el trigger handle_new_user solo crea
-    // restaurante + admin cuando está presente (solo service_role puede ponerla).
-    app_metadata: {
-      provisioned_by_platform: true,
     },
   });
   if (cErr || !created?.user) {
@@ -94,14 +89,18 @@ Deno.serve(async (req: Request) => {
   }
   const authUserId = created.user.id;
 
-  // 4) Resolver el restaurante creado por el trigger (con reintentos por la carrera del trigger)
-  let restaurantId: number | null = null;
-  for (let i = 0; i < 6; i++) {
-    const { data: row } = await admin.from("users").select("restaurant_id").eq("auth_user_id", authUserId).maybeSingle();
-    if (row?.restaurant_id) { restaurantId = row.restaurant_id as number; break; }
-    await new Promise((r) => setTimeout(r, 300));
+  // 4) Crear restaurante + admin dueño de forma explícita (guard is_platform_owner).
+  const { data: restaurantId, error: pErr } = await asOperator.rpc("platform_provision_admin", {
+    p_auth_user_id: authUserId,
+    p_email: adminEmail,
+    p_name: adminName,
+    p_restaurant_name: restaurantName,
+  });
+  if (pErr || !restaurantId) {
+    // Limpieza: sin restaurante, el usuario auth quedaría huérfano -> lo borramos.
+    await admin.auth.admin.deleteUser(authUserId);
+    return json({ error: "No se pudo crear el restaurante del cliente." }, 500);
   }
-  if (!restaurantId) return json({ error: "El usuario se creó, pero no se pudo resolver el restaurante." }, 500);
 
   const warnings: string[] = [];
 
