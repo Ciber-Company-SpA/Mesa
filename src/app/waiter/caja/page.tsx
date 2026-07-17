@@ -4,6 +4,7 @@ import type { FormEvent } from "react"
 import { useMemo, useState } from "react"
 import { useCashShift } from "@/hooks/useCashShift"
 import { closeShift, openShift } from "@/services/cash-shift-service"
+import { OnlinePaymentsSection } from "@/components/waiter/OnlinePaymentsSection"
 
 const clpFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -250,6 +251,9 @@ export default function CajaPage() {
             </section>
           </>
         )}
+
+        {/* Pagos en línea: independientes del turno de caja (no son efectivo). */}
+        <OnlinePaymentsSection />
       </div>
     </main>
   )
