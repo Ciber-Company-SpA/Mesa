@@ -1,15 +1,19 @@
 import type { DteAdapter } from "./adapter"
 import { SimulatedDteAdapter } from "./adapters/simulated"
+import { LibreDteAdapter } from "./adapters/libredte"
 
 /**
  * Selecciona el adaptador de DTE según la variable de entorno DTE_PROVIDER.
- * Hoy solo existe el simulado (default). Al integrar un proveedor real se
- * agrega su adaptador y su case aquí, sin tocar el servicio ni la UI.
+ * Default: simulado. `libredte` activa el proveedor real (requiere LIBREDTE_HASH
+ * y, opcional, LIBREDTE_URL para API Gateway) — validar en certificación antes
+ * de producción. Agregar otro proveedor = un adaptador + un case, sin tocar
+ * el servicio ni la UI.
  */
 export function getDteAdapter(): DteAdapter {
   const provider = process.env.DTE_PROVIDER ?? "simulated"
   switch (provider) {
-    // case "libredte":  return new LibreDteAdapter()   // futuro (API Gateway)
+    case "libredte":
+      return new LibreDteAdapter()
     // case "simpleapi": return new SimpleApiAdapter()  // futuro
     case "simulated":
     default:
