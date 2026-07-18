@@ -18,9 +18,10 @@
 /out/
 
 # production
-/build
+/build/*
 !/build/icon.ico
 !/build/icon.icns
+!/build/icon.png
 
 # electron-builder output
 /dist
