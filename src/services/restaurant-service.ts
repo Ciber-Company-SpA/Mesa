@@ -66,6 +66,36 @@ export async function updateOrderDestination(
   return ok(null)
 }
 
+const UpdateStockMenuModeSchema = z.object({
+  mode: z.enum(["block", "info"]),
+})
+
+export type UpdateStockMenuModeInput = z.infer<typeof UpdateStockMenuModeSchema>
+
+export async function updateStockMenuMode(
+  input: UpdateStockMenuModeInput
+): Promise<Result<null>> {
+  const parsed = UpdateStockMenuModeSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Datos inválidos")
+  }
+
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return auth
+
+  const { supabase } = auth.data
+
+  // RPC: actualiza el modo Y recalcula la disponibilidad de todos los productos
+  // (para que el menú refleje el cambio al instante).
+  const { error } = await supabase.rpc("set_stock_menu_mode", { p_mode: parsed.data.mode })
+
+  if (error) return fail("No se pudo guardar los cambios")
+
+  revalidateTag("menu", "max")
+  revalidatePath("/[id]/menu", "page")
+  return ok(null)
+}
+
 const UpdateOutputModeSchema = z.object({
   mode: z.enum(["none", "printer", "screen"]),
   bluetoothName: z

@@ -71,6 +71,8 @@ export const SetIngredientStockSchema = z.object({
 const RecipeItemSchema = z.object({
   ingredientId: IdSchema,
   cantidad: PositiveAmountSchema,
+  // true = insumo crítico (bloquea/oculta si falta); false = opcional.
+  bloquea: z.boolean().default(true),
 })
 
 export const SetProductRecipeSchema = z

@@ -7,6 +7,7 @@ import { StockActionDialog } from "@/components/admin/StockActionDialog"
 import { StockHistoryDialog } from "@/components/admin/StockHistoryDialog"
 import { ImportInventoryDialog } from "@/components/admin/ImportInventoryDialog"
 import { InventoryAlertsPanel } from "@/components/admin/InventoryAlertsPanel"
+import { StockModeSelector } from "@/components/admin/StockModeSelector"
 import { formatStock, formatUnitPrice } from "@/lib/inventory/units"
 import type { IngredientWithFlag } from "@/types/ingredient"
 
@@ -78,6 +79,9 @@ export default function InventoryPage() {
           </button>
         </div>
       </div>
+
+      {/* MODO DE DISPONIBILIDAD POR STOCK (global) */}
+      <StockModeSelector />
 
       {/* STATS */}
       <div className="mt-5 grid grid-cols-2 gap-3 sm:max-w-md">

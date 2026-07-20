@@ -20,6 +20,8 @@ type RecipeLine = {
   newName?: string
   newUnit?: IngredientUnit
   cantidad: string
+  // Insumo crítico (true) u opcional (false): un opcional no bloquea la venta.
+  bloquea: boolean
 }
 
 type Props = {
@@ -35,14 +37,19 @@ function normalizeName(s: string): string {
   return s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
 }
 
-function linesFromItems(items: { ingredientId: number; cantidad: number }[]): RecipeLine[] {
-  return items.map((i) => ({ ingredientId: i.ingredientId, cantidad: String(i.cantidad) }))
+function linesFromItems(items: { ingredientId: number; cantidad: number; bloquea: boolean }[]): RecipeLine[] {
+  return items.map((i) => ({
+    ingredientId: i.ingredientId,
+    cantidad: String(i.cantidad),
+    bloquea: i.bloquea,
+  }))
 }
 
 function lineFromSuggestion(item: SuggestedRecipeItem): RecipeLine {
+  // La IA no distingue críticos/opcionales: por defecto todo es crítico.
   return item.existingId != null
-    ? { ingredientId: item.existingId, cantidad: String(item.cantidad) }
-    : { ingredientId: "", newName: item.name, newUnit: item.unit, cantidad: String(item.cantidad) }
+    ? { ingredientId: item.existingId, cantidad: String(item.cantidad), bloquea: true }
+    : { ingredientId: "", newName: item.name, newUnit: item.unit, cantidad: String(item.cantidad), bloquea: true }
 }
 
 export function ProductRecipeEditor({
@@ -204,15 +211,18 @@ export function ProductRecipeEditor({
         const items = t.lines
           .map((l) => {
             if (l.ingredientId !== "") {
-              return { ingredientId: Number(l.ingredientId), cantidad: Number(l.cantidad) }
+              return { ingredientId: Number(l.ingredientId), cantidad: Number(l.cantidad), bloquea: l.bloquea }
             }
             if (l.newName) {
               const id = createdIdByKey.get(normalizeName(l.newName))
-              if (id) return { ingredientId: id, cantidad: Number(l.cantidad) }
+              if (id) return { ingredientId: id, cantidad: Number(l.cantidad), bloquea: l.bloquea }
             }
             return null
           })
-          .filter((it): it is { ingredientId: number; cantidad: number } => it !== null && it.cantidad > 0)
+          .filter(
+            (it): it is { ingredientId: number; cantidad: number; bloquea: boolean } =>
+              it !== null && it.cantidad > 0
+          )
 
         const res = await setProductRecipeAction({ productId: t.productId, variantId: t.variantId, items })
         if (!res.ok) {
@@ -242,8 +252,11 @@ export function ProductRecipeEditor({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs text-stone-600">
-          Define qué insumos consume cada unidad vendida. Al venderse, el stock se descuenta solo y
-          se bloquea la venta si no alcanza. Sin insumos asignados, el producto no descuenta nada.
+          Define qué insumos consume cada unidad vendida y marca cuáles son{" "}
+          <span className="font-semibold">críticos</span> u{" "}
+          <span className="font-semibold">opcionales</span>. Al venderse, el stock se descuenta solo;
+          un insumo crítico agota/bloquea el producto si no alcanza (según el modo de stock del local),
+          uno opcional no. Sin insumos asignados, el producto no descuenta nada.
         </p>
         <button
           type="button"
@@ -342,7 +355,7 @@ function TargetEditor({ title, lines, ingredients, ingredientById, disabled, onC
     onChange(lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
   function addLine() {
-    onChange([...lines, { ingredientId: "", cantidad: "" }])
+    onChange([...lines, { ingredientId: "", cantidad: "", bloquea: true }])
   }
   function removeLine(idx: number) {
     onChange(lines.filter((_, i) => i !== idx))
@@ -405,7 +418,7 @@ function TargetEditor({ title, lines, ingredients, ingredientById, disabled, onC
                     ))}
                   </select>
                 )}
-                <div className="flex w-32 shrink-0 items-center gap-1">
+                <div className="flex w-28 shrink-0 items-center gap-1">
                   <input
                     type="number"
                     min="0"
@@ -418,6 +431,23 @@ function TargetEditor({ title, lines, ingredients, ingredientById, disabled, onC
                   />
                   <span className="w-7 shrink-0 text-[11px] font-medium text-stone-500">{unitLabel}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setLine(idx, { bloquea: !line.bloquea })}
+                  disabled={disabled}
+                  title={
+                    line.bloquea
+                      ? "Crítico: si falta, el producto se agota/bloquea"
+                      : "Opcional: si falta, el producto sigue disponible"
+                  }
+                  className={`shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-bold transition disabled:opacity-50 ${
+                    line.bloquea
+                      ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                      : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  }`}
+                >
+                  {line.bloquea ? "crítico" : "opcional"}
+                </button>
                 <button
                   type="button"
                   onClick={() => removeLine(idx)}

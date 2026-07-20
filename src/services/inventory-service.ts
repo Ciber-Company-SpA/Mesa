@@ -275,7 +275,7 @@ export async function getProductRecipe(
   }
   const recipesRes = await supabase
     .from("product_recipes")
-    .select("product_id, variant_id, ingredient_id, cantidad")
+    .select("product_id, variant_id, ingredient_id, cantidad, bloquea")
     .or(orFilters.join(","))
 
   if (recipesRes.error) return fail(recipesRes.error.message)
@@ -288,6 +288,7 @@ export async function getProductRecipe(
     const item: RecipeItem = {
       ingredientId: r.ingredient_id as number,
       cantidad: Number(r.cantidad),
+      bloquea: (r.bloquea as boolean | null) ?? true,
     }
     if (r.variant_id != null && variantIds.has(r.variant_id as number)) {
       variantRecipes[r.variant_id as number].push(item)
@@ -317,6 +318,7 @@ export async function setProductRecipe(
     p_items: parsed.data.items.map((i) => ({
       ingredient_id: i.ingredientId,
       cantidad: i.cantidad,
+      bloquea: i.bloquea,
     })),
   })
 

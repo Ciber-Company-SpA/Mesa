@@ -11,9 +11,12 @@ export type ProductRecipeRow = {
 }
 
 // Una línea de receta tal como la maneja la UI (sin metadatos de fila).
+// `bloquea`: insumo crítico (true) u opcional (false). Un insumo opcional se
+// descuenta pero su falta no oculta ni bloquea el producto.
 export type RecipeItem = {
   ingredientId: number
   cantidad: number
+  bloquea: boolean
 }
 
 // Insumo sugerido por la IA para la receta de un producto. existingId apunta a

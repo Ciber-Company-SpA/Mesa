@@ -6,6 +6,11 @@ export type OutputMode = "none" | "printer" | "screen"
 
 export type ReservationContactType = "none" | "whatsapp"
 
+// Modo de control de disponibilidad por stock:
+//   'block' = el stock oculta/bloquea productos (según insumos críticos).
+//   'info'  = el stock nunca oculta ni bloquea; solo alimenta las alertas.
+export type StockMenuMode = "block" | "info"
+
 export type PublicRestaurant = {
   id: number
   restaurant_name: string
@@ -23,4 +28,5 @@ export type Restaurant = PublicRestaurant & {
   reservation_contact_type: ReservationContactType
   reservation_whatsapp: string | null
   reservation_duration_minutes: number
+  stock_menu_mode: StockMenuMode
 }
