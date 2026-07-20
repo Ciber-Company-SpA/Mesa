@@ -1,7 +1,10 @@
 export type CartItem = {
   id: string
-  productId: number
+  // productId es null cuando la línea es una promoción (combo).
+  productId: number | null
   variantId: number | null
+  // promotionId no es null cuando la línea es una promoción.
+  promotionId?: number | null
   name: string
   price: number
   quantity: number

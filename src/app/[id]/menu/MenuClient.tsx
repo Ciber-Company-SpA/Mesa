@@ -6,6 +6,7 @@ import { FloatingCartButton } from "@/components/customer/FloatingCartButton"
 import { RecommendationsModal } from "@/components/customer/RecommendationsModal"
 import { TableOrdersHeader } from "@/components/customer/TableOrdersHeader"
 import { GroupBillSummary } from "@/components/customer/GroupBillSummary"
+import { PromotionsSection } from "@/components/customer/PromotionsSection"
 import { ProductDetailSheet } from "@/components/customer/ProductDetailSheet"
 import { ProductImage } from "@/components/customer/ProductImage"
 import { getTopProductsTodayAction } from "@/app/actions/recommendation-actions"
@@ -198,7 +199,7 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
   const router = useRouter()
   const { orders: tableOrders } = useTableOrders(qrCode)
   const hasHadOrdersRef = useRef(false)
-  const { addItem } = useTableCart(tableId ?? null, restaurant?.id ?? null)
+  const { addItem, addPromo } = useTableCart(tableId ?? null, restaurant?.id ?? null)
   const [showReco, setShowReco] = useState(false)
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -710,6 +711,11 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
             </div>
           ) : null}
         </div>
+
+        {/* ── Promociones (solo en la vista general, sin búsqueda) ── */}
+        {!isSearching && effectiveCat === "all" && (
+          <PromotionsSection promotions={menu.promotions ?? []} onAdd={addPromo} />
+        )}
 
         {/* ── Listado ── */}
         <div className="flex-1 px-4 pt-4">

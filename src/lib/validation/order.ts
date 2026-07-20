@@ -3,18 +3,24 @@ import { z } from "zod"
 
 
 
-export const CreateOrderItemSchema = z.object({
-  productId: z.number().int().positive(),
-  variantId: z.number().int().positive().nullable().optional(),
- 
-  productQuantity: z
-    .number()
-    .int()
-    .min(1, "La cantidad debe ser mayor a 0")
-    .max(20, "Cantidad máxima por ítem: 20"),
- 
-  notes: z.string().trim().max(250, "La nota es demasiado larga").nullable().optional(),
-})
+export const CreateOrderItemSchema = z
+  .object({
+    // Un ítem es un PRODUCTO (productId) o una PROMOCIÓN (promotionId), nunca ambos.
+    productId: z.number().int().positive().nullable().optional(),
+    variantId: z.number().int().positive().nullable().optional(),
+    promotionId: z.number().int().positive().nullable().optional(),
+
+    productQuantity: z
+      .number()
+      .int()
+      .min(1, "La cantidad debe ser mayor a 0")
+      .max(20, "Cantidad máxima por ítem: 20"),
+
+    notes: z.string().trim().max(250, "La nota es demasiado larga").nullable().optional(),
+  })
+  .refine((v) => (v.productId != null) !== (v.promotionId != null), {
+    message: "Cada ítem debe ser un producto o una promoción",
+  })
 
 export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>
 

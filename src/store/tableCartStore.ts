@@ -7,17 +7,20 @@ import type { TableCartStore } from "@/types/cart-store"
 
 type ProductJoin = { product_name: string; product_image: string | null } | null
 type VariantJoin = { variant_name: string; variant_image: string | null } | null
+type PromotionJoin = { name: string; image_url: string | null } | null
 
 type CartRow = {
   id: string
-  product_id: number
+  product_id: number | null
   variant_id: number | null
+  promotion_id: number | null
   quantity: number
   unit_price: number
   notes: string | null
   added_by: string | null
   products: ProductJoin | ProductJoin[]
   product_variants: VariantJoin | VariantJoin[]
+  promotion: PromotionJoin | PromotionJoin[]
 }
 
 function pickOne<T>(value: T | T[] | null): T | null {
@@ -26,6 +29,23 @@ function pickOne<T>(value: T | T[] | null): T | null {
 }
 
 function mapRowToItem(row: CartRow): CartItem {
+  // Línea de promoción (combo): nombre e imagen vienen de la promo.
+  if (row.promotion_id != null) {
+    const promo = pickOne(row.promotion)
+    return {
+      id: row.id,
+      productId: null,
+      variantId: null,
+      promotionId: row.promotion_id,
+      name: promo?.name ?? "Promoción",
+      price: row.unit_price,
+      quantity: row.quantity,
+      image: promo?.image_url ?? undefined,
+      notes: row.notes,
+      addedBy: row.added_by,
+    }
+  }
+
   const product = pickOne(row.products)
   const variant = pickOne(row.product_variants)
   const productName = product?.product_name ?? "Producto"
@@ -36,6 +56,7 @@ function mapRowToItem(row: CartRow): CartItem {
     id: row.id,
     productId: row.product_id,
     variantId: row.variant_id,
+    promotionId: null,
     name,
     price: row.unit_price,
     quantity: row.quantity,
@@ -92,6 +113,25 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
 
     if (error) {
       logger.error("Error agregando item al carrito", error)
+      return
+    }
+
+    await get().fetchItems()
+  },
+
+  addPromo: async (promotionId, quantity = 1) => {
+    const { qrCode } = get()
+    if (!qrCode) return
+
+    const { error } = await supabase.rpc("cart_add_promo_qr", {
+      p_qr_token: qrCode,
+      p_promotion_id: promotionId,
+      p_quantity: quantity,
+      p_added_by: getGuestId(),
+    })
+
+    if (error) {
+      logger.error("Error agregando promoción al carrito", error)
       return
     }
 

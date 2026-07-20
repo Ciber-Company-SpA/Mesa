@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache"
 import { createSupabaseAnonClient } from "@/lib/supabase/anon"
-import type { MenuData } from "@/types/menu"
+import type { MenuData, MenuPromotion } from "@/types/menu"
 import type { PublicRestaurant } from "@/types/restaurant"
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
@@ -9,6 +9,7 @@ type PublicMenuRpcResult = {
   restaurant: PublicRestaurant | null
   categories: Category[] | null
   products: Product[] | null
+  promotions: MenuPromotion[] | null
   tableId: number | null
   tableNumber: number | null
   reservation: { ends_at: string } | null
@@ -31,6 +32,7 @@ async function fetchMenuData(qrCode: string): Promise<MenuData> {
     restaurant: menu.restaurant ?? null,
     products: menu.products ?? [],
     categories: menu.categories ?? [],
+    promotions: menu.promotions ?? [],
     tableId: menu.tableId ?? null,
     tableNumber: menu.tableNumber ?? null,
     reservation: menu.reservation ?? null,

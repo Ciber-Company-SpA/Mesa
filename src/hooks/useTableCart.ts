@@ -9,6 +9,7 @@ export function useTableCart(tableId: number | null, restaurantId: number | null
   const items = useTableCartStore((s) => s.items)
   const isLoading = useTableCartStore((s) => s.isLoading)
   const addItem = useTableCartStore((s) => s.addItem)
+  const addPromo = useTableCartStore((s) => s.addPromo)
   const updateQuantity = useTableCartStore((s) => s.updateQuantity)
   const removeItem = useTableCartStore((s) => s.removeItem)
   const clear = useTableCartStore((s) => s.clear)
@@ -29,5 +30,5 @@ export function useTableCart(tableId: number | null, restaurantId: number | null
 
   const total = items.reduce((acc, i) => acc + i.price * i.quantity, 0)
 
-  return { items, total, isLoading, addItem, updateQuantity, removeItem, clear }
+  return { items, total, isLoading, addItem, addPromo, updateQuantity, removeItem, clear }
 }

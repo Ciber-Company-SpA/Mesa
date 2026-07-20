@@ -27,6 +27,7 @@ export interface TableCartStore {
   setTable: (tableId: number | null, restaurantId: number | null, qrCode: string | null) => void
   fetchItems: () => Promise<void>
   addItem: (input: AddCartItemInput) => Promise<void>
+  addPromo: (promotionId: number, quantity?: number) => Promise<void>
   updateQuantity: (rowId: string, quantity: number) => Promise<void>
   removeItem: (rowId: string) => Promise<void>
   clear: () => Promise<void>
