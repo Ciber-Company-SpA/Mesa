@@ -16,6 +16,9 @@ export type MyPlan = {
   has_reports_advanced: boolean
   has_full_waiter_mgmt: boolean
   has_multi_branch: boolean
+  // true si el usuario es el DUEÑO de su restaurante activo (no un admin de
+  // local delegado). Gatea el módulo Sucursales y el selector de local.
+  is_owner: boolean
 }
 
 /**

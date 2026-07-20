@@ -253,7 +253,7 @@ export function AdminSidebar() {
         </svg>
       ),
     },
-    ...(plan?.has_multi_branch
+    ...(plan?.has_multi_branch && plan?.is_owner
       ? [
           {
             label: "Sucursales",
@@ -304,8 +304,8 @@ export function AdminSidebar() {
         )}
       </div>
 
-      {/* SELECTOR DE LOCAL (multi-sucursal) */}
-      {!collapsed && <BranchSwitcher />}
+      {/* SELECTOR DE LOCAL (solo el dueño; el admin de local queda fijo en su sucursal) */}
+      {!collapsed && plan?.is_owner && <BranchSwitcher />}
 
       {/* TOGGLE */}
       <button

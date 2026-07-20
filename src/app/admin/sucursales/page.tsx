@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from "react"
 import { supabase } from "@/lib/supabase"
 import { clearUserScopedCache } from "@/lib/session-cache"
+import { BranchAdminsPanel } from "@/components/admin/BranchAdminsPanel"
 
 const clp = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })
 
@@ -50,6 +51,7 @@ export default function SucursalesPage() {
   const [editing, setEditing] = useState<Branch | null>(null)
   const [editOrg, setEditOrg] = useState(false)
   const [showCopy, setShowCopy] = useState(false)
+  const [managingAdmins, setManagingAdmins] = useState<Branch | null>(null)
 
   const reload = useCallback(async () => {
     const [{ data: bd }, { data: od }] = await Promise.all([
@@ -186,6 +188,14 @@ export default function SucursalesPage() {
         return res as { categories: number; products: number; variants: number }
       }} />}
 
+      {managingAdmins && (
+        <BranchAdminsPanel
+          restaurantId={managingAdmins.restaurant_id}
+          restaurantName={managingAdmins.restaurant_name}
+          onClose={() => setManagingAdmins(null)}
+        />
+      )}
+
       {/* LISTA DE SUCURSALES */}
       <section className="space-y-2">
         {branches.map((b) => (
@@ -208,6 +218,9 @@ export default function SucursalesPage() {
               )}
               <button type="button" onClick={() => { setEditing(b); setShowCreate(false) }} className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-[11px] font-bold text-stone-700 transition hover:bg-stone-100">
                 Editar
+              </button>
+              <button type="button" onClick={() => { setManagingAdmins(b); setShowCreate(false); setEditing(null) }} className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-[11px] font-bold text-stone-700 transition hover:bg-stone-100">
+                Administradores
               </button>
             </div>
           </div>
