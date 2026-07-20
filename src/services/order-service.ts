@@ -325,7 +325,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     return fail(validation.error.issues[0]?.message ?? "Datos inválidos")
   }
 
-  const { qrToken, items, dinerToken } = validation.data
+  const { qrToken, items, dinerToken, couponCode } = validation.data
 
   // Construir el array jsonb que espera la RPC (snake_case). Una línea es un
   // producto (product_id) o una promoción (promotion_id).
@@ -343,6 +343,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
     p_qr_token: qrToken,
     p_items: rpcItems,
     p_diner_token: dinerToken ?? null,
+    p_coupon_code: couponCode ?? null,
   })
 
 if (error) {

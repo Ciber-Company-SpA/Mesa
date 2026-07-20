@@ -119,13 +119,22 @@ export function AdminSidebar() {
       ),
     },
     {
-      // Subsección de Productos. (El toggle por operador se registra en el
-      // cierre de la feature; por ahora sin clave de módulo → siempre visible.)
+      // Subsección de Productos, togglable por el operador (platform_modules).
       label: "Promociones",
       href: "/admin/promociones",
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ),
+    },
+    {
+      // Subsección de Productos (cupones), togglable por el operador.
+      label: "Descuentos",
+      href: "/admin/descuentos",
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6M9.5 9h.01M14.5 15h.01M6 4h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4V6a2 2 0 012-2z" />
         </svg>
       ),
     },

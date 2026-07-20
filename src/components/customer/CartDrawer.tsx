@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useCartStore } from "@/store/cartStore"
 import { useTableCart } from "@/hooks/useTableCart"
 import { useTableCartStore } from "@/store/tableCartStore"
@@ -9,9 +9,25 @@ import { CartDrawerProps } from "@/types/cart-drawer"
 import type { StoredOrder } from "@/types/cart-store"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
 import { isStoredOrderInProgress, useLastOrder } from "@/hooks/useLastOrder"
+import { listAvailableCoupons, type AvailableCoupon } from "@/services/discounts-service"
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString("es-CL")}`
+}
+
+// Estimación del descuento en el carrito. Exacta para "toda la carta"; para
+// categoría/producto no tenemos ese dato en el cliente → el monto real se
+// confirma al enviar el pedido (lo calcula el servidor). Nunca aplica sobre
+// líneas de promoción (promotionId).
+function estimateDiscount(items: CartItem[], coupon: AvailableCoupon | null): number | null {
+  if (!coupon) return null
+  if (coupon.scope !== "all") return null
+  const base = items.reduce((acc, i) => (i.promotionId ? acc : acc + i.price * i.quantity), 0)
+  if (coupon.min_order_amount && items.reduce((a, i) => a + i.price * i.quantity, 0) < coupon.min_order_amount) {
+    return 0
+  }
+  const raw = coupon.discount_type === "percent" ? Math.round((base * coupon.discount_value) / 100) : Math.min(coupon.discount_value, base)
+  return Math.max(0, raw)
 }
 
 function CartView({
@@ -22,6 +38,9 @@ function CartView({
   isWaitingConnection,
   error,
   onContinue,
+  coupons,
+  selectedCode,
+  onToggleCoupon,
 }: {
   items: CartItem[]
   total: number
@@ -30,9 +49,15 @@ function CartView({
   isWaitingConnection: boolean
   error: string | null
   onContinue: () => void
+  coupons: AvailableCoupon[]
+  selectedCode: string | null
+  onToggleCoupon: (code: string | null) => void
 }) {
   const updateQuantity = useTableCartStore((state) => state.updateQuantity)
   const removeItem = useTableCartStore((state) => state.removeItem)
+  const selectedCoupon = coupons.find((c) => c.code === selectedCode) ?? null
+  const estDiscount = estimateDiscount(items, selectedCoupon)
+  const displayTotal = Math.max(0, total - (estDiscount ?? 0))
   return (
     <>
       <div className="max-h-[48vh] flex-1 overflow-y-auto px-5 py-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -99,13 +124,57 @@ function CartView({
       </div>
 
       <footer className="border-t border-[#1f1f23] px-5 pb-6 pt-4">
+        {/* Cupones disponibles */}
+        {hasItems && coupons.length > 0 && (
+          <div className="mb-3.5">
+            <p className="mb-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#fb923c]">
+              🎟 Cupones disponibles
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {coupons.map((c) => {
+                const on = c.code === selectedCode
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onToggleCoupon(on ? null : c.code)}
+                    className={`rounded-full border px-3 py-1.5 text-[12px] font-bold transition ${
+                      on
+                        ? "border-[#fb923c] bg-[#fb923c] text-[#1a1a1a]"
+                        : "border-[#27272a] bg-[#18181b] text-[#d4d4d8]"
+                    }`}
+                  >
+                    {c.description || c.code}
+                    {c.discount_type === "percent" ? ` · ${c.discount_value}%` : ` · ${formatPrice(c.discount_value)}`}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {error && (
           <p className="mb-3 text-center text-xs font-semibold text-red-400">{error}</p>
         )}
 
+        {estDiscount != null && estDiscount > 0 && (
+          <div className="mb-2 flex items-center justify-between text-[13px]">
+            <span className="font-semibold text-[#a1a1aa]">Subtotal</span>
+            <span className="font-semibold text-[#a1a1aa]">{formatPrice(total)}</span>
+          </div>
+        )}
+        {selectedCoupon && (
+          <div className="mb-2 flex items-center justify-between text-[13px]">
+            <span className="font-semibold text-[#fb923c]">Cupón {selectedCoupon.code}</span>
+            <span className="font-semibold text-[#fb923c]">
+              {estDiscount != null ? `−${formatPrice(estDiscount)}` : "al enviar"}
+            </span>
+          </div>
+        )}
+
         <div className="mb-3.5 flex items-center justify-between">
           <span className="text-sm font-semibold text-[#a1a1aa]">Total</span>
-          <span className="text-[22px] font-black">{formatPrice(total)}</span>
+          <span className="text-[22px] font-black">{formatPrice(displayTotal)}</span>
         </div>
 
         <button
@@ -140,6 +209,9 @@ function CartView({
 export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawerProps) {
   const { items, total } = useTableCart(tableId, restaurantId)
   const hasItems = items.length > 0
+  const qrCode = useTableCartStore((s) => s.qrCode)
+  const [coupons, setCoupons] = useState<AvailableCoupon[]>([])
+  const [selectedCode, setSelectedCode] = useState<string | null>(null)
 
   const {
     isLoading,
@@ -151,7 +223,22 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
     items,
     tableId,
     restaurantId,
+    couponCode: selectedCode,
   })
+
+  // Cupones vigentes al abrir el carrito (los filtra el servidor por día/hora).
+  useEffect(() => {
+    if (!isOpen || !qrCode) return
+    let active = true
+    listAvailableCoupons(qrCode)
+      .then((list) => {
+        if (active) setCoupons(list)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [isOpen, qrCode])
 
   const { activeOrder, isChecking, syncOrder } = useLastOrder()
 
@@ -224,6 +311,9 @@ export function CartDrawer({ isOpen, onClose, tableId, restaurantId }: CartDrawe
           isWaitingConnection={isWaitingConnection}
           error={error}
           onContinue={createOrder}
+          coupons={coupons}
+          selectedCode={selectedCode}
+          onToggleCoupon={setSelectedCode}
         />
       </section>
     </div>

@@ -8,6 +8,8 @@ export const ADMIN_MODULE_BY_ROUTE: Record<string, string> = {
   "/admin": "dashboard",
   "/admin/categories": "categories",
   "/admin/products": "products",
+  "/admin/promociones": "promociones",
+  "/admin/descuentos": "descuentos",
   "/admin/inventory": "inventory",
   "/admin/tables": "tables",
   "/admin/reservations": "reservations",

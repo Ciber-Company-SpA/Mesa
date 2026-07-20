@@ -12,9 +12,10 @@ type UseCreateOrderProps = {
   items: CartItem[]
   tableId: number
   restaurantId: number
+  couponCode?: string | null
 }
 
-export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderProps) {
+export function useCreateOrder({ items, tableId, restaurantId, couponCode }: UseCreateOrderProps) {
   const clearCart = useTableCartStore((state) => state.clear)
   // Credencial pública de la mesa: las RPC ya no aceptan table_id.
   const qrCode = useTableCartStore((state) => state.qrCode)
@@ -40,6 +41,7 @@ export function useCreateOrder({ items, tableId, restaurantId }: UseCreateOrderP
     const result = await createOrderAction({
       qrToken: qrCode,
       dinerToken,
+      couponCode: couponCode ?? null,
       items: orderItems,
     })
 
