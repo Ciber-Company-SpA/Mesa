@@ -15,6 +15,7 @@ import { useMyPlan } from "@/hooks/useMyPlan"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
 import { useInventoryAlerts } from "@/hooks/useInventoryAlerts"
 import { InventoryAlertBell } from "@/components/admin/InventoryAlertBell"
+import { BranchSwitcher } from "@/components/admin/BranchSwitcher"
 import { ADMIN_MODULE_BY_ROUTE } from "@/lib/module-visibility"
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed"
@@ -302,6 +303,9 @@ export function AdminSidebar() {
           <InventoryAlertBell outCount={invOut} lowCount={invLow} items={invAlertItems} />
         )}
       </div>
+
+      {/* SELECTOR DE LOCAL (multi-sucursal) */}
+      {!collapsed && <BranchSwitcher />}
 
       {/* TOGGLE */}
       <button
