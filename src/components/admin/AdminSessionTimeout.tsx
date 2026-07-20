@@ -4,23 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { clearUserScopedCache } from "@/lib/session-cache"
+import { idleRemainingMs, idleReset, idlePause } from "@/lib/idle-monitor"
 
-// 30 min de inactividad → aviso con 15 s de gracia → cierre de sesión.
-const IDLE_MS = 30 * 60 * 1000
 const GRACE = 15
-const ACTIVITY = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"]
 
 /**
  * Auto-cierre por inactividad del panel admin del cliente. Montado en
- * /admin/layout. La actividad reinicia el contador de 30 min; al expirar avisa
- * con cuenta regresiva de 15 s y, si no se confirma, cierra la sesión.
- * (No se usa en la app del mesero, que opera todo el turno.)
+ * /admin/layout. Usa el monitor de inactividad compartido (mismo reloj que el
+ * cronómetro del sidebar). Al expirar avisa con 15 s de gracia; si no se
+ * confirma, cierra la sesión. (No se usa en la app del mesero.)
  */
 export function AdminSessionTimeout() {
   const router = useRouter()
   const [warning, setWarning] = useState(false)
   const [count, setCount] = useState(GRACE)
-  const lastActivity = useRef(0)
   const warningRef = useRef(false)
 
   useEffect(() => {
@@ -39,22 +36,15 @@ export function AdminSessionTimeout() {
   }, [router])
 
   useEffect(() => {
-    lastActivity.current = Date.now()
-    const bump = () => {
-      if (!warningRef.current) lastActivity.current = Date.now()
-    }
-    ACTIVITY.forEach((e) => window.addEventListener(e, bump, { passive: true }))
     const iv = setInterval(() => {
       if (warningRef.current) return
-      if (Date.now() - lastActivity.current >= IDLE_MS) {
+      if (idleRemainingMs() <= 0) {
+        idlePause()
         setCount(GRACE)
         setWarning(true)
       }
     }, 1000)
-    return () => {
-      ACTIVITY.forEach((e) => window.removeEventListener(e, bump))
-      clearInterval(iv)
-    }
+    return () => clearInterval(iv)
   }, [])
 
   useEffect(() => {
@@ -72,7 +62,7 @@ export function AdminSessionTimeout() {
   }, [warning, doLogout])
 
   const stay = useCallback(() => {
-    lastActivity.current = Date.now()
+    idleReset()
     setWarning(false)
   }, [])
 

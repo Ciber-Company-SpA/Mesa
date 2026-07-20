@@ -16,6 +16,7 @@ import { useVisibleModules } from "@/hooks/useVisibleModules"
 import { useInventoryAlerts } from "@/hooks/useInventoryAlerts"
 import { InventoryAlertBell } from "@/components/admin/InventoryAlertBell"
 import { BranchSwitcher } from "@/components/admin/BranchSwitcher"
+import { IdleCountdown } from "@/components/admin/IdleCountdown"
 import { ADMIN_MODULE_BY_ROUTE } from "@/lib/module-visibility"
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed"
@@ -392,6 +393,7 @@ export function AdminSidebar() {
           {!collapsed && <span className="flex-1 truncate text-left">Cerrar sesión</span>}
         </button>
       </nav>
+      <IdleCountdown collapsed={collapsed} />
     </aside>
   )
 }
