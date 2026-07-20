@@ -8,6 +8,9 @@ import { ModuleGate } from "@/components/ModuleGate"
 
 export const metadata: Metadata = {
   title: "Administración",
+  // PWA del admin: sustituye al manifest del mesero (raíz) en todo /admin, para
+  // que "Instalar app" instale el panel (start_url /admin), no el del mesero.
+  manifest: "/manifest-admin.webmanifest",
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

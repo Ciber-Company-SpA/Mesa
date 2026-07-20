@@ -72,7 +72,10 @@ export function useAdminPushRegistration(enabled: boolean) {
         if (!firebase.apps?.length) firebase.initializeApp(CFG)
         const messaging = firebase.messaging()
 
-        // SW de FCM en scope /admin/ para no pisar al SW offline (scope /).
+        // SW de FCM en su scope propio de FCM (una URL virtual, no navegable),
+        // para NO colisionar con el SW offline del mesero (scope "/") ni con el
+        // SW de instalación del admin (admin-sw.js, scope "/admin"). El push en
+        // segundo plano no necesita que el SW controle las páginas de /admin.
         const params = new URLSearchParams({
           apiKey: CFG.apiKey!,
           authDomain: CFG.authDomain ?? "",
@@ -82,7 +85,7 @@ export function useAdminPushRegistration(enabled: boolean) {
         })
         const swReg = await navigator.serviceWorker.register(
           `/firebase-messaging-sw.js?${params.toString()}`,
-          { scope: "/admin/" }
+          { scope: "/firebase-cloud-messaging-push-scope" }
         )
 
         const token: string = await messaging.getToken({

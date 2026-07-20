@@ -254,6 +254,17 @@ export function AdminSidebar() {
         </svg>
       ),
     },
+    {
+      // Sin clave de módulo en ADMIN_MODULE_BY_ROUTE → siempre visible: el
+      // cliente siempre debe poder instalar la app.
+      label: "Instalar app",
+      href: "/admin/instalar",
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+        </svg>
+      ),
+    },
     ...(plan?.has_multi_branch && plan?.is_owner
       ? [
           {

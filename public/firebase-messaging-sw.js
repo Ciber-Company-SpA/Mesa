@@ -2,8 +2,9 @@
  *
  * Es INERTE hasta que `useAdminPushRegistration` lo registre con la config de
  * Firebase en el query string (?apiKey=...&projectId=...&...). Se registra con
- * scope "/admin/" para NO pisar al service worker offline principal (public/sw.js,
- * scope "/").
+ * el scope propio de FCM ("/firebase-cloud-messaging-push-scope"), para NO
+ * pisar al SW offline del mesero (public/sw.js, scope "/") ni al SW de
+ * instalación del admin (public/admin-sw.js, scope "/admin").
  *
  * Activación (cuando haya credenciales):
  *   - Definir NEXT_PUBLIC_FIREBASE_* + NEXT_PUBLIC_FIREBASE_VAPID_KEY (ver

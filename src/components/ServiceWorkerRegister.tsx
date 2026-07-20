@@ -12,34 +12,44 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return
 
-    // El Service Worker existe SOLO para la PWA del mesero (offline). El menú
-    // del cliente (QR), admin y landing NO deben quedar bajo el SW: el cliente
-    // en móvil no puede hacer un hard-reload, así que jamás debe quedar atrapado
-    // con assets cacheados. En dev tampoco se registra.
-    const isWaiterApp = process.env.NODE_ENV === "production" && pathname.startsWith("/waiter")
+    const isProd = process.env.NODE_ENV === "production"
 
-    if (!isWaiterApp) {
-      // Fuera del área de mesero (o en dev): desregistrar cualquier SW viejo y
-      // limpiar sus cachés, para servir siempre contenido fresco.
-      navigator.serviceWorker
-        .getRegistrations()
-        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
-        .catch(() => undefined)
-
-      if (typeof caches !== "undefined") {
-        caches
-          .keys()
-          .then((keys) =>
-            Promise.all(
-              keys.filter((k) => k.startsWith("mesa-offline-")).map((k) => caches.delete(k))
-            )
-          )
-          .catch(() => undefined)
-      }
+    // La PWA del MESERO usa sw.js (offline con caché). La PWA del ADMIN usa
+    // admin-sw.js (sin caché: solo habilita la instalación). El menú del
+    // cliente (QR) y la landing NO deben quedar bajo ningún SW: el cliente en
+    // móvil no puede hard-reload, así que jamás debe quedar atrapado con assets
+    // cacheados. En dev tampoco se registra nada.
+    if (isProd && pathname.startsWith("/waiter")) {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined)
       return
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined)
+    if (isProd && pathname.startsWith("/admin")) {
+      // admin-sw.js no cachea navegaciones (siempre red) → el admin nunca queda
+      // con contenido viejo; solo existe para que "Instalar app" funcione.
+      navigator.serviceWorker
+        .register("/admin-sw.js", { scope: "/admin" })
+        .catch(() => undefined)
+      return
+    }
+
+    // Landing / menú del comensal (o dev): desregistrar cualquier SW y limpiar
+    // sus cachés, para servir siempre contenido fresco.
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+      .catch(() => undefined)
+
+    if (typeof caches !== "undefined") {
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys.filter((k) => k.startsWith("mesa-offline-")).map((k) => caches.delete(k))
+          )
+        )
+        .catch(() => undefined)
+    }
   }, [pathname])
 
   useEffect(() => {
