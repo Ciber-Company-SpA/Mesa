@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useTableList } from "@/hooks/useTableList"
 import { useOrderList } from "@/hooks/useOrderList"
 import { useOrderStats } from "@/hooks/useOrderStats"
+import { InventoryAlertCard } from "@/components/admin/InventoryAlertCard"
 
 const statusConfig: Record<string, string> = {
   "Nuevo":          "bg-orange-50 text-orange-700 ring-orange-200/50",
@@ -18,7 +19,10 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      
+
+      {/* Aviso de inventario crítico (solo si hay insumos sin/bajo stock) */}
+      <InventoryAlertCard />
+
       {/* Sección principal de métricas de ventas */}
       <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -13,6 +13,8 @@ import { useCategoryList } from "@/hooks/useCategoryList"
 import { useWaiters } from "@/hooks/useWaiters"
 import { useMyPlan } from "@/hooks/useMyPlan"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
+import { useInventoryAlerts } from "@/hooks/useInventoryAlerts"
+import { InventoryAlertBell } from "@/components/admin/InventoryAlertBell"
 import { ADMIN_MODULE_BY_ROUTE } from "@/lib/module-visibility"
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed"
@@ -21,6 +23,8 @@ type Tab = {
   label: string
   href: string
   badge?: string
+  // Tono del badge: rojo/ámbar para alertas (inventario); naranja por defecto.
+  badgeTone?: "red" | "amber"
   icon: React.ReactNode
 }
 
@@ -35,6 +39,13 @@ export function AdminSidebar() {
   const { waiters, loading: loadingWaiters } = useWaiters()
   const { plan } = useMyPlan()
   const { isVisible } = useVisibleModules()
+  const {
+    outCount: invOut,
+    lowCount: invLow,
+    totalCount: invAlertCount,
+    items: invAlertItems,
+    loading: invAlertLoading,
+  } = useInventoryAlerts()
 
   const [collapsed, setCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
@@ -108,6 +119,10 @@ export function AdminSidebar() {
     {
       label: "Inventario",
       href: "/admin/inventory",
+      // Solo mostramos badge cuando hay alertas (rojo si hay agotados, ámbar si
+      // solo hay stock bajo). Nada de "..." mientras carga, para no meter ruido.
+      badge: !invAlertLoading && invAlertCount > 0 ? String(invAlertCount) : undefined,
+      badgeTone: invOut > 0 ? "red" : "amber",
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -283,6 +298,9 @@ export function AdminSidebar() {
             <p className="truncate text-[10px] font-medium text-emerald-700">Abierto</p>
           </div>
         )}
+        {!collapsed && isVisible("admin", "inventory") && (
+          <InventoryAlertBell outCount={invOut} lowCount={invLow} items={invAlertItems} />
+        )}
       </div>
 
       {/* TOGGLE */}
@@ -321,12 +339,32 @@ export function AdminSidebar() {
                   : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
               } ${collapsed ? "justify-center" : ""}`}
             >
-              <span className="shrink-0">{tab.icon}</span>
+              <span className="relative shrink-0">
+                {tab.icon}
+                {/* Punto de alerta sobre el ícono cuando el menú está colapsado */}
+                {collapsed && tab.badge !== undefined && tab.badgeTone && (
+                  <span
+                    className={`absolute -right-1 -top-1 h-2 w-2 rounded-full ring-2 ring-white ${
+                      tab.badgeTone === "red" ? "bg-red-500" : "bg-amber-500"
+                    }`}
+                  />
+                )}
+              </span>
               {!collapsed && <span className="flex-1 truncate">{tab.label}</span>}
               {!collapsed && tab.badge !== undefined && (
                 <span
                   className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-                    isActive ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-700"
+                    tab.badgeTone === "red"
+                      ? isActive
+                        ? "bg-red-500 text-white"
+                        : "bg-red-100 text-red-700"
+                      : tab.badgeTone === "amber"
+                      ? isActive
+                        ? "bg-amber-500 text-white"
+                        : "bg-amber-100 text-amber-700"
+                      : isActive
+                      ? "bg-orange-500 text-white"
+                      : "bg-orange-100 text-orange-700"
                   }`}
                 >
                   {tab.badge}

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { AdminGuard } from "./AdminGuard"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { OnboardingModal } from "@/components/admin/OnboardingModal"
+import { AdminPushRegister } from "@/components/admin/AdminPushRegister"
 import { ModuleGate } from "@/components/ModuleGate"
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <ModuleGate area="admin">{children}</ModuleGate>
         </main>
         <OnboardingModal />
+        <AdminPushRegister />
       </div>
     </AdminGuard>
   )

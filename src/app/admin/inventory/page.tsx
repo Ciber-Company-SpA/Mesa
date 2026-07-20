@@ -6,6 +6,7 @@ import { IngredientFormDialog } from "@/components/admin/IngredientFormDialog"
 import { StockActionDialog } from "@/components/admin/StockActionDialog"
 import { StockHistoryDialog } from "@/components/admin/StockHistoryDialog"
 import { ImportInventoryDialog } from "@/components/admin/ImportInventoryDialog"
+import { InventoryAlertsPanel } from "@/components/admin/InventoryAlertsPanel"
 import { formatStock, formatUnitPrice } from "@/lib/inventory/units"
 import type { IngredientWithFlag } from "@/types/ingredient"
 
@@ -41,6 +42,12 @@ export default function InventoryPage() {
     setDeletingId(ing.id)
     await deleteIngredient(ing.id)
     setDeletingId(null)
+  }
+
+  // Reponer desde una alerta de stock: abre el diálogo con el insumo cargado.
+  function handleRestockAlert(id: number) {
+    const ing = ingredients.find((i) => i.id === id)
+    if (ing) setStockAction({ mode: "restock", ingredient: ing })
   }
 
   return (
@@ -96,14 +103,8 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* ALERTA DE QUIEBRE */}
-      {!loading && lowStockCount > 0 && (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span className="font-bold">{lowStockCount}</span>{" "}
-          {lowStockCount === 1 ? "insumo está" : "insumos están"} en o bajo su mínimo de alerta.
-          Repón pronto para no quedarte sin stock.
-        </div>
-      )}
+      {/* ALERTAS DE STOCK (sin stock / bajo mínimo), en vivo */}
+      <InventoryAlertsPanel onRestock={handleRestockAlert} />
 
       {error && (
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

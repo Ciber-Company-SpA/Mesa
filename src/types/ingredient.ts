@@ -27,3 +27,26 @@ export type ImportIngredientsSummary = {
   updated: number
   skipped: { name: string; reason: string }[]
 }
+
+// ---------------------------------------------------------------------------
+// Alertas de inventario (stock bajo / sin stock) para el panel admin.
+// Nivel:
+//   'sin_stock' → stock_actual <= 0 (agotado)
+//   'bajo'      → 0 < stock_actual <= stock_minimo (bajo el mínimo)
+// ---------------------------------------------------------------------------
+export type InventoryAlertLevel = "sin_stock" | "bajo"
+
+export type InventoryAlertItem = {
+  id: number
+  name: string
+  unit: IngredientUnit
+  stock_actual: number
+  stock_minimo: number
+  level: InventoryAlertLevel
+}
+
+export type InventoryAlerts = {
+  out_count: number
+  low_count: number
+  items: InventoryAlertItem[]
+}
