@@ -255,8 +255,8 @@ export function AdminSidebar() {
       ),
     },
     {
-      // Sin clave de módulo en ADMIN_MODULE_BY_ROUTE → siempre visible: el
-      // cliente siempre debe poder instalar la app.
+      // Módulo "instalar" en platform_modules → el operador lo puede
+      // encender/apagar por cliente desde el portal (ADMIN_MODULE_BY_ROUTE).
       label: "Instalar app",
       href: "/admin/instalar",
       icon: (

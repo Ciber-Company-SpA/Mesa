@@ -21,6 +21,7 @@ export const ADMIN_MODULE_BY_ROUTE: Record<string, string> = {
   "/admin/pagos": "pagos",
   "/admin/api": "api",
   "/admin/soporte": "soporte",
+  "/admin/instalar": "instalar",
   "/admin/sucursales": "sucursales",
 }
 
