@@ -1,7 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
+
+/** Puntos animados "escribiendo…" tipo chat. */
+function TypingDots({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-1 py-1 text-xs font-medium text-stone-500">
+      <span className="flex gap-1">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400" />
+      </span>
+      {label}
+    </div>
+  )
+}
 
 /**
  * Centro de soporte del cliente (panel admin y app del mesero): crea tickets
@@ -95,6 +109,7 @@ export function SupportCenter() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial al montar
     void reload()
   }, [reload])
 
@@ -329,6 +344,11 @@ function TicketThread({ ticketId, onBack }: { ticketId: number; onBack: () => vo
   const [reply, setReply] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [operatorTyping, setOperatorTyping] = useState(false)
+
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const lastTypingSent = useRef(0)
+  const typingOffTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase.rpc("get_my_support_ticket", {
@@ -339,8 +359,42 @@ function TicketThread({ ticketId, onBack }: { ticketId: number; onBack: () => vo
   }, [ticketId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial al montar
     void load()
   }, [load])
+
+  // Chat en vivo: nuevo mensaje del operador → recargar el hilo; broadcast de
+  // "escribiendo…" del operador → mostrar el indicador (se apaga solo a los 3s).
+  useEffect(() => {
+    const channel = supabase
+      .channel(`support-ticket-${ticketId}`, { config: { broadcast: { self: false } } })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "support_ticket_messages", filter: `ticket_id=eq.${ticketId}` },
+        () => void load()
+      )
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.from !== "operator") return
+        setOperatorTyping(true)
+        if (typingOffTimer.current) clearTimeout(typingOffTimer.current)
+        typingOffTimer.current = setTimeout(() => setOperatorTyping(false), 3000)
+      })
+      .subscribe()
+    channelRef.current = channel
+    return () => {
+      if (typingOffTimer.current) clearTimeout(typingOffTimer.current)
+      supabase.removeChannel(channel)
+      channelRef.current = null
+    }
+  }, [ticketId, load])
+
+  // Avisar "escribiendo…" al operador (como máximo cada 1.5s).
+  function notifyTyping() {
+    const now = Date.now()
+    if (now - lastTypingSent.current < 1500) return
+    lastTypingSent.current = now
+    channelRef.current?.send({ type: "broadcast", event: "typing", payload: { from: "customer" } })
+  }
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
@@ -417,6 +471,8 @@ function TicketThread({ ticketId, onBack }: { ticketId: number; onBack: () => vo
           ) : null}
         </div>
 
+        {operatorTyping ? <TypingDots label="Soporte está escribiendo…" /> : null}
+
         {closed ? (
           <p className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-center text-xs font-semibold text-stone-500">
             Este ticket está cerrado. Si el problema vuelve, creá uno nuevo.
@@ -426,7 +482,10 @@ function TicketThread({ ticketId, onBack }: { ticketId: number; onBack: () => vo
             <textarea
               rows={2}
               value={reply}
-              onChange={(e) => setReply(e.target.value)}
+              onChange={(e) => {
+                setReply(e.target.value)
+                notifyTyping()
+              }}
               placeholder={
                 t.status === "resolved"
                   ? "¿Seguís con problemas? Respondé y el ticket se reabre."
