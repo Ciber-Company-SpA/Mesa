@@ -15,10 +15,13 @@ export function ManuelAvatar({
   size = 40,
   className,
   animated = false,
+  talking = false,
 }: {
   size?: number
   className?: string
   animated?: boolean
+  /** true mientras Manuel habla (TTS): la sonrisa se vuelve boca que se mueve. */
+  talking?: boolean
 }) {
   // id único por instancia: el avatar se renderiza varias veces en el chat y
   // los <linearGradient> no deben colisionar entre sí.
@@ -64,14 +67,18 @@ export function ManuelAvatar({
         <circle cx="40" cy="80" r="6.5" />
         <circle cx="88" cy="80" r="6.5" />
       </g>
-      {/* sonrisa */}
-      <path
-        d="M 50 84 Q 64 96 78 84"
-        fill="none"
-        stroke="#451A03"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
+      {/* boca: sonrisa en reposo, boca abierta que se mueve al hablar */}
+      {talking ? (
+        <ellipse cx="64" cy="89" rx="9" ry="7" fill="#451A03" className="manuel-mouth" />
+      ) : (
+        <path
+          d="M 50 84 Q 64 96 78 84"
+          fill="none"
+          stroke="#451A03"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+      )}
     </svg>
   )
 }

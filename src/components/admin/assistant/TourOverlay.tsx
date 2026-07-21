@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
 import { TOUR_STEPS } from "@/lib/assistant/tour-steps"
+import { speakText, stopSpeaking } from "@/lib/assistant/voice"
 
 /**
  * TOUR GUIADO de Manuel: recorre los módulos del panel navegando a cada ruta
@@ -15,14 +16,18 @@ import { TOUR_STEPS } from "@/lib/assistant/tour-steps"
 export function TourOverlay({
   onClose,
   isModuleVisible,
+  voiceEnabled = false,
 }: {
   onClose: () => void
   isModuleVisible: (area: "admin", key: string) => boolean
+  /** true = Manuel narra cada paso en voz alta (TTS del navegador). */
+  voiceEnabled?: boolean
 }) {
   const router = useRouter()
   // El overlay se monta SOLO mientras el tour está activo (el padre lo
   // renderiza condicionalmente), así que el índice arranca en 0 cada vez.
   const [idx, setIdx] = useState(0)
+  const [talking, setTalking] = useState(false)
 
   // Saltar los módulos que el operador apagó para este restaurante.
   const steps = useMemo(
@@ -36,6 +41,19 @@ export function TourOverlay({
   useEffect(() => {
     if (step?.route) router.push(step.route)
   }, [step, router])
+
+  // Narrar el paso si la voz está activada (y callar al salir del tour).
+  useEffect(() => {
+    if (!voiceEnabled || !step) return
+    speakText(`${step.title}. ${step.text}`, {
+      onStart: () => setTalking(true),
+      onEnd: () => setTalking(false),
+    })
+    return () => {
+      stopSpeaking()
+      setTalking(false)
+    }
+  }, [voiceEnabled, step])
 
   // Salir con Escape.
   useEffect(() => {
@@ -54,7 +72,7 @@ export function TourOverlay({
     <div className="fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4">
       <div className="animate-card-entrance w-full max-w-md rounded-3xl border border-stone-200 bg-white p-4 shadow-2xl shadow-stone-900/15">
         <div className="flex items-start gap-3">
-          <ManuelAvatar size={44} animated className="manuel-hello shrink-0" />
+          <ManuelAvatar size={44} animated talking={talking} className="manuel-hello shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-bold text-stone-900">

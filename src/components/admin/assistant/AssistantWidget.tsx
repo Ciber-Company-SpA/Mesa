@@ -5,6 +5,7 @@ import { useVisibleModules } from "@/hooks/useVisibleModules"
 import { MarkdownLite } from "@/components/admin/assistant/MarkdownLite"
 import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
 import { TourOverlay } from "@/components/admin/assistant/TourOverlay"
+import { speakText, stopSpeaking, speechAvailable } from "@/lib/assistant/voice"
 
 /**
  * Asistente IA del panel admin: botón flotante + panel de chat. Ejecuta tareas
@@ -20,11 +21,13 @@ type ChatMessage = { role: "user" | "assistant"; text: string; actions?: ActionC
 const STORAGE_KEY = "mesa-assistant-chat"
 
 const SUGGESTIONS = [
-  "Dame un tour por la plataforma",
   "Créame las categorías típicas para mi tipo de restaurante",
   "¿Qué me recomiendas para vender más?",
   "Revisa mi inventario y dime qué tengo que reponer",
+  "Crea un cupón de 10% de descuento para los lunes",
 ]
+
+const VOICE_KEY = "mesa-manuel-voice"
 
 function loadStored(): ChatMessage[] {
   try {
@@ -45,16 +48,55 @@ export function AssistantWidget() {
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  // Voz de Manuel (TTS del navegador): preferencia persistida + estado hablando.
+  const [voiceOn, setVoiceOn] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+  const voiceOnRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Cargar historial de la sesión al montar (evita hydration mismatch).
+  // Cargar historial de la sesión + preferencia de voz al montar (evita
+  // hydration mismatch).
   useEffect(() => {
     const stored = loadStored()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- lee sessionStorage tras montar
     setMessages(stored)
     setHydrated(true)
+    try {
+      const v = localStorage.getItem(VOICE_KEY) === "1" && speechAvailable()
+      setVoiceOn(v)
+      voiceOnRef.current = v
+    } catch {
+      // storage bloqueado: voz apagada
+    }
   }, [])
+
+  function toggleVoice() {
+    const next = !voiceOn
+    setVoiceOn(next)
+    voiceOnRef.current = next
+    try {
+      localStorage.setItem(VOICE_KEY, next ? "1" : "0")
+    } catch {
+      // storage bloqueado: la preferencia dura la sesión
+    }
+    if (next) {
+      speakText("¡Hola! Así suena mi voz.", {
+        onStart: () => setSpeaking(true),
+        onEnd: () => setSpeaking(false),
+      })
+    } else {
+      stopSpeaking()
+      setSpeaking(false)
+    }
+  }
+
+  function launchTour() {
+    stopSpeaking()
+    setSpeaking(false)
+    setTourOpen(true)
+    setOpen(false)
+  }
 
   // Persistir + autoscroll.
   useEffect(() => {
@@ -157,7 +199,15 @@ export function AssistantWidget() {
               setTourOpen(true)
               setOpen(false)
             } else if (event.type === "reply") {
-              patchLast((m) => ({ ...m, text: String(event.text ?? "") }))
+              const replyText = String(event.text ?? "")
+              patchLast((m) => ({ ...m, text: replyText }))
+              // Leer la respuesta en voz alta si la voz está activada.
+              if (voiceOnRef.current && replyText) {
+                speakText(replyText, {
+                  onStart: () => setSpeaking(true),
+                  onEnd: () => setSpeaking(false),
+                })
+              }
             } else if (event.type === "error") {
               patchLast((m) => ({
                 ...m,
@@ -184,8 +234,14 @@ export function AssistantWidget() {
 
   return (
     <>
-      {/* Tour guiado por los módulos (lo lanza Manuel desde el chat) */}
-      {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} isModuleVisible={isVisible} />}
+      {/* Tour guiado por los módulos (botón 🧭 o Manuel desde el chat) */}
+      {tourOpen && (
+        <TourOverlay
+          onClose={() => setTourOpen(false)}
+          isModuleVisible={isVisible}
+          voiceEnabled={voiceOn}
+        />
+      )}
 
       {/* Botón flotante: la cara de Manuel (flota y parpadea) */}
       {!open && !tourOpen && (
@@ -205,24 +261,56 @@ export function AssistantWidget() {
           <button
             type="button"
             aria-label="Cerrar asistente"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              stopSpeaking()
+              setSpeaking(false)
+              setOpen(false)
+            }}
             className="absolute inset-0 bg-black/20 sm:bg-transparent"
           />
           <aside className="relative z-10 flex h-full w-full flex-col border-l border-stone-200 bg-white shadow-2xl sm:w-[420px]">
             {/* Header */}
-            <div className="flex items-center gap-3 border-b border-stone-200 px-4 py-3">
-              <ManuelAvatar size={38} animated className="manuel-hello shrink-0" />
+            <div className="flex items-center gap-2.5 border-b border-stone-200 px-4 py-3">
+              <ManuelAvatar
+                size={38}
+                animated
+                talking={speaking}
+                className="manuel-hello shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-stone-900">Manuel</p>
-                <p className="text-[11px] text-stone-500">
+                <p className="truncate text-[11px] text-stone-500">
                   Tu asistente de MESA · ejecuta tareas y recomienda
                 </p>
               </div>
+              {speechAvailable() && (
+                <button
+                  type="button"
+                  onClick={toggleVoice}
+                  aria-label={voiceOn ? "Silenciar a Manuel" : "Activar la voz de Manuel"}
+                  title={voiceOn ? "Voz activada" : "Voz desactivada"}
+                  className={`rounded-lg p-1.5 text-base transition hover:bg-stone-100 ${
+                    voiceOn ? "" : "opacity-40 grayscale"
+                  }`}
+                >
+                  {voiceOn ? "🔊" : "🔇"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={launchTour}
+                title="Tour por la plataforma"
+                className="rounded-lg px-2 py-1 text-[11px] font-semibold text-stone-500 ring-1 ring-stone-200 transition hover:bg-orange-50 hover:text-orange-600 hover:ring-orange-200"
+              >
+                🧭 Tour
+              </button>
               {messages.length > 0 && (
                 <button
                   type="button"
                   onClick={() => {
                     abortRef.current?.abort()
+                    stopSpeaking()
+                    setSpeaking(false)
                     setMessages([])
                     setBusy(false)
                   }}
@@ -233,7 +321,11 @@ export function AssistantWidget() {
               )}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  stopSpeaking()
+                  setSpeaking(false)
+                  setOpen(false)
+                }}
                 aria-label="Cerrar"
                 className="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
               >
@@ -256,6 +348,13 @@ export function AssistantWidget() {
                     </p>
                   </div>
                   <div className="flex w-full flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={launchTour}
+                      className="rounded-xl bg-orange-500 px-3 py-2.5 text-center text-xs font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
+                    >
+                      🧭 Conocer la plataforma (tour guiado)
+                    </button>
                     {SUGGESTIONS.map((s) => (
                       <button
                         key={s}

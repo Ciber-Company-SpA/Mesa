@@ -245,6 +245,10 @@ html, body {
   94% { transform: rotate(5deg); }
   97% { transform: rotate(-2deg); }
 }
+@keyframes manuel-talk {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .manuel-eyes {
     transform-box: fill-box;
@@ -257,5 +261,10 @@ html, body {
   .manuel-hello {
     transform-origin: 50% 80%;
     animation: manuel-hello 2s ease-in-out infinite;
+  }
+  .manuel-mouth {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: manuel-talk 0.28s ease-in-out infinite;
   }
 }
