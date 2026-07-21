@@ -6,6 +6,32 @@
  */
 
 let cachedVoice: SpeechSynthesisVoice | null = null
+let cachedVoiceIsMale = false
+
+// La Web Speech API no expone el género: se detecta por el NOMBRE de la voz.
+// Masculinas conocidas por plataforma: Lorenzo (es-CL en Edge Natural), Jorge,
+// Álvaro, Pablo, Raúl (Windows), Diego, Juan, Carlos (macOS/iOS), etc.
+const MALE_NAME =
+  /\b(lorenzo|jorge|alvaro|álvaro|pablo|raul|raúl|diego|juan|carlos|gonzalo|enrique|andres|andrés|tomas|tomás|dario|darío|manuel|felipe|mario|male)\b/i
+const FEMALE_NAME =
+  /\b(female|monica|mónica|paulina|helena|sabina|laura|catalina|elvira|francisca|camila|lucia|lucía|isabela|marisol|soledad|angelica|angélica|esperanza|ximena|dalia|larissa|andrea|carmen|penelope|penélope|lupe|renata|paloma|salome|salomé|yolanda|vera|triana)\b/i
+
+// Preferencia por cercanía al español de Chile.
+const DIALECT_PREFS = ["es-cl", "es-419", "es-us", "es-mx", "es-ar", "es-es", "es"]
+
+function scoreVoice(v: SpeechSynthesisVoice): number {
+  const lang = v.lang.toLowerCase().replace("_", "-")
+  if (!lang.startsWith("es")) return -1
+  let s = 0
+  // Manuel es hombre: una voz masculina pesa más que cualquier otro criterio.
+  if (MALE_NAME.test(v.name)) s += 1000
+  else if (FEMALE_NAME.test(v.name)) s -= 200
+  const rank = DIALECT_PREFS.findIndex((p) => lang.startsWith(p))
+  if (rank !== -1) s += (DIALECT_PREFS.length - rank) * 10
+  // Las voces "Google/Natural/Neural/Online" suenan mejor que las del sistema.
+  if (/google|natural|neural|online/i.test(v.name)) s += 50
+  return s
+}
 
 function pickSpanishVoice(): SpeechSynthesisVoice | null {
   if (cachedVoice) return cachedVoice
@@ -14,20 +40,18 @@ function pickSpanishVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices()
   if (voices.length === 0) return null
 
-  // Preferencia por cercanía al español de Chile; dentro de cada dialecto,
-  // las voces "Google/Natural/Neural" suenan mejor que las del sistema.
-  const prefs = ["es-cl", "es-419", "es-us", "es-mx", "es-ar", "es-es", "es"]
-  for (const pref of prefs) {
-    const matches = voices.filter((v) =>
-      v.lang.toLowerCase().replace("_", "-").startsWith(pref)
-    )
-    if (matches.length > 0) {
-      cachedVoice =
-        matches.find((v) => /google|natural|neural|online/i.test(v.name)) ?? matches[0]
-      return cachedVoice
+  let best: SpeechSynthesisVoice | null = null
+  let bestScore = -1
+  for (const v of voices) {
+    const s = scoreVoice(v)
+    if (s > bestScore) {
+      bestScore = s
+      best = v
     }
   }
-  return null
+  cachedVoice = best
+  cachedVoiceIsMale = best ? MALE_NAME.test(best.name) : false
+  return best
 }
 
 // Las voces cargan async en Chrome: refrescar el caché cuando estén listas.
@@ -112,7 +136,9 @@ export function speakText(
     if (voice) u.voice = voice
     u.lang = voice?.lang ?? "es-CL"
     u.rate = 1.05
-    u.pitch = 1.03
+    // Manuel es hombre: con voz masculina real, tono natural; si el navegador
+    // solo trae voces femeninas/neutras, se baja el pitch para masculinizarla.
+    u.pitch = cachedVoiceIsMale ? 1.0 : 0.75
     u.onstart = () => {
       if (!started) {
         started = true
