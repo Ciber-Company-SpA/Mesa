@@ -36,6 +36,15 @@ export const leadRatelimit = new Ratelimit({
   analytics: true,
 })
 
+// Asistente IA del admin: cada request puede encadenar varias llamadas al LLM
+// (bucle de herramientas), así que el límite es por hora y por restaurante.
+export const assistantRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, "1 h"),
+  prefix: "rl:assistant",
+  analytics: true,
+})
+
 export async function getClientIp(): Promise<string> {
   const h = await headers()
   const forwarded = h.get("x-forwarded-for")
@@ -70,4 +79,9 @@ export async function checkApiInventoryLimit(token: string) {
 export async function checkLeadLimit() {
   const ip = await getClientIp()
   return leadRatelimit.limit(`ip:${ip}`)
+}
+
+/** Asistente IA: por restaurante (todos los admins del local comparten cupo). */
+export async function checkAssistantLimit(restaurantId: number) {
+  return assistantRatelimit.limit(`restaurant:${restaurantId}`)
 }

@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { OnboardingModal } from "@/components/admin/OnboardingModal"
 import { AdminPushRegister } from "@/components/admin/AdminPushRegister"
 import { AdminSessionTimeout } from "@/components/admin/AdminSessionTimeout"
+import { AssistantWidget } from "@/components/admin/assistant/AssistantWidget"
 import { ModuleGate } from "@/components/ModuleGate"
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <OnboardingModal />
         <AdminPushRegister />
         <AdminSessionTimeout />
+        <AssistantWidget />
       </div>
     </AdminGuard>
   )
