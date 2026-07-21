@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
 import { MarkdownLite } from "@/components/admin/assistant/MarkdownLite"
 import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
+import { TourOverlay } from "@/components/admin/assistant/TourOverlay"
 
 /**
  * Asistente IA del panel admin: botón flotante + panel de chat. Ejecuta tareas
@@ -19,10 +20,10 @@ type ChatMessage = { role: "user" | "assistant"; text: string; actions?: ActionC
 const STORAGE_KEY = "mesa-assistant-chat"
 
 const SUGGESTIONS = [
+  "Dame un tour por la plataforma",
   "Créame las categorías típicas para mi tipo de restaurante",
   "¿Qué me recomiendas para vender más?",
   "Revisa mi inventario y dime qué tengo que reponer",
-  "Crea un cupón de 10% de descuento para los lunes",
 ]
 
 function loadStored(): ChatMessage[] {
@@ -39,6 +40,7 @@ function loadStored(): ChatMessage[] {
 export function AssistantWidget() {
   const { isVisible } = useVisibleModules()
   const [open, setOpen] = useState(false)
+  const [tourOpen, setTourOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
@@ -150,6 +152,10 @@ export function AssistantWidget() {
                 else actions.push(chip)
                 return { ...m, actions }
               })
+            } else if (event.type === "client_action" && event.action === "start_tour") {
+              // Manuel lanzó el tour guiado: cerrar el chat y arrancarlo.
+              setTourOpen(true)
+              setOpen(false)
             } else if (event.type === "reply") {
               patchLast((m) => ({ ...m, text: String(event.text ?? "") }))
             } else if (event.type === "error") {
@@ -178,8 +184,11 @@ export function AssistantWidget() {
 
   return (
     <>
+      {/* Tour guiado por los módulos (lo lanza Manuel desde el chat) */}
+      {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} isModuleVisible={isVisible} />}
+
       {/* Botón flotante: la cara de Manuel (flota y parpadea) */}
-      {!open && (
+      {!open && !tourOpen && (
         <button
           type="button"
           onClick={() => setOpen(true)}

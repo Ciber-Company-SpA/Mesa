@@ -42,6 +42,7 @@ export const TOOL_LABELS: Record<string, string> = {
   crear_cupon: "Creando cupón",
   crear_promocion: "Creando promoción",
   crear_promo_armable: "Creando promo armable",
+  iniciar_tour: "Preparando el tour guiado",
   gestionar_cupones: "Activando/desactivando cupones",
   gestionar_promociones: "Activando/ocultando promociones",
   reponer_insumos: "Registrando reposición de stock",
@@ -300,6 +301,15 @@ export const functionDeclarations: FunctionDeclaration[] = [
       },
       required: ["nombre", "descuento_pct", "grupos"],
     },
+  },
+  {
+    // OJO: esta herramienta se ejecuta en el CLIENTE (la ruta la intercepta y
+    // emite un client_action al chat; no pasa por executeTool). Abre el tour
+    // guiado visual que recorre los módulos del panel paso a paso.
+    name: "iniciar_tour",
+    description:
+      "Inicia el TOUR GUIADO visual por el panel: navega módulo por módulo (carta, promociones, inventario, reportes, pagos, etc.) con una tarjeta explicativa y controles Siguiente/Anterior. Úsala cuando pidan un tour, un recorrido, conocer la plataforma o que les muestres cómo funciona MESA.",
+    parameters: { type: SchemaType.OBJECT, properties: {} },
   },
   {
     name: "gestionar_cupones",

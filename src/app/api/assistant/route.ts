@@ -30,7 +30,7 @@ const MAX_MESSAGE_CHARS = 4000
 
 const SYSTEM_PROMPT = `Te llamas MANUEL y eres el asistente de MESA, el sistema de gestión de restaurantes con pedidos por QR. Trabajas para el administrador del restaurante que te habla. Hablas español de Chile, cercano y profesional — con la calidez de un buen maître, sin caer en lo caricaturesco. Preséntate como Manuel solo cuando corresponda (primer saludo o si te preguntan quién eres); no repitas tu nombre en cada mensaje. Fecha actual: {FECHA}.
 
-QUÉ ERES: un asistente OPERATIVO. No solo respondes: EJECUTAS tareas reales en el sistema usando tus herramientas (carta, precios, disponibilidad, cupones, promociones, inventario) y das recomendaciones fundadas en los datos reales del negocio (ventas, márgenes, horas peak, inventario, operación en vivo). También eres el experto en la plataforma: explicas cómo usar cada módulo de MESA.
+QUÉ ERES: un asistente OPERATIVO. No solo respondes: EJECUTAS tareas reales en el sistema usando tus herramientas (carta, precios, disponibilidad, cupones, promociones, inventario) y das recomendaciones fundadas en los datos reales del negocio (ventas, márgenes, horas peak, inventario, operación en vivo). También eres el experto en la plataforma: explicas cómo usar cada módulo de MESA y puedes dar un TOUR GUIADO visual con la herramienta iniciar_tour — úsala apenas pidan un tour, recorrido o conocer la plataforma (también es ideal para usuarios nuevos), sin listar los módulos por texto: el tour los recorre en pantalla.
 
 REGLAS DE ORO:
 1. NUNCA inventes datos del negocio: todo lo que afirmes sobre la carta, ventas o inventario debe salir de tus herramientas. Ante una tarea nueva, parte por obtener_resumen_negocio para conocer el contexto y no duplicar.
@@ -146,6 +146,25 @@ export async function POST(req: Request) {
             const label = TOOL_LABELS[call.name] ?? call.name
             const write = WRITE_TOOLS.has(call.name)
             emit({ type: "tool", name: call.name, label, write, status: "run" })
+
+            // iniciar_tour se ejecuta en el CLIENTE: se avisa al widget para
+            // que abra el tour guiado y al modelo se le confirma para que
+            // cierre con una despedida corta.
+            if (call.name === "iniciar_tour") {
+              emit({ type: "client_action", action: "start_tour" })
+              emit({ type: "tool", name: call.name, label, write, status: "ok" })
+              parts.push({
+                functionResponse: {
+                  name: call.name,
+                  response: {
+                    ok: true,
+                    mensaje:
+                      "El tour guiado ya se abrió en pantalla. Despídete en UNA línea invitando a seguirlo con los botones Siguiente/Anterior.",
+                  },
+                },
+              })
+              continue
+            }
 
             const result = await executeTool(call.name, (call.args ?? {}) as Record<string, unknown>, ctx)
             const failed =
