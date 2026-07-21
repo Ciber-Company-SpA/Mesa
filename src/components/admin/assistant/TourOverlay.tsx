@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
-import { TOUR_STEPS } from "@/lib/assistant/tour-steps"
+import { buildTourSteps } from "@/lib/assistant/tour-steps"
+import { useRestaurant } from "@/hooks/useRestaurant"
+import { useMyPlan } from "@/hooks/useMyPlan"
 import { speakText, stopSpeaking } from "@/lib/assistant/voice"
 
 /**
@@ -71,13 +73,25 @@ export function TourOverlay({
   const [idx, setIdx] = useState(0)
   const [talking, setTalking] = useState(false)
 
-  // Saltar los módulos que el operador apagó para este restaurante.
+  // Mismo contexto que usa el sidebar para decidir qué ítems mostrar: los
+  // pasos se derivan del orden del sidebar (arriba → abajo) cruzado con los
+  // módulos visibles + la config del restaurante + el plan.
+  const { restaurant } = useRestaurant()
+  const { plan } = useMyPlan()
+
   const steps = useMemo(
-    () => TOUR_STEPS.filter((s) => s.moduleKey === null || isModuleVisible("admin", s.moduleKey)),
-    [isModuleVisible]
+    () =>
+      buildTourSteps({
+        isModuleVisible: (key) => isModuleVisible("admin", key),
+        restaurant,
+        plan,
+      }),
+    [isModuleVisible, restaurant, plan]
   )
 
-  const step = steps[idx]
+  // Clamp por si los pasos se recalculan a mitad del tour (visibilidad/plan
+  // cargando): nunca quedar apuntando fuera del arreglo.
+  const step = steps[Math.min(idx, steps.length - 1)]
 
   // Navegar a la ruta del paso actual.
   useEffect(() => {

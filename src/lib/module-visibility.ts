@@ -1,7 +1,11 @@
 /**
  * Mapa ruta → clave de módulo del registro platform_modules (portal
- * Plataforma). Lo usan el sidebar del admin (ocultar navegación) y
- * ModuleGate (bloqueo duro por URL directa).
+ * Plataforma). Lo usan el sidebar del admin (ocultar navegación),
+ * ModuleGate (bloqueo duro por URL directa) y el TOUR de Manuel.
+ *
+ * OJO: el ORDEN DE INSERCIÓN de este objeto ES el orden del sidebar
+ * (arriba → abajo) y el orden de los pasos del tour (buildTourSteps).
+ * Al agregar un módulo, insertarlo en su posición visual, no al final.
  */
 
 export const ADMIN_MODULE_BY_ROUTE: Record<string, string> = {
