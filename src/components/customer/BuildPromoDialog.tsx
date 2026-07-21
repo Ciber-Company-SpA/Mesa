@@ -11,10 +11,27 @@ function formatPrice(price: number) {
 
 type Sel = { productId: number; variantId: number | null }
 
+/** Precio de un producto según la variante elegida (o la base si no tiene). */
+function priceOf(product: Product, variantId: number | null): number {
+  if (variantId != null) {
+    const v = product.product_variants?.find((x) => x.id === variantId)
+    if (v) return v.variant_price
+  }
+  return product.product_price
+}
+
+/** Precio "desde" de un producto en la lista (el menor entre sus variantes). */
+function fromPriceOf(product: Product): number {
+  const vs = product.product_variants ?? []
+  if (vs.length > 0) return Math.min(...vs.map((v) => v.variant_price))
+  return product.product_price
+}
+
 /**
  * Configurador de una promo "arma tu promo" (build): por cada grupo el comensal
- * elige entre min..max productos de una categoría. Precio fijo del combo. Al
- * confirmar arma las selecciones y las agrega al carrito.
+ * elige entre min..max productos de una categoría. El total se calcula en vivo
+ * como la suma de lo elegido menos el % de descuento de la promo (la base
+ * recalcula y valida ese precio al agregar y al pedir).
  */
 export function BuildPromoDialog({
   promo,
@@ -32,6 +49,8 @@ export function BuildPromoDialog({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
+  const pct = promo.discount_pct ?? 0
+
   // Opciones disponibles por grupo: productos disponibles de su categoría.
   const optionsByGroup = useMemo(() => {
     const m = new Map<number, Product[]>()
@@ -43,6 +62,34 @@ export function BuildPromoDialog({
     }
     return m
   }, [promo.groups, products])
+
+  const productById = useMemo(() => {
+    const m = new Map<number, Product>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
+
+  // Precio en vivo: suma de lo elegido − % de descuento.
+  const pricing = useMemo(() => {
+    let subtotal = 0
+    for (const g of promo.groups) {
+      for (const s of byGroup[g.id] ?? []) {
+        const p = productById.get(s.productId)
+        if (p) subtotal += priceOf(p, s.variantId)
+      }
+    }
+    const discount = Math.round((subtotal * pct) / 100)
+    return { subtotal, discount, total: Math.max(0, subtotal - discount) }
+  }, [byGroup, promo.groups, productById, pct])
+
+  const complete = useMemo(
+    () =>
+      promo.groups.every((g) => {
+        const n = (byGroup[g.id] ?? []).length
+        return n >= g.min_select && n <= g.max_select
+      }),
+    [byGroup, promo.groups]
+  )
 
   function isSelected(groupId: number, productId: number) {
     return (byGroup[groupId] ?? []).some((s) => s.productId === productId)
@@ -77,7 +124,6 @@ export function BuildPromoDialog({
 
   async function handleConfirm() {
     setError("")
-    // Validación local (la RPC revalida): cada grupo cumple su min/max.
     for (const g of promo.groups) {
       const count = (byGroup[g.id] ?? []).length
       if (count < g.min_select || count > g.max_select) {
@@ -121,7 +167,14 @@ export function BuildPromoDialog({
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-[#1f1f23] p-4">
           <div className="min-w-0">
-            <h2 className="truncate text-[17px] font-black text-[#fafafa]">{promo.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-[17px] font-black text-[#fafafa]">{promo.name}</h2>
+              {pct > 0 && (
+                <span className="shrink-0 rounded-full bg-[#fb923c] px-2 py-0.5 text-[11px] font-black text-[#1a1a1a]">
+                  {pct}% OFF
+                </span>
+              )}
+            </div>
             {promo.description && (
               <p className="mt-0.5 line-clamp-2 text-[12px] text-[#a1a1aa]">{promo.description}</p>
             )}
@@ -172,6 +225,9 @@ export function BuildPromoDialog({
                       const selected = isSelected(g.id, p.id)
                       const sel = (byGroup[g.id] ?? []).find((s) => s.productId === p.id)
                       const hasVariants = (p.product_variants?.length ?? 0) > 0
+                      const shownPrice = selected
+                        ? priceOf(p, sel?.variantId ?? null)
+                        : fromPriceOf(p)
                       return (
                         <div
                           key={p.id}
@@ -198,9 +254,12 @@ export function BuildPromoDialog({
                             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#fafafa]">
                               {p.product_name}
                             </span>
+                            <span className="shrink-0 text-[13px] font-semibold text-[#a1a1aa]">
+                              {!selected && hasVariants ? "desde " : ""}
+                              {formatPrice(shownPrice)}
+                            </span>
                           </button>
 
-                          {/* Variante (si aplica y está seleccionado) */}
                           {selected && hasVariants && (
                             <select
                               value={sel?.variantId ?? p.product_variants![0].id}
@@ -209,7 +268,7 @@ export function BuildPromoDialog({
                             >
                               {p.product_variants!.map((v) => (
                                 <option key={v.id} value={v.id}>
-                                  {v.variant_name}
+                                  {v.variant_name} · {formatPrice(v.variant_price)}
                                 </option>
                               ))}
                             </select>
@@ -224,13 +283,34 @@ export function BuildPromoDialog({
           })}
         </div>
 
-        {/* Footer: cantidad + agregar */}
+        {/* Footer: desglose + cantidad + agregar */}
         <div className="border-t border-[#1f1f23] p-4">
           {error && (
             <p className="mb-2.5 rounded-lg bg-red-500/15 px-3 py-2 text-[12px] font-semibold text-red-300">
               {error}
             </p>
           )}
+
+          {/* Desglose en vivo */}
+          <div className="mb-3 space-y-1">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-[#a1a1aa]">Subtotal</span>
+              <span className="text-[#d4d4d8]">{formatPrice(pricing.subtotal * quantity)}</span>
+            </div>
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-[#a1a1aa]">Descuento {pct}%</span>
+              <span className="font-semibold text-emerald-400">
+                −{formatPrice(pricing.discount * quantity)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-[#1f1f23] pt-1.5 text-[15px]">
+              <span className="font-bold text-[#fafafa]">Total</span>
+              <span className="font-black text-[#fb923c]">
+                {formatPrice(pricing.total * quantity)}
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5 rounded-full bg-[#18181b] px-2 py-1.5">
               <button
@@ -255,9 +335,15 @@ export function BuildPromoDialog({
               type="button"
               onClick={handleConfirm}
               disabled={submitting}
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#fb923c] text-[14px] font-black text-[#1a1a1a] transition active:scale-[0.98] disabled:opacity-60"
+              className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-black transition active:scale-[0.98] disabled:opacity-60 ${
+                complete ? "bg-[#fb923c] text-[#1a1a1a]" : "bg-[#27272a] text-[#a1a1aa]"
+              }`}
             >
-              {submitting ? "Agregando…" : `Agregar combo · ${formatPrice(promo.promo_price * quantity)}`}
+              {submitting
+                ? "Agregando…"
+                : complete
+                  ? `Agregar combo · ${formatPrice(pricing.total * quantity)}`
+                  : "Elegí las opciones"}
             </button>
           </div>
         </div>

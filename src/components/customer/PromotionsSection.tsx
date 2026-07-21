@@ -33,7 +33,11 @@ function PromoCard({
   const [added, setAdded] = useState(false)
   const [building, setBuilding] = useState(false)
   const isBuild = promo.kind === "build"
-  const pct = isBuild ? 0 : discountPct(promo.original_total, promo.promo_price)
+  // En build el % lo fija el local y se aplica sobre lo que elija el comensal;
+  // en fixed se deriva del precio de carta vs el precio de promo.
+  const pct = isBuild
+    ? (promo.discount_pct ?? 0)
+    : discountPct(promo.original_total, promo.promo_price)
 
   async function handleAddFixed() {
     try {
@@ -61,16 +65,15 @@ function PromoCard({
           ) : (
             <div className="flex h-full w-full items-center justify-center text-4xl">{isBuild ? "🍔" : "🏷️"}</div>
           )}
-          {isBuild ? (
-            <span className="absolute left-2 top-2 rounded-full bg-[#fb923c] px-2 py-0.5 text-[11px] font-black text-[#1a1a1a]">
+          {pct > 0 && (
+            <span className="absolute top-2 left-2 rounded-full bg-[#fb923c] px-2 py-0.5 text-[11px] font-black text-[#1a1a1a]">
+              {pct}% OFF
+            </span>
+          )}
+          {isBuild && (
+            <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-[#fafafa] backdrop-blur">
               Armá el tuyo
             </span>
-          ) : (
-            pct > 0 && (
-              <span className="absolute left-2 top-2 rounded-full bg-[#fb923c] px-2 py-0.5 text-[11px] font-black text-[#1a1a1a]">
-                {pct}% OFF
-              </span>
-            )
           )}
         </div>
 
@@ -81,12 +84,31 @@ function PromoCard({
           </p>
 
           <div className="mt-1 flex items-end gap-2">
-            {pct > 0 && (
-              <span className="text-[12px] text-[#71717a] line-through">
-                {formatPrice(promo.original_total)}
-              </span>
+            {isBuild ? (
+              promo.min_price != null && promo.min_price > 0 ? (
+                <>
+                  <span className="text-[12px] text-[#71717a]">desde</span>
+                  <span className="text-[18px] font-black text-[#fb923c]">
+                    {formatPrice(promo.min_price)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[15px] font-black text-[#fb923c]">
+                  {pct}% en tu combo
+                </span>
+              )
+            ) : (
+              <>
+                {pct > 0 && (
+                  <span className="text-[12px] text-[#71717a] line-through">
+                    {formatPrice(promo.original_total)}
+                  </span>
+                )}
+                <span className="text-[18px] font-black text-[#fb923c]">
+                  {formatPrice(promo.promo_price)}
+                </span>
+              </>
             )}
-            <span className="text-[18px] font-black text-[#fb923c]">{formatPrice(promo.promo_price)}</span>
           </div>
 
           <button

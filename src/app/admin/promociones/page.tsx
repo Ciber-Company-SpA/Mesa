@@ -154,7 +154,9 @@ export default function PromocionesPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {promos.map((promo) => {
             const isBuild = promo.kind === "build"
-            const pct = isBuild ? 0 : promoDiscountPct(promo.original_total, promo.promo_price)
+            const pct = isBuild
+              ? (promo.discount_pct ?? 0)
+              : promoDiscountPct(promo.original_total, promo.promo_price)
             const someUnavailable = isBuild
               ? promo.groups.some((g) => g.available_count < g.min_select)
               : promo.items.some((it) => !it.available)
@@ -221,12 +223,23 @@ export default function PromocionesPage() {
 
                 <div className="mt-3 flex items-end justify-between border-t border-stone-100 pt-3">
                   <div>
-                    {pct > 0 && (
-                      <span className="text-xs text-stone-400 line-through">
-                        {formatPrice(promo.original_total)}
-                      </span>
+                    {isBuild ? (
+                      <>
+                        <span className="text-xs text-stone-400">Sobre lo que elija</span>
+                        <p className="text-lg font-bold text-orange-600">{pct}% OFF</p>
+                      </>
+                    ) : (
+                      <>
+                        {pct > 0 && (
+                          <span className="text-xs text-stone-400 line-through">
+                            {formatPrice(promo.original_total)}
+                          </span>
+                        )}
+                        <p className="text-lg font-bold text-orange-600">
+                          {formatPrice(promo.promo_price)}
+                        </p>
+                      </>
                     )}
-                    <p className="text-lg font-bold text-orange-600">{formatPrice(promo.promo_price)}</p>
                   </div>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${

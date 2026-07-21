@@ -32,7 +32,10 @@ export type Promotion = {
   kind: PromoKind
   name: string
   description: string | null
+  /** Solo para kind='fixed'. En 'build' queda en 0 (el precio se calcula). */
   promo_price: number
+  /** Solo para kind='build': % de descuento sobre lo que elija el comensal. */
+  discount_pct: number | null
   image_url: string | null
   active: boolean
   sort_order: number
@@ -60,7 +63,10 @@ export type PromotionInput = {
   kind: PromoKind
   name: string
   description: string | null
+  /** Precio del combo fijo. En 'build' se ignora (mandar 0). */
   promo_price: number
+  /** % de descuento del combo build (1-100). En 'fixed' va null. */
+  discount_pct: number | null
   image_url: string | null
   active: boolean
   items: PromotionItemInput[]
@@ -101,6 +107,7 @@ export async function savePromotion(input: PromotionInput): Promise<number> {
     p_items: input.items,
     p_kind: input.kind,
     p_groups: input.groups,
+    p_discount_pct: input.discount_pct,
   })
   if (error) throw error
   return data as number

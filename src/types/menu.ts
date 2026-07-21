@@ -18,7 +18,12 @@ export interface MenuPromotion {
   kind: "fixed" | "build"
   name: string
   description: string | null
+  /** Precio del combo fijo. En 'build' es 0 (el total depende de lo elegido). */
   promo_price: number
+  /** Solo 'build': % de descuento sobre la suma de lo que elija el comensal. */
+  discount_pct: number | null
+  /** Solo 'build': total más barato posible ("desde $X"), ya con el % aplicado. */
+  min_price: number | null
   image_url: string | null
   original_total: number
   items: { product_name: string; variant_name: string | null; quantity: number }[]

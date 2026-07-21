@@ -64,7 +64,10 @@ export function PromotionDialog({
   const [name, setName] = useState(initial?.name ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
   const [promoPrice, setPromoPrice] = useState<string>(
-    initial ? String(initial.promo_price) : ""
+    initial && initial.kind === "fixed" ? String(initial.promo_price) : ""
+  )
+  const [discountPct, setDiscountPct] = useState<string>(
+    initial?.discount_pct != null ? String(initial.discount_pct) : ""
   )
   const [active, setActive] = useState(initial?.active ?? true)
   const [items, setItems] = useState<DraftItem[]>(
@@ -97,7 +100,8 @@ export function PromotionDialog({
     [items]
   )
   const promoPriceNum = Number(promoPrice) || 0
-  const discountPct = promoDiscountPct(originalTotal, promoPriceNum)
+  const discountPctNum = Number(discountPct) || 0
+  const fixedDiscountPct = promoDiscountPct(originalTotal, promoPriceNum)
 
   // Cuántos productos tiene cada categoría (hint para armar los grupos).
   const countByCategory = useMemo(() => {
@@ -113,6 +117,29 @@ export function PromotionDialog({
     if (!q) return products.slice(0, 50)
     return products.filter((p) => p.product_name.toLowerCase().includes(q)).slice(0, 50)
   }, [products, search])
+
+  // Ejemplo para el admin: cómo queda el combo eligiendo lo más económico de
+  // cada grupo (mismo criterio que el "desde $X" que ve el comensal).
+  const buildExample = useMemo(() => {
+    if (kind !== "build" || groups.length === 0) return null
+    let subtotal = 0
+    for (const g of groups) {
+      if (!g.category_id) continue
+      const opts = products.filter((p) => p.category_id === g.category_id)
+      if (opts.length === 0) continue
+      const cheapest = Math.min(
+        ...opts.map((p) =>
+          p.variants.length > 0
+            ? Math.min(...p.variants.map((v) => v.variant_price))
+            : p.product_price
+        )
+      )
+      subtotal += cheapest * g.min_select
+    }
+    if (subtotal <= 0) return null
+    const discount = Math.round((subtotal * discountPctNum) / 100)
+    return { subtotal, discount, total: Math.max(0, subtotal - discount) }
+  }, [kind, groups, products, discountPctNum])
 
   function addItem(product: SelectableProduct, variantId: number | null) {
     const variant = variantId ? product.variants.find((v) => v.id === variantId) ?? null : null
@@ -167,14 +194,17 @@ export function PromotionDialog({
   async function handleSave() {
     setError("")
     if (!name.trim()) return setError("Ponele un nombre a la promoción.")
-    if (promoPriceNum <= 0) return setError("Ingresá el precio de la promoción.")
 
     if (kind === "fixed") {
+      if (promoPriceNum <= 0) return setError("Ingresá el precio de la promoción.")
       if (items.length === 0) return setError("Agregá al menos un producto.")
       if (promoPriceNum > originalTotal) {
         return setError("El precio de promoción no puede superar el precio original.")
       }
     } else {
+      if (discountPctNum < 1 || discountPctNum > 100) {
+        return setError("Ingresá un descuento entre 1% y 100%.")
+      }
       if (groups.length === 0) return setError("Agregá al menos un grupo de elección.")
       for (const g of groups) {
         if (!g.category_id) return setError("Cada grupo necesita una categoría.")
@@ -191,7 +221,8 @@ export function PromotionDialog({
         kind,
         name: name.trim(),
         description: description.trim() || null,
-        promo_price: promoPriceNum,
+        promo_price: kind === "fixed" ? promoPriceNum : 0,
+        discount_pct: kind === "build" ? discountPctNum : null,
         image_url: initial?.image_url ?? null,
         active,
         items:
@@ -479,21 +510,39 @@ export function PromotionDialog({
           </>
         )}
 
-        {/* Precio + descuento */}
+        {/* Precio (fijo) o % de descuento (build) */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>
-              {kind === "build" ? "Precio fijo del combo" : "Precio de la promoción"}
+              {kind === "build" ? "Descuento sobre lo que elija" : "Precio de la promoción"}
             </label>
-            <input
-              type="number"
-              min={0}
-              className={inputCls}
-              value={promoPrice}
-              onChange={(e) => setPromoPrice(e.target.value)}
-              placeholder="0"
-            />
+            {kind === "build" ? (
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  className={inputCls + " pr-8"}
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(e.target.value)}
+                  placeholder="Ej. 20"
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-bold text-stone-400">
+                  %
+                </span>
+              </div>
+            ) : (
+              <input
+                type="number"
+                min={0}
+                className={inputCls}
+                value={promoPrice}
+                onChange={(e) => setPromoPrice(e.target.value)}
+                placeholder="0"
+              />
+            )}
           </div>
+
           {kind === "fixed" ? (
             <div className="rounded-xl border border-stone-200 bg-white p-3">
               <div className="flex items-center justify-between text-sm">
@@ -504,10 +553,12 @@ export function PromotionDialog({
                 <span className="text-stone-500">Descuento</span>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                    discountPct > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/10" : "text-stone-400"
+                    fixedDiscountPct > 0
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/10"
+                      : "text-stone-400"
                   }`}
                 >
-                  {discountPct}% OFF
+                  {fixedDiscountPct}% OFF
                 </span>
               </div>
               <div className="mt-1 flex items-center justify-between text-sm">
@@ -516,8 +567,34 @@ export function PromotionDialog({
               </div>
             </div>
           ) : (
-            <div className="flex items-center rounded-xl border border-stone-200 bg-white p-3 text-xs text-stone-500">
-              El comensal arma el combo y siempre paga {formatPrice(promoPriceNum)}, elija lo que elija.
+            <div className="rounded-xl border border-stone-200 bg-white p-3">
+              <p className="text-xs text-stone-500">
+                El comensal paga la suma de lo que elija, menos{" "}
+                <span className="font-bold text-orange-600">{discountPctNum || 0}%</span>.
+              </p>
+              {buildExample ? (
+                <div className="mt-2 border-t border-stone-100 pt-2">
+                  <p className="mb-1 text-[10px] font-bold tracking-wide text-stone-400 uppercase">
+                    Ejemplo (opción más económica)
+                  </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-stone-500">Suma de productos</span>
+                    <span className="text-stone-600">{formatPrice(buildExample.subtotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-stone-500">Descuento {discountPctNum || 0}%</span>
+                    <span className="text-emerald-600">−{formatPrice(buildExample.discount)}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between text-sm">
+                    <span className="font-semibold text-stone-700">Queda en</span>
+                    <span className="font-bold text-orange-600">{formatPrice(buildExample.total)}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-[11px] text-stone-400">
+                  Agregá grupos con categorías que tengan productos para ver un ejemplo.
+                </p>
+              )}
             </div>
           )}
         </div>
