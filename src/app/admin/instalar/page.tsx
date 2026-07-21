@@ -13,8 +13,8 @@ export default function InstallPage() {
           Instalar app
         </h2>
         <p className="mt-1 text-sm text-stone-500">
-          Instalá MESA como una app en tus dispositivos. Siempre se mantiene al
-          día con la última versión, sin que tengas que actualizar nada.
+          Descargá los instaladores de MESA para tus equipos. Las apps se
+          mantienen al día solas y te avisan cuando hay una versión nueva.
         </p>
       </section>
       <InstallAppSection />
