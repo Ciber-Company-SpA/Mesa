@@ -178,15 +178,15 @@ export function AssistantWidget() {
 
   return (
     <>
-      {/* Botón flotante: la cara de Manuel */}
+      {/* Botón flotante: la cara de Manuel (flota y parpadea) */}
       {!open && (
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Abrir a Manuel, tu asistente"
-          className="fixed right-5 bottom-5 z-40 rounded-full shadow-xl shadow-orange-500/30 ring-2 ring-white transition hover:-translate-y-0.5 hover:shadow-orange-500/50"
+          className="manuel-float fixed right-5 bottom-5 z-40 rounded-full shadow-xl shadow-orange-500/30 ring-2 ring-white transition hover:shadow-orange-500/50"
         >
-          <ManuelAvatar size={56} className="block" />
+          <ManuelAvatar size={56} animated className="block" />
         </button>
       )}
 
@@ -202,7 +202,7 @@ export function AssistantWidget() {
           <aside className="relative z-10 flex h-full w-full flex-col border-l border-stone-200 bg-white shadow-2xl sm:w-[420px]">
             {/* Header */}
             <div className="flex items-center gap-3 border-b border-stone-200 px-4 py-3">
-              <ManuelAvatar size={38} className="shrink-0" />
+              <ManuelAvatar size={38} animated className="manuel-hello shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-stone-900">Manuel</p>
                 <p className="text-[11px] text-stone-500">
@@ -238,7 +238,7 @@ export function AssistantWidget() {
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-                  <ManuelAvatar size={72} />
+                  <ManuelAvatar size={72} animated className="manuel-hello" />
                   <div>
                     <p className="text-sm font-bold text-stone-800">¡Hola! Soy Manuel 👋</p>
                     <p className="mx-auto mt-1 max-w-[260px] text-xs text-stone-500">

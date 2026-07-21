@@ -226,3 +226,36 @@ html, body {
     padding: 0;
   }
 }
+
+/* ── Manuel, el asistente: animaciones del avatar ──────────────────────────
+   Parpadeo de ojos (dentro del SVG), flotación del botón y saludo sutil del
+   header. Todo respeta prefers-reduced-motion. */
+@keyframes manuel-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  93%, 95% { transform: scaleY(0.08); }
+  98% { transform: scaleY(1); }
+}
+@keyframes manuel-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes manuel-hello {
+  0%, 86%, 100% { transform: rotate(0deg); }
+  90% { transform: rotate(-5deg); }
+  94% { transform: rotate(5deg); }
+  97% { transform: rotate(-2deg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .manuel-eyes {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: manuel-blink 4.6s ease-in-out infinite;
+  }
+  .manuel-float {
+    animation: manuel-float 3.4s ease-in-out infinite;
+  }
+  .manuel-hello {
+    transform-origin: 50% 80%;
+    animation: manuel-hello 6s ease-in-out infinite;
+  }
+}
