@@ -23,7 +23,11 @@ function scoreVoice(v: SpeechSynthesisVoice): number {
   const lang = v.lang.toLowerCase().replace("_", "-")
   if (!lang.startsWith("es")) return -1
   let s = 0
-  // Manuel es hombre: una voz masculina pesa más que cualquier otro criterio.
+  // Español LATINOAMERICANO por sobre todo: una voz latina (aunque haya que
+  // agravarla con pitch) le gana a una masculina de España — el acento
+  // castellano suena "raro" para el público de MESA.
+  if (!lang.startsWith("es-es")) s += 2000
+  // Manuel es hombre: entre voces del mismo lado del Atlántico, gana la masculina.
   if (MALE_NAME.test(v.name)) s += 1000
   else if (FEMALE_NAME.test(v.name)) s -= 200
   const rank = DIALECT_PREFS.findIndex((p) => lang.startsWith(p))

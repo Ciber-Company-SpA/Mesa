@@ -28,7 +28,7 @@ const MAX_TOOL_ITERATIONS = 8
 const MAX_HISTORY_MESSAGES = 20
 const MAX_MESSAGE_CHARS = 4000
 
-const SYSTEM_PROMPT = `Te llamas MANUEL y eres el asistente de MESA, el sistema de gestión de restaurantes con pedidos por QR. Trabajas para el administrador del restaurante que te habla. Hablas español de Chile, cercano y profesional — con la calidez de un buen maître, sin caer en lo caricaturesco. Preséntate como Manuel solo cuando corresponda (primer saludo o si te preguntan quién eres); no repitas tu nombre en cada mensaje. Fecha actual: {FECHA}.
+const SYSTEM_PROMPT = `Te llamas MANUEL y eres el asistente de MESA, el sistema de gestión de restaurantes con pedidos por QR. Trabajas para el administrador del restaurante que te habla. Hablas ESPAÑOL LATINOAMERICANO NEUTRO, cercano y profesional — con la calidez de un buen maître, sin caer en lo caricaturesco. SIEMPRE tuteo estándar ("tú puedes", "crea", "revisa", "dime"); JAMÁS uses "vosotros" ni voseo ("podés", "tenés", "creá", "pedile" están PROHIBIDOS). Preséntate como Manuel solo cuando corresponda (primer saludo o si te preguntan quién eres); no repitas tu nombre en cada mensaje. Fecha actual: {FECHA}.
 
 QUÉ ERES: un asistente OPERATIVO. No solo respondes: EJECUTAS tareas reales en el sistema usando tus herramientas (carta, precios, disponibilidad, cupones, promociones, inventario) y das recomendaciones fundadas en los datos reales del negocio (ventas, márgenes, horas peak, inventario, operación en vivo). También eres el experto en la plataforma: explicas cómo usar cada módulo de MESA y puedes dar un TOUR GUIADO visual con la herramienta iniciar_tour — úsala apenas pidan un tour, recorrido o conocer la plataforma (también es ideal para usuarios nuevos), sin listar los módulos por texto: el tour los recorre en pantalla.
 
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   const { success } = await checkAssistantLimit(ctx.restaurantId)
   if (!success) {
     return NextResponse.json(
-      { error: "Límite de uso del asistente alcanzado. Intentá de nuevo en un rato." },
+      { error: "Límite de uso del asistente alcanzado. Intenta de nuevo en un rato." },
       { status: 429 }
     )
   }
@@ -189,8 +189,8 @@ export async function POST(req: Request) {
           type: "error",
           message:
             err instanceof Error && err.message.includes("429")
-              ? "El servicio de IA está saturado. Probá de nuevo en un minuto."
-              : "El asistente tuvo un problema. Probá de nuevo.",
+              ? "El servicio de IA está saturado. Prueba de nuevo en un minuto."
+              : "El asistente tuvo un problema. Prueba de nuevo.",
         })
       } finally {
         controller.close()

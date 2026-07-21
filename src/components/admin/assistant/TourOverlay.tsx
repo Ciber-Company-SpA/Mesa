@@ -7,6 +7,48 @@ import { TOUR_STEPS } from "@/lib/assistant/tour-steps"
 import { speakText, stopSpeaking } from "@/lib/assistant/voice"
 
 /**
+ * Efecto máquina de escribir: el texto del paso aparece carácter a carácter
+ * con un cursor de terminal parpadeando, mientras Manuel lo narra. Se monta
+ * con key por paso (el estado arranca de cero en cada uno, sin setState en
+ * cuerpo de efecto). Clic sobre el texto = mostrarlo completo al instante.
+ * Con prefers-reduced-motion el texto aparece completo de una.
+ */
+function TypeText({ text }: { text: string }) {
+  const [shown, setShown] = useState(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return text.length
+    }
+    return 0
+  })
+
+  useEffect(() => {
+    if (shown >= text.length) return
+    const id = setInterval(() => {
+      setShown((prev) => {
+        if (prev >= text.length) {
+          clearInterval(id)
+          return prev
+        }
+        return prev + 1
+      })
+    }, 16)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- arranca una vez por montaje (key por paso)
+  }, [])
+
+  const done = shown >= text.length
+  return (
+    <span onClick={() => setShown(text.length)} className={done ? undefined : "cursor-pointer"}>
+      {text.slice(0, shown)}
+      {!done && <span className="manuel-caret" aria-hidden />}
+    </span>
+  )
+}
+
+/**
  * TOUR GUIADO de Manuel: recorre los módulos del panel navegando a cada ruta
  * y mostrando una tarjeta con la explicación. Motor determinístico (los pasos
  * viven en tour-steps.ts), lanzado desde el chat vía la herramienta
@@ -89,7 +131,10 @@ export function TourOverlay({
               <h3 className="mt-0.5 text-[16.5px] font-extrabold tracking-tight text-stone-900">
                 {step.emoji} {step.title}
               </h3>
-              <p className="mt-1 text-[13px] leading-5 text-stone-600">{step.text}</p>
+              {/* min-h evita que la tarjeta "salte" mientras el texto se escribe */}
+              <p className="mt-1 min-h-[60px] text-[13px] leading-5 text-stone-600">
+                <TypeText key={`${idx}-${step.title}`} text={step.text} />
+              </p>
             </div>
           </div>
 

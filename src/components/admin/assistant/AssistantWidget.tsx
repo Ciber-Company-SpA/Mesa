@@ -27,7 +27,7 @@ const STORAGE_KEY = "mesa-assistant-chat"
 const VOICE_KEY = "mesa-manuel-voice"
 
 const SUGGESTIONS: { emoji: string; text: string }[] = [
-  { emoji: "🗂️", text: "Créame las categorías típicas para mi tipo de restaurante" },
+  { emoji: "🗂️", text: "Crea las categorías típicas para mi tipo de restaurante" },
   { emoji: "📈", text: "¿Qué me recomiendas para vender más?" },
   { emoji: "📦", text: "Revisa mi inventario y dime qué tengo que reponer" },
   { emoji: "🎟️", text: "Crea un cupón de 10% de descuento para los lunes" },
@@ -229,7 +229,7 @@ export function AssistantWidget() {
       } catch {
         patchLast((m) => ({
           ...m,
-          text: m.text || "Se cortó la conexión con el asistente. Probá de nuevo.",
+          text: m.text || "Se cortó la conexión con el asistente. Prueba de nuevo.",
         }))
       } finally {
         setBusy(false)
@@ -475,7 +475,7 @@ export function AssistantWidget() {
                     }
                   }}
                   rows={1}
-                  placeholder={busy ? "Manuel está trabajando…" : "Pedile algo a Manuel…"}
+                  placeholder={busy ? "Manuel está trabajando…" : "Pídele algo a Manuel…"}
                   disabled={busy}
                   className="max-h-28 min-h-[38px] flex-1 resize-none bg-transparent py-2 text-[13.5px] text-stone-900 outline-none placeholder:text-stone-400 disabled:opacity-60"
                 />
