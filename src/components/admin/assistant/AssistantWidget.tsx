@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
 import { MarkdownLite } from "@/components/admin/assistant/MarkdownLite"
+import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
 
 /**
  * Asistente IA del panel admin: botón flotante + panel de chat. Ejecuta tareas
@@ -177,15 +178,15 @@ export function AssistantWidget() {
 
   return (
     <>
-      {/* Botón flotante */}
+      {/* Botón flotante: la cara de Manuel */}
       {!open && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Abrir asistente"
-          className="fixed right-5 bottom-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-orange-500 text-2xl shadow-xl shadow-orange-500/30 transition hover:-translate-y-0.5 hover:bg-orange-600"
+          aria-label="Abrir a Manuel, tu asistente"
+          className="fixed right-5 bottom-5 z-40 rounded-full shadow-xl shadow-orange-500/30 ring-2 ring-white transition hover:-translate-y-0.5 hover:shadow-orange-500/50"
         >
-          ✨
+          <ManuelAvatar size={56} className="block" />
         </button>
       )}
 
@@ -201,13 +202,11 @@ export function AssistantWidget() {
           <aside className="relative z-10 flex h-full w-full flex-col border-l border-stone-200 bg-white shadow-2xl sm:w-[420px]">
             {/* Header */}
             <div className="flex items-center gap-3 border-b border-stone-200 px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-lg">
-                ✨
-              </span>
+              <ManuelAvatar size={38} className="shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-stone-900">Asistente MESA</p>
+                <p className="text-sm font-bold text-stone-900">Manuel</p>
                 <p className="text-[11px] text-stone-500">
-                  Ejecuta tareas y recomienda con tus datos reales
+                  Tu asistente de MESA · ejecuta tareas y recomienda
                 </p>
               </div>
               {messages.length > 0 && (
@@ -239,12 +238,12 @@ export function AssistantWidget() {
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-                  <span className="text-4xl">✨</span>
+                  <ManuelAvatar size={72} />
                   <div>
-                    <p className="text-sm font-bold text-stone-800">¿En qué te ayudo?</p>
+                    <p className="text-sm font-bold text-stone-800">¡Hola! Soy Manuel 👋</p>
                     <p className="mx-auto mt-1 max-w-[260px] text-xs text-stone-500">
                       Pedime crear categorías, productos, cupones o promos — o consejos
-                      con tus ventas e inventario.
+                      con tus ventas e inventario. También te explico cómo usar MESA.
                     </p>
                   </div>
                   <div className="flex w-full flex-col gap-2">
@@ -262,12 +261,20 @@ export function AssistantWidget() {
                 </div>
               ) : (
                 messages.map((m, i) => (
-                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                  <div
+                    key={i}
+                    className={
+                      m.role === "user" ? "flex justify-end" : "flex items-end justify-start gap-2"
+                    }
+                  >
+                    {m.role === "assistant" && (
+                      <ManuelAvatar size={24} className="mb-0.5 shrink-0" />
+                    )}
                     <div
                       className={
                         m.role === "user"
                           ? "max-w-[85%] rounded-2xl rounded-br-md bg-orange-500 px-3.5 py-2.5 text-sm text-white"
-                          : "max-w-[92%] rounded-2xl rounded-bl-md bg-stone-100 px-3.5 py-2.5 text-sm text-stone-800"
+                          : "max-w-[88%] rounded-2xl rounded-bl-md bg-stone-100 px-3.5 py-2.5 text-sm text-stone-800"
                       }
                     >
                       {/* Log de acciones ejecutadas */}
@@ -335,7 +342,7 @@ export function AssistantWidget() {
                   }
                 }}
                 rows={1}
-                placeholder={busy ? "Trabajando…" : "Pedile algo al asistente…"}
+                placeholder={busy ? "Manuel está trabajando…" : "Pedile algo a Manuel…"}
                 disabled={busy}
                 className="max-h-28 min-h-[42px] flex-1 resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100 disabled:opacity-60"
               />
