@@ -249,13 +249,13 @@ html, body {
   .manuel-eyes {
     transform-box: fill-box;
     transform-origin: center;
-    animation: manuel-blink 4.6s ease-in-out infinite;
+    animation: manuel-blink 2s ease-in-out infinite;
   }
   .manuel-float {
-    animation: manuel-float 3.4s ease-in-out infinite;
+    animation: manuel-float 2s ease-in-out infinite;
   }
   .manuel-hello {
     transform-origin: 50% 80%;
-    animation: manuel-hello 6s ease-in-out infinite;
+    animation: manuel-hello 2s ease-in-out infinite;
   }
 }
