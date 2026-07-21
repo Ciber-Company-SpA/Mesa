@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRestaurantId } from "@/hooks/useRestaurantId"
+import { useAllCategories } from "@/hooks/useAllCategories"
 import { PromotionDialog } from "@/components/admin/PromotionDialog"
 import {
   listPromotions,
@@ -19,6 +20,7 @@ function formatPrice(n: number) {
 
 export default function PromocionesPage() {
   const { restaurantId } = useRestaurantId()
+  const { categories } = useAllCategories()
   const [promos, setPromos] = useState<Promotion[]>([])
   const [products, setProducts] = useState<SelectableProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -151,8 +153,11 @@ export default function PromocionesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {promos.map((promo) => {
-            const pct = promoDiscountPct(promo.original_total, promo.promo_price)
-            const someUnavailable = promo.items.some((it) => !it.available)
+            const isBuild = promo.kind === "build"
+            const pct = isBuild ? 0 : promoDiscountPct(promo.original_total, promo.promo_price)
+            const someUnavailable = isBuild
+              ? promo.groups.some((g) => g.available_count < g.min_select)
+              : promo.items.some((it) => !it.available)
             return (
               <article
                 key={promo.id}
@@ -162,7 +167,14 @@ export default function PromocionesPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="truncate text-base font-bold text-stone-900">{promo.name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="truncate text-base font-bold text-stone-900">{promo.name}</h3>
+                      {isBuild && (
+                        <span className="shrink-0 rounded-full bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-600/10">
+                          Arma tu promo
+                        </span>
+                      )}
+                    </div>
                     {promo.description && (
                       <p className="mt-0.5 line-clamp-2 text-xs text-stone-500">{promo.description}</p>
                     )}
@@ -175,20 +187,36 @@ export default function PromocionesPage() {
                 </div>
 
                 <ul className="mt-3 space-y-1">
-                  {promo.items.map((it, i) => (
-                    <li key={i} className="flex items-center gap-1.5 text-xs text-stone-600">
-                      <span className="text-stone-400">{it.quantity}×</span>
-                      <span className="truncate">
-                        {it.product_name}
-                        {it.variant_name ? ` · ${it.variant_name}` : ""}
-                      </span>
-                      {!it.available && (
-                        <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700">
-                          no disp.
-                        </span>
-                      )}
-                    </li>
-                  ))}
+                  {isBuild
+                    ? promo.groups.map((g) => (
+                        <li key={g.id} className="flex items-center gap-1.5 text-xs text-stone-600">
+                          <span className="text-stone-400">
+                            {g.min_select === g.max_select ? `${g.min_select}×` : `${g.min_select}-${g.max_select}×`}
+                          </span>
+                          <span className="truncate">{g.name}</span>
+                          <span className="text-stone-400">·</span>
+                          <span className="truncate text-stone-400">{g.category_name}</span>
+                          {g.available_count < g.min_select && (
+                            <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700">
+                              sin stock
+                            </span>
+                          )}
+                        </li>
+                      ))
+                    : promo.items.map((it, i) => (
+                        <li key={i} className="flex items-center gap-1.5 text-xs text-stone-600">
+                          <span className="text-stone-400">{it.quantity}×</span>
+                          <span className="truncate">
+                            {it.product_name}
+                            {it.variant_name ? ` · ${it.variant_name}` : ""}
+                          </span>
+                          {!it.available && (
+                            <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700">
+                              no disp.
+                            </span>
+                          )}
+                        </li>
+                      ))}
                 </ul>
 
                 <div className="mt-3 flex items-end justify-between border-t border-stone-100 pt-3">
@@ -213,7 +241,9 @@ export default function PromocionesPage() {
 
                 {someUnavailable && (
                   <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
-                    Tiene productos no disponibles; no se mostrará hasta reponerlos.
+                    {isBuild
+                      ? "Un grupo no tiene suficientes productos disponibles; no se mostrará hasta reponerlos."
+                      : "Tiene productos no disponibles; no se mostrará hasta reponerlos."}
                   </p>
                 )}
 
@@ -254,6 +284,7 @@ export default function PromocionesPage() {
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
           products={products}
+          categories={categories}
           initial={editing}
           onSaved={refresh}
         />

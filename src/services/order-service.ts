@@ -328,11 +328,19 @@ export async function createOrder(input: CreateOrderInput): Promise<Result<Creat
   const { qrToken, items, dinerToken, couponCode } = validation.data
 
   // Construir el array jsonb que espera la RPC (snake_case). Una línea es un
-  // producto (product_id) o una promoción (promotion_id).
+  // producto (product_id) o una promoción (promotion_id). Las promos "build"
+  // llevan además las elecciones del comensal (selections).
   const rpcItems = items.map((item) => ({
     product_id: item.productId ?? null,
     variant_id: item.variantId ?? null,
     promotion_id: item.promotionId ?? null,
+    selections: item.selections
+      ? item.selections.map((s) => ({
+          group_id: s.groupId,
+          product_id: s.productId,
+          variant_id: s.variantId ?? null,
+        }))
+      : null,
     quantity: item.productQuantity,
     notes: item.notes ?? null,
   }))

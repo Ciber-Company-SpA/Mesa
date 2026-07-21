@@ -3,12 +3,22 @@ import { z } from "zod"
 
 
 
+// Una elección del comensal en una promo "build" (arma tu promo).
+export const CreateOrderSelectionSchema = z.object({
+  groupId: z.number().int().positive(),
+  productId: z.number().int().positive(),
+  variantId: z.number().int().positive().nullable().optional(),
+})
+
 export const CreateOrderItemSchema = z
   .object({
     // Un ítem es un PRODUCTO (productId) o una PROMOCIÓN (promotionId), nunca ambos.
     productId: z.number().int().positive().nullable().optional(),
     variantId: z.number().int().positive().nullable().optional(),
     promotionId: z.number().int().positive().nullable().optional(),
+
+    // Solo en promos "build": las opciones elegidas por grupo. La RPC revalida.
+    selections: z.array(CreateOrderSelectionSchema).max(50).nullable().optional(),
 
     productQuantity: z
       .number()

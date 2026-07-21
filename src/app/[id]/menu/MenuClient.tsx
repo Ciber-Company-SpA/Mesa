@@ -714,7 +714,11 @@ export function MenuClient({ qrCode, menu }: MenuClientProps) {
 
         {/* ── Promociones (solo en la vista general, sin búsqueda) ── */}
         {!isSearching && effectiveCat === "all" && (
-          <PromotionsSection promotions={menu.promotions ?? []} onAdd={addPromo} />
+          <PromotionsSection
+            promotions={menu.promotions ?? []}
+            products={menu.products ?? []}
+            onAdd={addPromo}
+          />
         )}
 
         {/* ── Listado ── */}

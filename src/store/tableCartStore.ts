@@ -2,18 +2,27 @@ import { create } from "zustand"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 import { getGuestId } from "@/lib/guest-id"
-import type { CartItem } from "@/types/cart-item"
+import type { CartItem, CartPromoSelection } from "@/types/cart-item"
 import type { TableCartStore } from "@/types/cart-store"
 
 type ProductJoin = { product_name: string; product_image: string | null } | null
 type VariantJoin = { variant_name: string; variant_image: string | null } | null
-type PromotionJoin = { name: string; image_url: string | null } | null
+type PromotionJoin = {
+  name: string
+  image_url: string | null
+  kind?: string | null
+  selection_labels?: string[] | null
+} | null
+
+// Selección cruda tal como la guarda table_cart_items.promo_selections (snake).
+type RawSelection = { group_id: number; product_id: number; variant_id: number | null }
 
 type CartRow = {
   id: string
   product_id: number | null
   variant_id: number | null
   promotion_id: number | null
+  promo_selections: RawSelection[] | null
   quantity: number
   unit_price: number
   notes: string | null
@@ -28,6 +37,15 @@ function pickOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
+function mapSelections(raw: RawSelection[] | null): CartPromoSelection[] | null {
+  if (!raw || !Array.isArray(raw)) return null
+  return raw.map((s) => ({
+    groupId: s.group_id,
+    productId: s.product_id,
+    variantId: s.variant_id ?? null,
+  }))
+}
+
 function mapRowToItem(row: CartRow): CartItem {
   // Línea de promoción (combo): nombre e imagen vienen de la promo.
   if (row.promotion_id != null) {
@@ -37,6 +55,8 @@ function mapRowToItem(row: CartRow): CartItem {
       productId: null,
       variantId: null,
       promotionId: row.promotion_id,
+      selections: mapSelections(row.promo_selections),
+      selectionLabels: promo?.selection_labels ?? null,
       name: promo?.name ?? "Promoción",
       price: row.unit_price,
       quantity: row.quantity,
@@ -119,7 +139,7 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
     await get().fetchItems()
   },
 
-  addPromo: async (promotionId, quantity = 1) => {
+  addPromo: async (promotionId, quantity = 1, selections = null) => {
     const { qrCode } = get()
     if (!qrCode) return
 
@@ -128,11 +148,19 @@ export const useTableCartStore = create<TableCartStore>()((set, get) => ({
       p_promotion_id: promotionId,
       p_quantity: quantity,
       p_added_by: getGuestId(),
+      // Solo las promos "build" llevan elecciones (snake_case para la RPC).
+      p_selections: selections
+        ? selections.map((s) => ({
+            group_id: s.groupId,
+            product_id: s.productId,
+            variant_id: s.variantId ?? null,
+          }))
+        : null,
     })
 
     if (error) {
       logger.error("Error agregando promoción al carrito", error)
-      return
+      throw error
     }
 
     await get().fetchItems()

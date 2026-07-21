@@ -1,4 +1,4 @@
-import type { CartItem } from "@/types/cart-item"
+import type { CartItem, CartPromoSelection } from "@/types/cart-item"
 
 export type StoredOrder = {
   id: number
@@ -27,7 +27,12 @@ export interface TableCartStore {
   setTable: (tableId: number | null, restaurantId: number | null, qrCode: string | null) => void
   fetchItems: () => Promise<void>
   addItem: (input: AddCartItemInput) => Promise<void>
-  addPromo: (promotionId: number, quantity?: number) => Promise<void>
+  // selections solo para promos "build" (arma tu promo).
+  addPromo: (
+    promotionId: number,
+    quantity?: number,
+    selections?: CartPromoSelection[] | null
+  ) => Promise<void>
   updateQuantity: (rowId: string, quantity: number) => Promise<void>
   removeItem: (rowId: string) => Promise<void>
   clear: () => Promise<void>

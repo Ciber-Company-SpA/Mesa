@@ -89,6 +89,11 @@ function CartView({
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14.5px] font-semibold">{item.name}</p>
+                  {item.selectionLabels && item.selectionLabels.length > 0 && (
+                    <p className="line-clamp-2 text-[11px] leading-4 text-[#71717a]">
+                      {item.selectionLabels.join(" · ")}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-[13px] font-semibold text-[#a1a1aa]">
                     {formatPrice(item.price * item.quantity)}
                   </p>

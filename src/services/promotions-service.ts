@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabase"
 
+// 'fixed' = combo de productos fijos (precio fijo). 'build' = "arma tu promo":
+// el comensal elige, por grupo, entre min..max productos de una categoría.
+export type PromoKind = "fixed" | "build"
+
 // Una línea de la promoción (producto o variante), tal como la devuelve promo_list.
 export type PromotionItem = {
   product_id: number
@@ -11,8 +15,21 @@ export type PromotionItem = {
   available: boolean
 }
 
+// Un grupo de elección de una promo build (ancla a una categoría de la carta).
+export type PromotionGroup = {
+  id: number
+  name: string
+  category_id: number
+  category_name: string
+  min_select: number
+  max_select: number
+  sort_order: number
+  available_count: number
+}
+
 export type Promotion = {
   id: number
+  kind: PromoKind
   name: string
   description: string | null
   promo_price: number
@@ -21,6 +38,7 @@ export type Promotion = {
   sort_order: number
   items: PromotionItem[]
   original_total: number
+  groups: PromotionGroup[]
 }
 
 export type PromotionItemInput = {
@@ -29,14 +47,24 @@ export type PromotionItemInput = {
   quantity: number
 }
 
+export type PromotionGroupInput = {
+  category_id: number
+  name: string
+  min_select: number
+  max_select: number
+  sort_order: number
+}
+
 export type PromotionInput = {
   id: number | null
+  kind: PromoKind
   name: string
   description: string | null
   promo_price: number
   image_url: string | null
   active: boolean
   items: PromotionItemInput[]
+  groups: PromotionGroupInput[]
 }
 
 // Producto de la carta para el selector del diálogo (con sus variantes).
@@ -45,6 +73,7 @@ export type SelectableProduct = {
   id: number
   product_name: string
   product_price: number
+  category_id: number | null
   variants: SelectableVariant[]
 }
 
@@ -70,6 +99,8 @@ export async function savePromotion(input: PromotionInput): Promise<number> {
     p_image_url: input.image_url,
     p_active: input.active,
     p_items: input.items,
+    p_kind: input.kind,
+    p_groups: input.groups,
   })
   if (error) throw error
   return data as number
@@ -89,7 +120,7 @@ export async function deletePromotion(id: number): Promise<void> {
 export async function listSelectableProducts(restaurantId: number): Promise<SelectableProduct[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, product_name, product_price, product_variants(id, variant_name, variant_price)")
+    .select("id, product_name, product_price, category_id, product_variants(id, variant_name, variant_price)")
     .eq("restaurant_id", restaurantId)
     .order("product_name", { ascending: true })
     .limit(500)
@@ -98,6 +129,7 @@ export async function listSelectableProducts(restaurantId: number): Promise<Sele
     id: p.id as number,
     product_name: p.product_name as string,
     product_price: p.product_price as number,
+    category_id: (p.category_id as number | null) ?? null,
     variants: ((p.product_variants ?? []) as SelectableVariant[]).sort((a, b) =>
       a.variant_name.localeCompare(b.variant_name)
     ),
