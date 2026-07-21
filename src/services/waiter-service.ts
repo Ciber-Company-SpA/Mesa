@@ -1,5 +1,6 @@
 import "server-only"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { requireCurrentAdmin } from "@/services/auth-guard"
 import { sendWaiterCredentialsEmail } from "@/lib/email/send-waiter-credentials"
 import {
@@ -49,16 +50,14 @@ export async function createWaiter(input: CreateWaiterInput): Promise<Result<Cre
 
   // Verificar que el caller es admin del mismo restaurant
   const serverClient = await createSupabaseServerClient()
-  const {
-    data: { user: currentUser },
-  } = await serverClient.auth.getUser()
+  const currentUser = await getSessionClaims(serverClient)
 
   if (!currentUser) return fail("No autorizado")
 
   const { data: adminProfile, error: profileError } = await serverClient
     .from("users")
     .select("restaurant_id, role_id")
-    .eq("auth_user_id", currentUser.id)
+    .eq("auth_user_id", currentUser.userId)
     .single()
 
   if (profileError || !adminProfile) return fail("Perfil no encontrado")

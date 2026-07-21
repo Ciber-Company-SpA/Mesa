@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { isAdminRole, roleIdToRole } from "@/lib/waiter-session"
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -13,15 +14,15 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     // mandalo a /waiter/control en vez de dejarlo ver UI de admin con
     // queries que fallarán por RLS.
     async function checkRole() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const claims = await getSessionClaims(supabase)
+      if (!claims) {
         router.replace("/login")
         return
       }
       const { data: profile } = await supabase
         .from("users")
         .select("role_id")
-        .eq("auth_user_id", user.id)
+        .eq("auth_user_id", claims.userId)
         .single()
       const role = roleIdToRole(profile?.role_id ?? 1)
       if (!isAdminRole(role)) {

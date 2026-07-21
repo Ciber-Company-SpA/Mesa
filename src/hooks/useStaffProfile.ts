@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { useCache } from "@/hooks/useCache"
 import { logger } from "@/lib/logger"
 import {
@@ -10,28 +11,24 @@ import {
 
 export function useStaffProfile() {
   const fetchProfile = useCallback(async (): Promise<Staff | null> => {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const claims = await getSessionClaims(supabase)
 
-    if (userError) throw userError
-    if (!user) return null
+    if (!claims) return null
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("id, user_name, role_id, restaurant_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", claims.userId)
       .single()
 
     if (profileError) throw profileError
     if (!profile) return null
 
     const fallbackName =
-      (typeof user.user_metadata?.admin_name === "string"
-        ? user.user_metadata.admin_name
+      (typeof claims.userMetadata.admin_name === "string"
+        ? claims.userMetadata.admin_name
         : null) ??
-      user.email?.split("@")[0] ??
+      claims.email?.split("@")[0] ??
       "Mesero"
 
     return {

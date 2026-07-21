@@ -1,5 +1,6 @@
 import "server-only"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { ok, fail, type Result } from "@/services/result"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -29,16 +30,14 @@ export async function requireStaffForRestaurant(
 export async function requireCurrentAdmin(): Promise<Result<AdminContext>> {
   const supabase = await createSupabaseServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const claims = await getSessionClaims(supabase)
 
-  if (!user) return fail("No autorizado")
+  if (!claims) return fail("No autorizado")
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("restaurant_id, role_id")
-    .eq("auth_user_id", user.id)
+    .eq("auth_user_id", claims.userId)
     .single()
 
   if (profileError || !profile) return fail("Perfil no encontrado")
@@ -47,7 +46,7 @@ export async function requireCurrentAdmin(): Promise<Result<AdminContext>> {
 
   return ok({
     supabase,
-    userId: user.id,
+    userId: claims.userId,
     roleId: profile.role_id,
     restaurantId: profile.restaurant_id,
   })
@@ -63,16 +62,14 @@ async function requireRoleForRestaurant(
 
   const supabase = await createSupabaseServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const claims = await getSessionClaims(supabase)
 
-  if (!user) return fail("No autorizado")
+  if (!claims) return fail("No autorizado")
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("restaurant_id, role_id")
-    .eq("auth_user_id", user.id)
+    .eq("auth_user_id", claims.userId)
     .single()
 
   if (profileError || !profile) return fail("Perfil no encontrado")
@@ -81,5 +78,5 @@ async function requireRoleForRestaurant(
     return fail("No tienes permiso sobre este restaurante")
   }
 
-  return ok({ supabase, userId: user.id, roleId: profile.role_id })
+  return ok({ supabase, userId: claims.userId, roleId: profile.role_id })
 }

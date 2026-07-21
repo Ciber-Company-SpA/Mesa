@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { logger } from "@/lib/logger"
 import { isNetworkError } from "@/hooks/useOfflineRetry"
 import { getHomeRouteForRole, isAdminRole, roleIdToRole } from "@/lib/waiter-session"
@@ -55,8 +56,8 @@ export default function WaiterLoginPage() {
     }
 
     async function checkSession() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
+      const claims = await getSessionClaims(supabase)
+      if (claims) {
         const { data: mustChange } = await supabase.rpc("get_my_must_change_password")
         if (mustChange === true) {
           setView("change-password")
@@ -64,7 +65,7 @@ export default function WaiterLoginPage() {
           const { data: profile } = await supabase
             .from("users")
             .select("role_id")
-            .eq("auth_user_id", user.id)
+            .eq("auth_user_id", claims.userId)
             .single()
           const role = roleIdToRole(profile?.role_id ?? 1)
           if (!isAdminRole(role)) {

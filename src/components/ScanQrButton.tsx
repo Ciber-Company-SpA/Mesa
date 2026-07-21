@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { logger } from "@/lib/logger"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { checkQrBelongsToUserRestaurant } from "@/lib/qr-table-check"
 
 type Props = {
@@ -63,13 +64,13 @@ export function ScanQrButton({ onError }: Props) {
       // Antes de navegar verificamos que la mesa pertenezca a este restaurante.
       // Si no, abortamos con un toast en vez de mandar al mesero al menú de
       // otro restaurante.
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const claims = await getSessionClaims(supabase)
+      if (!claims) {
         onError?.("Tu sesión expiró. Volvé a iniciar sesión.")
         return
       }
 
-      const check = await checkQrBelongsToUserRestaurant(qrCode, user.id)
+      const check = await checkQrBelongsToUserRestaurant(qrCode, claims.userId)
       if (check.kind === "foreign-restaurant") {
         onError?.("Esa mesa pertenece a otro restaurante.")
         return

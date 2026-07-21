@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { useCache } from "@/hooks/useCache"
 import { logger } from "@/lib/logger"
 import type { AdminProfile } from "@/types/admin-profile"
@@ -22,31 +23,27 @@ function getInitials(nameOrEmail: string) {
 
 export function useAdminProfile() {
   const fetchAdminProfile = useCallback(async (): Promise<AdminProfile> => {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const claims = await getSessionClaims(supabase)
 
-    if (userError) throw userError
-    if (!user) throw new Error("Usuario no autenticado")
+    if (!claims) throw new Error("Usuario no autenticado")
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("restaurant_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", claims.userId)
       .single()
 
     if (profileError) throw profileError
 
-    const email = user.email ?? ""
+    const email = claims.email ?? ""
     const metadataName =
-      typeof user.user_metadata?.admin_name === "string"
-        ? user.user_metadata.admin_name
+      typeof claims.userMetadata.admin_name === "string"
+        ? claims.userMetadata.admin_name
         : ""
     const name = metadataName || email.split("@")[0] || "Admin"
 
     return {
-      id: user.id,
+      id: claims.userId,
       email,
       name,
       initials: getInitials(name || email),

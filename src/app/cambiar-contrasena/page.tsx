@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { logger } from "@/lib/logger"
 import { getHomeRouteForRole, roleIdToRole } from "@/lib/waiter-session"
 
@@ -24,15 +25,15 @@ export default function CambiarContrasenaPage() {
   useEffect(() => {
     let active = true
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const claims = await getSessionClaims(supabase)
+      if (!claims) {
         router.replace("/login")
         return
       }
       const { data: profile } = await supabase
         .from("users")
         .select("role_id")
-        .eq("auth_user_id", user.id)
+        .eq("auth_user_id", claims.userId)
         .maybeSingle()
       const route = getHomeRouteForRole(roleIdToRole(profile?.role_id ?? 1))
       if (!active) return

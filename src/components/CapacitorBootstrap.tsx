@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { logger } from "@/lib/logger"
 import { checkQrBelongsToUserRestaurant } from "@/lib/qr-table-check"
 
@@ -49,11 +50,11 @@ export function CapacitorBootstrap() {
           if (!parsed.pathname.startsWith("/r/")) return
           const qrCode = parsed.pathname.split("/").filter(Boolean)[1] ?? ""
 
-          const { data: { user } } = await supabase.auth.getUser()
+          const claims = await getSessionClaims(supabase)
 
           // Sin sesión → al navegador del sistema (Custom Tab usa cookies de
           // Chrome y el server decide menú o /waiter/control).
-          if (!user) {
+          if (!claims) {
             await openExternal(url)
             return
           }
@@ -62,7 +63,7 @@ export function CapacitorBootstrap() {
           // (ej. mesero de R1 que escanea QR de R2): mismo flujo de "sin sesión".
           // Así evitamos que el WebView muestre contenido cruzado y dejamos que
           // el navegador trate al usuario como cliente del otro restaurante.
-          const check = await checkQrBelongsToUserRestaurant(qrCode, user.id)
+          const check = await checkQrBelongsToUserRestaurant(qrCode, claims.userId)
           if (check.kind !== "ok") {
             await openExternal(url)
             return

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSessionClaims } from "@/lib/supabase/claims"
 
 
 export const dynamic = "force-dynamic"
@@ -34,12 +35,12 @@ export async function GET(
     return new NextResponse("QR no válido", { status: 404 })
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
+  const claims = await getSessionClaims(supabase)
+  if (claims) {
     const { data: profile } = await supabase
       .from("users")
       .select("id, role_id, restaurant_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", claims.userId)
       .maybeSingle()
 
   

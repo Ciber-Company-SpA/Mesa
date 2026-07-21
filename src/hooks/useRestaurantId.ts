@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getSessionClaims } from "@/lib/supabase/claims"
 import { logger } from "@/lib/logger"
 import { useCache } from "@/hooks/useCache"
 
@@ -9,15 +10,14 @@ type RestaurantIdCache = {
 
 export function useRestaurantId() {
   const fetchRestaurantId = useCallback(async (): Promise<RestaurantIdCache> => {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const claims = await getSessionClaims(supabase)
 
-    if (userError) throw userError
-    if (!user) throw new Error("Usuario no autenticado")
+    if (!claims) throw new Error("Usuario no autenticado")
 
     const { data: profile, error } = await supabase
       .from("users")
       .select("restaurant_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", claims.userId)
       .single()
 
     if (error) throw error
