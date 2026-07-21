@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
-import { MarkdownLite } from "@/components/admin/assistant/MarkdownLite"
+import { TypewriterMarkdown } from "@/components/admin/assistant/TypewriterMarkdown"
 import { ManuelAvatar } from "@/components/admin/assistant/ManuelAvatar"
 import { TourOverlay } from "@/components/admin/assistant/TourOverlay"
 import { speakText, stopSpeaking, speechAvailable } from "@/lib/assistant/voice"
@@ -58,6 +58,9 @@ export function AssistantWidget() {
   const voiceOnRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // Índice del mensaje recién llegado por el stream: es el ÚNICO que se
+  // anima con el typewriter (el historial restaurado aparece completo).
+  const freshReplyRef = useRef<number | null>(null)
 
   // Cargar historial de la sesión + preferencia de voz al montar (evita
   // hydration mismatch).
@@ -131,7 +134,9 @@ export function AssistantWidget() {
       setInput("")
       setBusy(true)
 
-      // Placeholder del asistente que se va llenando con el stream.
+      // Placeholder del asistente que se va llenando con el stream. Su índice
+      // en el array queda fijo: es el que se animará con el typewriter.
+      const assistantIdx = nextMessages.length
       setMessages((prev) => [...prev, { role: "assistant", text: "", actions: [] }])
 
       const controller = new AbortController()
@@ -210,6 +215,9 @@ export function AssistantWidget() {
               setOpen(false)
             } else if (event.type === "reply") {
               const replyText = String(event.text ?? "")
+              // Marcar ANTES de setear el texto: al montarse el mensaje ya
+              // debe saber que le toca teclearse.
+              freshReplyRef.current = assistantIdx
               patchLast((m) => ({ ...m, text: replyText }))
               // Leer la respuesta en voz alta si la voz está activada.
               if (voiceOnRef.current && replyText) {
@@ -326,6 +334,7 @@ export function AssistantWidget() {
                     abortRef.current?.abort()
                     stopSpeaking()
                     setSpeaking(false)
+                    freshReplyRef.current = null
                     setMessages([])
                     setBusy(false)
                   }}
@@ -439,7 +448,17 @@ export function AssistantWidget() {
                         )}
                         {m.text ? (
                           <div className="text-[13.5px] leading-6 text-stone-800">
-                            <MarkdownLite text={m.text} />
+                            <TypewriterMarkdown
+                              text={m.text}
+                              animate={i === freshReplyRef.current}
+                              onProgress={() => {
+                                const el = scrollRef.current
+                                if (el) el.scrollTop = el.scrollHeight
+                              }}
+                              onDone={() => {
+                                if (freshReplyRef.current === i) freshReplyRef.current = null
+                              }}
+                            />
                           </div>
                         ) : busy && i === messages.length - 1 ? (
                           // Pensando: shimmer tipo Gemini

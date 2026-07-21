@@ -92,16 +92,28 @@ function parseBlocks(source: string): Block[] {
   return blocks
 }
 
-export function MarkdownLite({ text }: { text: string }) {
+export function MarkdownLite({ text, caret = false }: { text: string; caret?: boolean }) {
   const blocks = parseBlocks(text)
+
+  // Cursor de terminal al final del contenido (efecto máquina de escribir):
+  // se ancla al último trozo de texto del último bloque.
+  const caretEl = caret ? <span className="manuel-caret" aria-hidden /> : null
+
+  if (blocks.length === 0) {
+    return caret ? <p>{caretEl}</p> : null
+  }
+
+  const last = blocks.length - 1
 
   return (
     <div className="space-y-2">
       {blocks.map((b, i) => {
+        const tail = i === last ? caretEl : null
         if (b.kind === "h") {
           return (
             <p key={i} className="pt-0.5 text-[13px] font-bold text-stone-900">
               {renderInline(b.text, `h${i}`)}
+              {tail}
             </p>
           )
         }
@@ -111,7 +123,10 @@ export function MarkdownLite({ text }: { text: string }) {
               {b.items.map((it, j) => (
                 <li key={j} className="flex gap-2">
                   <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-stone-400" />
-                  <span className="min-w-0">{renderInline(it, `u${i}-${j}`)}</span>
+                  <span className="min-w-0">
+                    {renderInline(it, `u${i}-${j}`)}
+                    {j === b.items.length - 1 ? tail : null}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -123,7 +138,10 @@ export function MarkdownLite({ text }: { text: string }) {
               {b.items.map((it, j) => (
                 <li key={j} className="flex gap-2">
                   <span className="shrink-0 text-[12px] font-bold text-stone-500">{j + 1}.</span>
-                  <span className="min-w-0">{renderInline(it, `o${i}-${j}`)}</span>
+                  <span className="min-w-0">
+                    {renderInline(it, `o${i}-${j}`)}
+                    {j === b.items.length - 1 ? tail : null}
+                  </span>
                 </li>
               ))}
             </ol>
@@ -132,6 +150,7 @@ export function MarkdownLite({ text }: { text: string }) {
         return (
           <p key={i} className="whitespace-pre-wrap">
             {renderInline(b.text, `p${i}`)}
+            {tail}
           </p>
         )
       })}
