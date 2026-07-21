@@ -69,56 +69,64 @@ export function TourOverlay({
   const isLast = idx === steps.length - 1
 
   return (
-    <div className="fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4">
-      <div className="animate-card-entrance w-full max-w-md rounded-3xl border border-stone-200 bg-white p-4 shadow-2xl shadow-stone-900/15">
-        <div className="flex items-start gap-3">
-          <ManuelAvatar size={44} animated talking={talking} className="manuel-hello shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-stone-900">
-                {step.emoji} {step.title}
-              </p>
-              <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-bold text-stone-500">
-                {idx + 1} / {steps.length}
+    <div className="fixed inset-x-0 bottom-6 z-[70] flex justify-center px-4">
+      <div className="manuel-panel-in w-full max-w-lg overflow-hidden rounded-[28px] bg-white/95 shadow-[0_24px_80px_-16px_rgba(28,25,23,0.4)] ring-1 ring-stone-200/70 backdrop-blur-xl">
+        {/* Hairline de gradiente superior (acento de marca) */}
+        <div className="manuel-gradient-bg h-[3px] w-full" />
+
+        <div className="p-5">
+          <div className="flex items-start gap-3.5">
+            <span className="relative shrink-0">
+              <span className="manuel-ring absolute -inset-[2.5px] rounded-full opacity-70" />
+              <span className="relative block rounded-full bg-white p-[2.5px]">
+                <ManuelAvatar size={46} animated talking={talking} className="block" />
               </span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="manuel-gradient-text text-[10px] font-extrabold tracking-[0.14em] uppercase">
+                Paso {idx + 1} de {steps.length} · Tour de Manuel
+              </span>
+              <h3 className="mt-0.5 text-[16.5px] font-extrabold tracking-tight text-stone-900">
+                {step.emoji} {step.title}
+              </h3>
+              <p className="mt-1 text-[13px] leading-5 text-stone-600">{step.text}</p>
             </div>
-            <p className="mt-1 text-[13px] leading-5 text-stone-600">{step.text}</p>
           </div>
-        </div>
 
-        {/* Progreso */}
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-stone-100">
-          <div
-            className="h-full rounded-full bg-orange-500 transition-all duration-300"
-            style={{ width: `${((idx + 1) / steps.length) * 100}%` }}
-          />
-        </div>
+          {/* Progreso con gradiente */}
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-stone-100">
+            <div
+              className="manuel-gradient-bg h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((idx + 1) / steps.length) * 100}%` }}
+            />
+          </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl px-3 py-2 text-xs font-semibold text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
-          >
-            Salir del tour
-          </button>
-          <div className="flex gap-2">
-            {idx > 0 && (
-              <button
-                type="button"
-                onClick={() => setIdx((i) => Math.max(0, i - 1))}
-                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
-              >
-                Anterior
-              </button>
-            )}
+          <div className="mt-4 flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={() => (isLast ? onClose() : setIdx((i) => i + 1))}
-              className="rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
+              onClick={onClose}
+              className="rounded-full px-3 py-2 text-[12px] font-semibold text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
             >
-              {isLast ? "Terminar" : "Siguiente"}
+              Salir del tour
             </button>
+            <div className="flex gap-2">
+              {idx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIdx((i) => Math.max(0, i - 1))}
+                  className="rounded-full px-4 py-2.5 text-[12px] font-bold text-stone-600 ring-1 ring-stone-200 transition hover:bg-stone-50 hover:ring-stone-300"
+                >
+                  Anterior
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => (isLast ? onClose() : setIdx((i) => i + 1))}
+                className="manuel-gradient-bg rounded-full px-6 py-2.5 text-[12px] font-extrabold text-white shadow-lg shadow-orange-500/30 transition hover:shadow-orange-500/50"
+              >
+                {isLast ? "🎉 Terminar" : "Siguiente →"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
