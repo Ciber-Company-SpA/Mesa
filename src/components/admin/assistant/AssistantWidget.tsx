@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useVisibleModules } from "@/hooks/useVisibleModules"
+import { MarkdownLite } from "@/components/admin/assistant/MarkdownLite"
 
 /**
  * Asistente IA del panel admin: botón flotante + panel de chat. Ejecuta tareas
@@ -298,7 +299,11 @@ export function AssistantWidget() {
                         </div>
                       )}
                       {m.text ? (
-                        <p className="whitespace-pre-wrap">{m.text}</p>
+                        m.role === "assistant" ? (
+                          <MarkdownLite text={m.text} />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{m.text}</p>
+                        )
                       ) : m.role === "assistant" && busy && i === messages.length - 1 ? (
                         <span className="inline-flex gap-1">
                           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400" />

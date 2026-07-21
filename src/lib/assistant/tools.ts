@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { createCategory } from "@/services/category-service"
 import { createProduct } from "@/services/product-service"
 import { getSalesReport, getProductMargins, getPeakHours } from "@/services/report-service"
+import { listIngredients, restockIngredient } from "@/services/inventory-service"
 import { menuTag } from "@/lib/menu/menu-cache"
 
 /**
@@ -28,9 +29,12 @@ export const TOOL_LABELS: Record<string, string> = {
   obtener_resumen_negocio: "Revisando tu carta y tu negocio",
   obtener_reporte_ventas: "Analizando tus ventas",
   obtener_margenes_y_horas_peak: "Calculando márgenes y horas peak",
-  obtener_alertas_inventario: "Revisando tu inventario",
+  obtener_alertas_inventario: "Revisando alertas de inventario",
+  estado_operacion_hoy: "Mirando la operación de hoy",
+  listar_insumos: "Revisando tu inventario",
   listar_cupones: "Revisando tus cupones",
   listar_promociones: "Revisando tus promociones",
+  listar_equipo: "Revisando tu equipo",
   crear_categorias: "Creando categorías",
   crear_productos: "Creando productos",
   actualizar_productos: "Actualizando productos",
@@ -38,6 +42,9 @@ export const TOOL_LABELS: Record<string, string> = {
   crear_cupon: "Creando cupón",
   crear_promocion: "Creando promoción",
   crear_promo_armable: "Creando promo armable",
+  gestionar_cupones: "Activando/desactivando cupones",
+  gestionar_promociones: "Activando/ocultando promociones",
+  reponer_insumos: "Registrando reposición de stock",
 }
 
 // Herramientas que modifican datos (para marcarlas en el log del chat).
@@ -49,6 +56,9 @@ export const WRITE_TOOLS = new Set([
   "crear_cupon",
   "crear_promocion",
   "crear_promo_armable",
+  "gestionar_cupones",
+  "gestionar_promociones",
+  "reponer_insumos",
 ])
 
 export const functionDeclarations: FunctionDeclaration[] = [
@@ -88,6 +98,23 @@ export const functionDeclarations: FunctionDeclaration[] = [
   {
     name: "obtener_alertas_inventario",
     description: "Insumos sin stock o con stock bajo el mínimo (para recomendar reposición).",
+    parameters: { type: SchemaType.OBJECT, properties: {} },
+  },
+  {
+    name: "estado_operacion_hoy",
+    description:
+      "Cómo va la operación AHORA: pedidos activos (nuevos/preparando/listos) con mesa y monto, y las ventas acumuladas de hoy. Úsala para '¿cómo va el día?' o '¿hay pedidos pendientes?'.",
+    parameters: { type: SchemaType.OBJECT, properties: {} },
+  },
+  {
+    name: "listar_insumos",
+    description:
+      "Inventario completo: cada insumo con su unidad, stock actual y stock mínimo (no solo alertas).",
+    parameters: { type: SchemaType.OBJECT, properties: {} },
+  },
+  {
+    name: "listar_equipo",
+    description: "Cuentas del equipo del restaurante (meseros, cocina, etc.) con su rol.",
     parameters: { type: SchemaType.OBJECT, properties: {} },
   },
   {
@@ -201,6 +228,12 @@ export const functionDeclarations: FunctionDeclaration[] = [
         tipo: { type: SchemaType.STRING, description: "'percent' (porcentaje) o 'amount' (monto fijo CLP)" },
         valor: { type: SchemaType.NUMBER, description: "1-100 si percent; CLP entero si amount" },
         descripcion: { type: SchemaType.STRING, description: "Opcional" },
+        alcance: {
+          type: SchemaType.STRING,
+          description: "Opcional: 'all' (default, toda la carta), 'categoria' o 'producto'",
+        },
+        categoria_id: { type: SchemaType.NUMBER, description: "Requerido si alcance='categoria'" },
+        producto_id: { type: SchemaType.NUMBER, description: "Requerido si alcance='producto'" },
         dias_semana: {
           type: SchemaType.ARRAY,
           items: { type: SchemaType.NUMBER },
@@ -266,6 +299,72 @@ export const functionDeclarations: FunctionDeclaration[] = [
         },
       },
       required: ["nombre", "descuento_pct", "grupos"],
+    },
+  },
+  {
+    name: "gestionar_cupones",
+    description: "Activa o desactiva cupones existentes (ids de listar_cupones). NO los borra.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        cambios: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              cupon_id: { type: SchemaType.NUMBER },
+              activo: { type: SchemaType.BOOLEAN },
+            },
+            required: ["cupon_id", "activo"],
+          },
+        },
+      },
+      required: ["cambios"],
+    },
+  },
+  {
+    name: "gestionar_promociones",
+    description:
+      "Activa u oculta promociones existentes del menú (ids de listar_promociones). NO las borra.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        cambios: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              promocion_id: { type: SchemaType.NUMBER },
+              activa: { type: SchemaType.BOOLEAN },
+            },
+            required: ["promocion_id", "activa"],
+          },
+        },
+      },
+      required: ["cambios"],
+    },
+  },
+  {
+    name: "reponer_insumos",
+    description:
+      "Registra la reposición de stock de insumos (compras/llegada de mercadería). Suma la cantidad al stock actual y queda en el historial de movimientos. Usa insumo_id de listar_insumos u obtener_alertas_inventario.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        reposiciones: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              insumo_id: { type: SchemaType.NUMBER },
+              cantidad: { type: SchemaType.NUMBER, description: "Cantidad a SUMAR, en la unidad del insumo" },
+              nota: { type: SchemaType.STRING, description: "Opcional, ej. 'compra proveedor X'" },
+            },
+            required: ["insumo_id", "cantidad"],
+          },
+        },
+      },
+      required: ["reposiciones"],
     },
   },
 ]
@@ -513,15 +612,23 @@ async function cambiarDisponibilidad(ctx: AssistantContext, args: ToolArgs) {
 
 async function crearCupon(ctx: AssistantContext, args: ToolArgs) {
   const tipo = String(args.tipo ?? "percent")
+  // Alcance: toda la carta (default), una categoría o un producto puntual.
+  const alcanceRaw = String(args.alcance ?? "all").toLowerCase()
+  const scope =
+    alcanceRaw === "categoria" || alcanceRaw === "category"
+      ? "category"
+      : alcanceRaw === "producto" || alcanceRaw === "product"
+        ? "product"
+        : "all"
   const { data, error } = await ctx.supabase.rpc("discount_save", {
     p_id: null,
     p_code: String(args.codigo ?? "").trim(),
     p_description: args.descripcion ? String(args.descripcion) : null,
     p_discount_type: tipo === "amount" ? "amount" : "percent",
     p_discount_value: Math.round(Number(args.valor) || 0),
-    p_scope: "all",
-    p_scope_category_id: null,
-    p_scope_product_id: null,
+    p_scope: scope,
+    p_scope_category_id: scope === "category" ? Number(args.categoria_id) || null : null,
+    p_scope_product_id: scope === "product" ? Number(args.producto_id) || null : null,
     p_days_of_week: Array.isArray(args.dias_semana)
       ? (args.dias_semana as unknown[]).map((d) => Number(d)).filter((d) => d >= 0 && d <= 6)
       : null,
@@ -593,6 +700,117 @@ async function crearPromoArmable(ctx: AssistantContext, args: ToolArgs) {
   return { promocion_id: data, nombre: String(args.nombre ?? "").trim() }
 }
 
+async function estadoOperacionHoy(ctx: AssistantContext) {
+  const estados: Record<number, string> = { 1: "nuevo", 2: "preparando", 3: "listo" }
+  const [activos, ventasHoy] = await Promise.all([
+    ctx.supabase
+      .from("orders")
+      .select("id, status_id, total, created_at, tables(table_number)")
+      .eq("restaurant_id", ctx.restaurantId)
+      .in("status_id", [1, 2, 3])
+      .order("created_at", { ascending: true })
+      .limit(30),
+    getSalesReport(rangeFromDays(1)),
+  ])
+
+  const pedidos = ((activos.data ?? []) as {
+    id: number
+    status_id: number
+    total: number | null
+    created_at: string | null
+    tables: { table_number: number | null } | { table_number: number | null }[] | null
+  }[]).map((o) => {
+    const t = Array.isArray(o.tables) ? o.tables[0] : o.tables
+    return {
+      pedido_id: o.id,
+      estado: estados[o.status_id] ?? String(o.status_id),
+      mesa: t?.table_number ?? null,
+      total: o.total ?? 0,
+      creado: o.created_at,
+    }
+  })
+
+  return {
+    pedidos_activos: pedidos,
+    conteo_por_estado: {
+      nuevos: pedidos.filter((p) => p.estado === "nuevo").length,
+      preparando: pedidos.filter((p) => p.estado === "preparando").length,
+      listos: pedidos.filter((p) => p.estado === "listo").length,
+    },
+    ventas_hoy: ventasHoy.ok
+      ? { ...ventasHoy.data.summary, top_productos: ventasHoy.data.topProducts.slice(0, 5) }
+      : { error: ventasHoy.error },
+  }
+}
+
+async function gestionarCupones(ctx: AssistantContext, args: ToolArgs) {
+  const cambios = (Array.isArray(args.cambios) ? args.cambios : []).slice(0, 20) as {
+    cupon_id?: unknown
+    activo?: unknown
+  }[]
+  const actualizados: number[] = []
+  const errores: string[] = []
+  for (const c of cambios) {
+    const id = Number(c.cupon_id) || 0
+    const { error } = await ctx.supabase.rpc("discount_set_active", {
+      p_id: id,
+      p_active: Boolean(c.activo),
+    })
+    if (error) errores.push(`Cupón ${id}: ${error.message}`)
+    else actualizados.push(id)
+  }
+  return { actualizados, errores }
+}
+
+async function gestionarPromociones(ctx: AssistantContext, args: ToolArgs) {
+  const cambios = (Array.isArray(args.cambios) ? args.cambios : []).slice(0, 20) as {
+    promocion_id?: unknown
+    activa?: unknown
+  }[]
+  const actualizados: number[] = []
+  const errores: string[] = []
+  for (const c of cambios) {
+    const id = Number(c.promocion_id) || 0
+    const { error } = await ctx.supabase.rpc("promo_set_active", {
+      p_id: id,
+      p_active: Boolean(c.activa),
+    })
+    if (error) errores.push(`Promoción ${id}: ${error.message}`)
+    else actualizados.push(id)
+  }
+  if (actualizados.length > 0) refreshMenu(ctx.restaurantId)
+  return { actualizados, errores }
+}
+
+async function reponerInsumos(_ctx: AssistantContext, args: ToolArgs) {
+  const items = (Array.isArray(args.reposiciones) ? args.reposiciones : []).slice(0, 30) as {
+    insumo_id?: unknown
+    cantidad?: unknown
+    nota?: unknown
+  }[]
+  if (items.length === 0) return { error: "No se recibieron reposiciones" }
+
+  const repuestos: number[] = []
+  const errores: string[] = []
+  for (const it of items) {
+    const id = Number(it.insumo_id) || 0
+    const cantidad = Number(it.cantidad) || 0
+    if (cantidad <= 0) {
+      errores.push(`Insumo ${id}: la cantidad debe ser positiva`)
+      continue
+    }
+    // restockIngredient hace su propio guard de admin + scope de restaurante.
+    const res = await restockIngredient({
+      id,
+      cantidad,
+      nota: it.nota ? String(it.nota).slice(0, 200) : null,
+    })
+    if (res.ok) repuestos.push(id)
+    else errores.push(`Insumo ${id}: ${res.error}`)
+  }
+  return { repuestos, errores }
+}
+
 export async function executeTool(
   name: string,
   args: ToolArgs,
@@ -627,6 +845,29 @@ export async function executeTool(
         return (data ?? {}) as Record<string, unknown>
       }
 
+      case "estado_operacion_hoy":
+        return await estadoOperacionHoy(ctx)
+
+      case "listar_insumos": {
+        const res = await listIngredients()
+        if (!res.ok) return { error: res.error }
+        return {
+          insumos: res.data.slice(0, 100).map((i) => ({
+            id: i.id,
+            nombre: i.name,
+            unidad: i.unit,
+            stock_actual: i.stock_actual,
+            stock_minimo: i.stock_minimo,
+          })),
+        }
+      }
+
+      case "listar_equipo": {
+        const { data, error } = await ctx.supabase.rpc("list_waiters_for_admin")
+        if (error) return { error: error.message }
+        return { equipo: data ?? [] }
+      }
+
       case "listar_cupones": {
         const { data, error } = await ctx.supabase.rpc("discount_list")
         if (error) return { error: error.message }
@@ -653,6 +894,12 @@ export async function executeTool(
         return await crearPromocion(ctx, args)
       case "crear_promo_armable":
         return await crearPromoArmable(ctx, args)
+      case "gestionar_cupones":
+        return await gestionarCupones(ctx, args)
+      case "gestionar_promociones":
+        return await gestionarPromociones(ctx, args)
+      case "reponer_insumos":
+        return await reponerInsumos(ctx, args)
 
       default:
         return { error: `Herramienta desconocida: ${name}` }
