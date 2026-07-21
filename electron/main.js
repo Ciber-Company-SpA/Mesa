@@ -1,8 +1,54 @@
-﻿const { app, BrowserWindow, shell, Menu, session } = require('electron')
+﻿const { app, BrowserWindow, shell, Menu, session, dialog } = require('electron')
 
 const BASE_URL = 'https://tumesaqr.com'
 const APP_URL = `${BASE_URL}/admin`
 const isDev = !app.isPackaged
+
+// ── Auto-actualización del binario ─────────────────────────────────────────
+// El CONTENIDO del panel siempre está al día (la app carga tumesaqr.com/admin
+// en vivo). Esto actualiza el BINARIO: electron-updater consulta el último
+// GitHub Release del repo (público, sin token), descarga el instalador en
+// segundo plano y ofrece reiniciar. Corre solo empaquetado (no en dev).
+function setupAutoUpdates() {
+  if (isDev) return
+
+  let autoUpdater
+  try {
+    ;({ autoUpdater } = require('electron-updater'))
+  } catch (err) {
+    console.error('[updater] electron-updater no disponible:', err)
+    return
+  }
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-downloaded', (info) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    const opts = {
+      type: 'info',
+      buttons: ['Reiniciar ahora', 'Después'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Actualización lista',
+      message: `Hay una versión nueva de MESA (${info?.version ?? ''}).`,
+      detail: 'Se descargó en segundo plano. Reiniciá la app para aplicarla; si elegís "Después", se instala sola al cerrar.',
+    }
+    const ask = win ? dialog.showMessageBox(win, opts) : dialog.showMessageBox(opts)
+    ask.then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall()
+    }).catch(() => undefined)
+  })
+
+  autoUpdater.on('error', (err) => {
+    // Sin red o release sin assets: silencioso, se reintenta en el próximo ciclo.
+    console.error('[updater] error:', err?.message ?? err)
+  })
+
+  const check = () => autoUpdater.checkForUpdates().catch(() => undefined)
+  check()
+  setInterval(check, 4 * 60 * 60 * 1000) // cada 4 horas mientras esté abierta
+}
 
 
 const ALLOWED_ORIGIN = new URL(BASE_URL).origin
@@ -90,6 +136,7 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  setupAutoUpdates()
 })
 
 app.on('window-all-closed', () => {

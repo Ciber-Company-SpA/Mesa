@@ -125,3 +125,33 @@ for (const [from, name] of JAVA_FILES) {
     console.error(`[patch-android-manifest] error copiando ${name}: ${err.message}`)
   }
 }
+
+// ============================================================================
+// 3. Sincroniza la versión del APK con package.json (fuente única de verdad).
+//    versionName = la versión tal cual; versionCode = M*10000 + m*100 + p
+//    (crece monótonamente entre releases → Android acepta el upgrade).
+//    App.getInfo().version devuelve versionName: es lo que compara el
+//    UpdateNotifier contra /api/app-version para avisar de APK nuevos.
+// ============================================================================
+
+const GRADLE = resolve("android/app/build.gradle")
+const pkgVersion = JSON.parse(readFileSync(resolve("package.json"), "utf8")).version
+const [vMajor = 0, vMinor = 0, vPatch = 0] = pkgVersion
+  .split(".")
+  .map((n) => parseInt(n, 10) || 0)
+const versionCode = vMajor * 10000 + vMinor * 100 + vPatch
+
+try {
+  let gradle = readFileSync(GRADLE, "utf8")
+  const before = gradle
+  gradle = gradle.replace(/versionCode\s+\d+/, `versionCode ${versionCode}`)
+  gradle = gradle.replace(/versionName\s+"[^"]*"/, `versionName "${pkgVersion}"`)
+  if (gradle !== before) {
+    writeFileSync(GRADLE, gradle, "utf8")
+    console.log(`[patch-android-manifest] versión APK: ${pkgVersion} (versionCode ${versionCode})`)
+  } else {
+    console.log(`[patch-android-manifest] versión APK ya en ${pkgVersion}`)
+  }
+} catch (err) {
+  console.error(`[patch-android-manifest] no se pudo fijar la versión en build.gradle: ${err.message}`)
+}

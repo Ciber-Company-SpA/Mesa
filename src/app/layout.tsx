@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Manrope, Bricolage_Grotesque, Fraunces, Inter, JetBrains_Mono, Inter_Tight } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { CapacitorBootstrap } from "@/components/CapacitorBootstrap";
+import { UpdateNotifier } from "@/components/UpdateNotifier";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -89,6 +90,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ServiceWorkerRegister />
         <CapacitorBootstrap />
+        <UpdateNotifier />
         {children}
       </body>
     </html>

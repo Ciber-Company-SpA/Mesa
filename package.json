@@ -1,6 +1,6 @@
 {
   "name": "mesa",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -41,7 +41,8 @@
     "recharts": "^3.8.1",
     "resend": "^6.12.3",
     "zod": "^4.4.3",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "electron-updater": "^6.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -93,7 +94,15 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "artifactName": "MESA-Admin-Setup-${version}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Ciber-Company-SpA",
+        "repo": "Mesa"
+      }
+    ]
   },
   "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
   "repository": {

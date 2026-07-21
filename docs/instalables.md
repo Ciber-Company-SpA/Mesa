@@ -1,82 +1,107 @@
-# Instalables de MESA — guía de actualización/reconstrucción
+# Instalables de MESA — guía de versiones y releases
 
 El proyecto se instala de **cuatro** formas. Tres cargan el sitio **en vivo**
 (`tumesaqr.com`), así que su **contenido se actualiza solo** con cada deploy —
-solo hay que reconstruir el binario cuando cambian ícono, versión, plugins o
-config nativa.
+el binario solo se reconstruye cuando cambian ícono, versión, plugins o config
+nativa.
 
-| Instalable | Rol | Qué carga | Se reconstruye… |
-|---|---|---|---|
-| **PWA** (navegador) | Mesero | `/waiter/` (con caché offline vía `sw.js`) | automático (deploy) |
-| **App Android** (Capacitor) | Mesero | `https://tumesaqr.com/waiter/control` | solo por ícono/versión/plugins |
-| **App Escritorio** (Electron) | Admin restaurante | `https://tumesaqr.com/admin` | solo por ícono/versión |
-| **Portal operadores** (PWA) | Operador plataforma | administracion.tumesaqr.com | automático (deploy) |
+| Instalable | Rol | Qué carga | Contenido | Binario |
+|---|---|---|---|---|
+| **PWA** (navegador) | Mesero | `/waiter/` (caché offline vía `sw.js`) | automático (deploy) | n/a |
+| **App Android** (Capacitor) | Mesero | `tumesaqr.com/waiter/control` | automático | aviso in-app → descarga APK |
+| **App Escritorio** (Electron) | Admin restaurante | `tumesaqr.com/admin` | automático | **auto-update** (electron-updater) |
+| **Portal operadores** (PWA) | Operador plataforma | administracion.tumesaqr.com | automático (deploy) | n/a |
 
-Ícono de marca: se genera con `node scripts/gen-icons.mjs` (SVG → PNG con
-`sharp`). Produce los íconos de la PWA (`public/icons/…`), el maestro de
-Electron (`build/icon.png`) y el de Capacitor (`assets/icon-only.png`,
-`assets/logo.png`). Reejecutar tras cambiar la marca.
+## Arquitectura de distribución y actualización
 
----
+- **Fuente única de versión**: `package.json → version`. De ahí salen el
+  instalador de Windows (electron-builder), el `versionName`/`versionCode` del
+  APK (`scripts/patch-android-manifest.mjs`) y el manifiesto
+  `src/lib/app-version.ts` (URLs de descarga + `/api/app-version`).
+- **Canal de distribución**: **GitHub Releases** del repo (público), tag
+  `v<version>`, assets con nombre sin espacios. Los links de `/admin/instalar`
+  apuntan ahí.
+- **Detección de actualizaciones**:
+  - *Contenido (mesero)*: cada deploy sube `CACHE_VERSION` en `public/sw.js`;
+    `src/components/UpdateNotifier.tsx` escucha `controllerchange` (+ chequeo
+    cada 30 min y al volver a foco) y ofrece **Recargar**. Aplica a la PWA y al
+    WebView del APK.
+  - *Binario APK*: `UpdateNotifier` (solo en Capacitor) compara
+    `App.getInfo().version` contra `/api/app-version`; si hay APK más nuevo
+    muestra el aviso con link de descarga (posponible 24 h).
+  - *Binario .exe*: `electron/main.js` usa **electron-updater** contra el
+    último GitHub Release (repo público, sin token): descarga en segundo plano,
+    ofrece reiniciar y si no, instala al cerrar. Chequea al abrir y cada 4 h.
+  - *Panel admin web*: `admin-sw.js` no cachea → siempre fresco, sin aviso.
 
-## App Android (Capacitor) — "Meseros-App"
-
-`appId com.mesa.meseros`. El proyecto nativo `android/` **no está versionado**
-(regenerable). Requiere JDK 17 + Android SDK (Android Studio).
-
-```bash
-# 1) Íconos de marca (si cambiaron)
-node scripts/gen-icons.mjs
-
-# 2) Generar los recursos nativos (íconos/splash) desde assets/
-npm i -D @capacitor/assets
-npx capacitor-assets generate --android
-
-# 3) Crear el proyecto android/ si no existe, y sincronizar la config web
-npx cap add android        # solo la primera vez
-npm run cap:sync           # cap sync android + patch del AndroidManifest
-
-# 4) Compilar el APK/AAB (en la carpeta android/)
-cd android
-./gradlew assembleRelease  # APK  → android/app/build/outputs/apk/release/
-./gradlew bundleRelease    # AAB  → para Google Play
-```
-
-> Firma: para publicar en Play Store hay que firmar el AAB con un keystore
-> (`android/keystore.jks`, ya contemplado en `.gitignore`). Ver docs oficiales
-> de Capacitor Android para el `signingConfig`.
-
-Para subir la versión: editar `versionCode`/`versionName` en
-`android/app/build.gradle` (se regeneran si borrás `android/`; conviene fijarlos
-en un script de patch o mantener `android/` una vez estable).
-
----
-
-## App de Escritorio (Electron) — "Mesa"
-
-`appId com.mesa.app`. Carga `/admin`. Empaqueta con electron-builder. El ícono
-maestro es `build/icon.png` (1024×1024); electron-builder deriva `.ico`/`.icns`.
+## Publicar una versión nueva (proceso completo)
 
 ```bash
-node scripts/gen-icons.mjs      # refresca build/icon.png si cambió la marca
-npm run electron                # probar en local (carga tumesaqr.com/admin)
-npm run electron:build          # empaquetar para la plataforma actual
+# 0) Bump de versión (fuente única)
+#    package.json → "version": "1.1.0"
+
+# 1) APK release firmado (requiere el keystore, ver abajo)
+bash scripts/build-android-release.sh
+#    → dist-android/MESA-Mesero-1.1.0.apk
+
+# 2) Instalador Windows (wine en Linux, o nativo en Windows)
+npx electron-builder --win --publish never
+#    → dist/MESA-Admin-Setup-1.1.0.exe + latest.yml + .blockmap
+
+# 3) Release en GitHub (los 4 assets; latest.yml es el que lee electron-updater)
+gh release create v1.1.0 \
+  "dist/MESA-Admin-Setup-1.1.0.exe" \
+  "dist/MESA-Admin-Setup-1.1.0.exe.blockmap" \
+  dist/latest.yml \
+  "dist-android/MESA-Mesero-1.1.0.apk" \
+  --title "MESA v1.1.0" --notes "…"
+
+# 4) Commit + push del bump → el deploy actualiza /admin/instalar y /api/app-version
 ```
 
-- **Windows** (`.exe` NSIS): correr `electron:build` en Windows (o Linux con
-  wine). Salida en `dist/`.
-- **macOS** (`.dmg`): correr `electron:build` en macOS (la firma/notarización
-  requiere cuenta de Apple Developer).
-- Subir versión: cambiar `version` en `package.json`.
+> **IMPORTANTE — releases**: electron-updater lee `latest.yml` del **último
+> release** del repo. Todo release nuevo debe incluir `latest.yml` + el `.exe`
+> + su `.blockmap` (paso 3); no crear releases "solo de código".
 
-> Para íconos pixel-perfect por plataforma se pueden colocar `build/icon.ico`
-> (Windows) y `build/icon.icns` (macOS); si existen, electron-builder los usa en
-> vez de derivarlos del PNG. Ambos ya están permitidos en `.gitignore`.
+## Firma del APK (keystore) — CRÍTICO
 
----
+El APK release se firma con un keystore **persistente** en
+`~/.mesa-android/` (`mesa-release.keystore` + `keystore.properties`), fuera del
+repo porque el repo es público. Android **solo instala una actualización sobre
+la app existente si la firma coincide**:
+
+- **Respaldar** `~/.mesa-android/` en un lugar seguro. Si se pierde, la
+  próxima versión obligará a desinstalar/reinstalar la app en cada teléfono.
+- No commitear jamás el keystore ni sus contraseñas.
+- Ubicación alternativa: exportar `MESA_KEYSTORE_DIR` antes de correr el script.
+
+## Requisitos del contenedor de build
+
+- **JDK 21** (`/usr/lib/jvm/java-21-openjdk-amd64`) — Capacitor 8 lo exige.
+- **Android SDK** en `/opt/android-sdk` (platform-tools, platforms;android-35,
+  build-tools;35.0.0).
+- **wine** (para el `.exe` NSIS desde Linux).
+- `android/` regenerable: `npx cap add android && npm run cap:sync` (el patch
+  reaplica intent-filter de deep links, permisos de cámara, Java nativo y la
+  versión desde package.json).
+
+Ícono de marca: `node scripts/gen-icons.mjs` (SVG → PNG con sharp). Produce los
+íconos de la PWA (`public/icons/…`), el maestro de Electron (`build/icon.png`)
+y los de Capacitor (`assets/`). Tras cambiarlo: `npx capacitor-assets generate
+--android` para los mipmaps.
 
 ## PWA del mesero (sin reconstrucción)
 
 `public/manifest.webmanifest` (scope `/waiter/`) + `public/sw.js`. Se instala
 desde el navegador (botón en `/waiter/login`). Al cambiar assets del front,
-subir `CACHE_VERSION` en `public/sw.js`. Los íconos viven en `public/icons/`.
+subir `CACHE_VERSION` en `public/sw.js` — además de limpiar cachés, ese bump es
+lo que dispara el aviso "Actualización disponible" en las apps abiertas.
+
+## Push del APK (pendiente)
+
+Falta `android/app/google-services.json`: registrar la app
+`com.mesa.meseros` en el proyecto Firebase cuyo service account está en el
+secreto Supabase `FCM_SERVICE_ACCOUNT`, aplicar el plugin
+`com.google.gms.google-services` en los build.gradle y recompilar. Sin eso la
+app funciona completa (panel en vivo + escáner QR) pero sin push en segundo
+plano.

@@ -25,6 +25,7 @@
 
 # electron-builder output
 /dist
+/dist-android
 
 # Claude Code workspace
 /.claude/
