@@ -8,6 +8,7 @@ import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
 import { ScanQrButton } from "@/components/ScanQrButton"
 import { PayTableSection } from "@/components/waiter/PayTableSection"
 import { ChargeDialog, type ChargeTarget } from "@/components/charge/ChargeDialog"
+import { TakeOrderPanel } from "@/components/pos/TakeOrderPanel"
 import { useGatewayProvider } from "@/hooks/useGatewayProvider"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
@@ -118,6 +119,8 @@ function WaiterControlSystem() {
   // Cobro de un pedido puntual ("Marcar pagado"): abre el mismo diálogo de
   // cobro que la mesa/comensal, con alcance por pedido.
   const [orderChargeTarget, setOrderChargeTarget] = useState<ChargeTarget | null>(null)
+  // Toma de pedidos (POS): la misma carta del menú QR.
+  const [posOpen, setPosOpen] = useState(false)
   const { tables: allTables, refresh: refreshTables } = useRestaurantTables(restaurantId)
   const { calls: serviceCalls, attend: attendServiceCall } = useServiceCalls(restaurantId)
   // Nota: useWaiters() lee el restaurantId internamente (useRestaurantId), no
@@ -327,6 +330,13 @@ function WaiterControlSystem() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setPosOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600 active:scale-95"
+            >
+              ➕ Tomar pedido
+            </button>
             <ScanQrButton onError={triggerToast} />
             {isVisible("waiter", "caja") && (
               <Link
@@ -620,6 +630,15 @@ function WaiterControlSystem() {
             gatewayProvider={gatewayProvider}
             onClose={() => setOrderChargeTarget(null)}
             onSettled={(label) => triggerToast(`${label} cobrado 💸`)}
+          />
+        )}
+
+        {posOpen && (
+          <TakeOrderPanel
+            onClose={() => setPosOpen(false)}
+            onCreated={(order) =>
+              triggerToast(`Pedido #${order.id} enviado a Mesa ${order.tableNumber ?? "—"} 🧾`)
+            }
           />
         )}
 
