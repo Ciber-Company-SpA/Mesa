@@ -52,6 +52,34 @@ export async function requireCurrentAdmin(): Promise<Result<AdminContext>> {
   })
 }
 
+/** Staff que puede cobrar (mesero o admin), con su restaurante de sesión. */
+export async function requireCurrentStaff(): Promise<Result<AdminContext>> {
+  const supabase = await createSupabaseServerClient()
+
+  const claims = await getSessionClaims(supabase)
+
+  if (!claims) return fail("No autorizado")
+
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("restaurant_id, role_id")
+    .eq("auth_user_id", claims.userId)
+    .single()
+
+  if (profileError || !profile) return fail("Perfil no encontrado")
+  if (![WAITER_ROLE_ID, ADMIN_ROLE_ID].includes(profile.role_id)) {
+    return fail("Acceso restringido")
+  }
+  if (!profile.restaurant_id) return fail("Perfil sin restaurante")
+
+  return ok({
+    supabase,
+    userId: claims.userId,
+    roleId: profile.role_id,
+    restaurantId: profile.restaurant_id,
+  })
+}
+
 async function requireRoleForRestaurant(
   restaurantId: number,
   allowedRoleIds: number[]

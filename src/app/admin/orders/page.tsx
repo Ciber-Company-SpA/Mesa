@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useOrderList } from "@/hooks/useOrderList"
 import { OrderDetailModal } from "@/components/admin/OrderDetailModal"
+import { AdminChargeSection } from "@/components/admin/AdminChargeSection"
+import { PaymentsTodaySection } from "@/components/charge/PaymentsTodaySection"
 
 const statusStyles: Record<string, string> = {
   Nuevo: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/50",
@@ -49,7 +51,7 @@ export default function OrdersPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-stone-900">Panel de Pedidos</h2>
           <p className="text-sm text-stone-600">
-            Monitoreo y despacho de comandas activas en cocina y sala.
+            Monitoreo, despacho y cobro de las comandas activas.
           </p>
         </div>
       </div>
@@ -65,6 +67,9 @@ export default function OrdersPage() {
           </div>
         ))}
       </section>
+
+      {/* Cobro por mesa (pasarela conectada, efectivo o tarjeta) */}
+      <AdminChargeSection orders={orders} />
 
       {/* Panel principal de comandas */}
       <section className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
@@ -155,6 +160,9 @@ export default function OrdersPage() {
           </div>
         )}
       </section>
+
+      {/* Pagos del día con su boleta (todos los métodos) */}
+      <PaymentsTodaySection />
 
       <OrderDetailModal
         orderId={selectedOrderId}

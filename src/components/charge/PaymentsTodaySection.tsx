@@ -1,7 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { listOnlinePayments, type OnlinePayment } from "@/services/online-payments-service"
+import {
+  emitBoletaForPayment,
+  listPaymentsToday,
+  type PaymentTodayRow,
+} from "@/services/charge-service"
 import { PAYMENT_PROVIDER_LABEL } from "@/lib/payments/types"
 
 const clp = new Intl.NumberFormat("es-CL", {
@@ -19,6 +23,12 @@ const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
   refunded: { label: "Reembolsado", cls: "bg-stone-100 text-stone-600 ring-stone-200" },
 }
 
+const METHOD_STYLE: Record<string, { label: string; cls: string }> = {
+  cash: { label: "💵 Efectivo", cls: "bg-emerald-50 text-emerald-700" },
+  card: { label: "💳 Tarjeta", cls: "bg-sky-50 text-sky-700" },
+  online: { label: "📱 En línea", cls: "bg-orange-50 text-orange-700" },
+}
+
 function hora(iso: string): string {
   const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`
   const d = new Date(normalized)
@@ -26,12 +36,19 @@ function hora(iso: string): string {
   return d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
 }
 
-export function OnlinePaymentsSection() {
-  const [payments, setPayments] = useState<OnlinePayment[]>([])
+/**
+ * Pagos de HOY del restaurante — todos los métodos (efectivo, tarjeta, en
+ * línea) con su boleta: folio con link imprimible, o botón "Emitir boleta"
+ * si el pago quedó sin documento. Se usa en /waiter/caja y en el panel de
+ * pedidos del admin.
+ */
+export function PaymentsTodaySection() {
+  const [payments, setPayments] = useState<PaymentTodayRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [emittingId, setEmittingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
-    const res = await listOnlinePayments()
+    const res = await listPaymentsToday()
     if (res.ok) setPayments(res.data)
     setLoading(false)
   }, [])
@@ -49,21 +66,24 @@ export function OnlinePaymentsSection() {
     }
   }, [load])
 
-  // El total cobrado en línea (pagado) es dinero que NO entra a caja: va a la
-  // cuenta de la pasarela del restaurante.
-  const totalPagado = useMemo(
-    () => payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount + p.tip, 0),
-    [payments]
-  )
-  const countPagado = useMemo(() => payments.filter((p) => p.status === "paid").length, [payments])
+  async function handleEmit(paymentId: number) {
+    setEmittingId(paymentId)
+    await emitBoletaForPayment(paymentId)
+    setEmittingId(null)
+    await load()
+  }
+
+  const paid = useMemo(() => payments.filter((p) => p.status === "paid"), [payments])
+  const totalPagado = useMemo(() => paid.reduce((s, p) => s + p.amount + p.tip, 0), [paid])
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-stone-900">Pagos en línea de hoy</h2>
+          <h2 className="text-lg font-bold tracking-tight text-stone-900">Pagos de hoy</h2>
           <p className="mt-1 text-sm text-stone-500">
-            Cobros por pasarela. Este dinero llega a la cuenta bancaria del restaurante, no a la caja.
+            Todos los cobros del día con su boleta. Lo pagado en línea llega a la cuenta de la
+            pasarela, no a la caja.
           </p>
         </div>
         <div className="text-right">
@@ -72,7 +92,7 @@ export function OnlinePaymentsSection() {
             {fmt(totalPagado)}
           </p>
           <p className="mt-0.5 text-[11px] text-stone-400">
-            {countPagado} {countPagado === 1 ? "pago" : "pagos"}
+            {paid.length} {paid.length === 1 ? "pago" : "pagos"}
           </p>
         </div>
       </div>
@@ -85,24 +105,30 @@ export function OnlinePaymentsSection() {
           </div>
         ) : payments.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 px-4 py-6 text-center text-sm text-stone-500">
-            Todavía no hay pagos en línea hoy.
+            Todavía no hay pagos hoy.
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[460px] text-sm">
+            <table className="w-full min-w-[620px] text-sm">
               <thead>
                 <tr className="border-b border-stone-200 text-left text-[11px] font-bold uppercase tracking-wider text-stone-500">
                   <th className="py-2 pr-3">Hora</th>
                   <th className="py-2 pr-3">Mesa</th>
                   <th className="py-2 pr-3">Monto</th>
                   <th className="py-2 pr-3">Propina</th>
-                  <th className="py-2 pr-3">Vía</th>
-                  <th className="py-2">Estado</th>
+                  <th className="py-2 pr-3">Método</th>
+                  <th className="py-2 pr-3">Estado</th>
+                  <th className="py-2">Boleta</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {payments.map((p) => {
                   const st = STATUS_STYLE[p.status] ?? STATUS_STYLE.pending
+                  const m = METHOD_STYLE[p.method] ?? METHOD_STYLE.online
+                  const providerLabel =
+                    p.method === "online"
+                      ? (PAYMENT_PROVIDER_LABEL[p.provider ?? ""] ?? p.provider ?? "")
+                      : null
                   return (
                     <tr key={p.id} className="text-stone-800">
                       <td className="py-2.5 pr-3 tabular-nums text-stone-500">{hora(p.createdAt)}</td>
@@ -111,15 +137,43 @@ export function OnlinePaymentsSection() {
                       <td className="py-2.5 pr-3 tabular-nums text-stone-500">
                         {p.tip > 0 ? fmt(p.tip) : "—"}
                       </td>
-                      <td className="py-2.5 pr-3 text-stone-500">
-                        {PAYMENT_PROVIDER_LABEL[p.provider ?? ""] ?? p.provider ?? "—"}
+                      <td className="py-2.5 pr-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${m.cls}`}>
+                          {m.label}
+                        </span>
+                        {providerLabel && (
+                          <span className="ml-1 text-[10px] text-stone-400">{providerLabel}</span>
+                        )}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 pr-3">
                         <span
                           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ${st.cls}`}
                         >
                           {st.label}
                         </span>
+                      </td>
+                      <td className="py-2.5">
+                        {p.boleta ? (
+                          <a
+                            href={`/boleta/${p.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-700 transition hover:bg-stone-200"
+                          >
+                            🧾 N° {p.boleta.folio ?? p.boleta.id}
+                          </a>
+                        ) : p.status === "paid" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleEmit(p.id)}
+                            disabled={emittingId != null}
+                            className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-bold text-white shadow transition hover:bg-orange-600 disabled:opacity-50"
+                          >
+                            {emittingId === p.id ? "Emitiendo…" : "Emitir boleta"}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-stone-400">—</span>
+                        )}
                       </td>
                     </tr>
                   )

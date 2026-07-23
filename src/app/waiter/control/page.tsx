@@ -7,6 +7,8 @@ import { getStaffRoleLabel, isAdminRole } from "@/lib/waiter-session"
 import { DeepLinkSetupNotice } from "@/components/DeepLinkSetupNotice"
 import { ScanQrButton } from "@/components/ScanQrButton"
 import { PayTableSection } from "@/components/waiter/PayTableSection"
+import { ChargeDialog, type ChargeTarget } from "@/components/charge/ChargeDialog"
+import { useGatewayProvider } from "@/hooks/useGatewayProvider"
 import { useStaffProfile } from "@/hooks/useStaffProfile"
 import { useWaiterOrders } from "@/hooks/useWaiterOrders"
 import { useWaiters } from "@/hooks/useWaiters"
@@ -109,13 +111,13 @@ function WaiterControlSystem() {
     loading: ordersLoading,
     error: ordersError,
     advance,
-    markPaid,
-    markTablePaid,
-    markDinerPaid,
-    payingTableId,
-    payingDinerKey,
     advancingId,
   } = useWaiterOrders(restaurantId)
+  // Pasarela conectada (o null) para ofrecer "QR de pago" en el cobro.
+  const gatewayProvider = useGatewayProvider()
+  // Cobro de un pedido puntual ("Marcar pagado"): abre el mismo diálogo de
+  // cobro que la mesa/comensal, con alcance por pedido.
+  const [orderChargeTarget, setOrderChargeTarget] = useState<ChargeTarget | null>(null)
   const { tables: allTables, refresh: refreshTables } = useRestaurantTables(restaurantId)
   const { calls: serviceCalls, attend: attendServiceCall } = useServiceCalls(restaurantId)
   // Nota: useWaiters() lee el restaurantId internamente (useRestaurantId), no
@@ -227,14 +229,17 @@ function WaiterControlSystem() {
     [advance, triggerToast]
   )
 
-  const handleMarkPaid = useCallback(
-    async (order: WaiterOrder) => {
-      const ok = await markPaid(order.id)
-      if (!ok) return
-      triggerToast(`Pedido #${order.id} pagado 💸`)
-    },
-    [markPaid, triggerToast]
-  )
+  const handleMarkPaid = useCallback((order: WaiterOrder) => {
+    if (order.tableId == null) return
+    const tableLabel =
+      order.tableNumber != null ? `Mesa ${order.tableNumber}` : `Mesa #${order.tableId}`
+    setOrderChargeTarget({
+      scope: { tableId: order.tableId, orderId: order.id },
+      label: `Pedido #${order.id} · ${tableLabel}`,
+      total: order.total,
+      ordersCount: 1,
+    })
+  }, [])
 
   const handleAttendCall = useCallback(
     async (callId: number, tableLabel: string) => {
@@ -605,14 +610,18 @@ function WaiterControlSystem() {
 
         <PayTableSection
           orders={ownOrders}
-          payingTableId={payingTableId}
-          payingDinerKey={payingDinerKey}
-          onPayTable={markTablePaid}
-          onPayDiner={markDinerPaid}
-          onSuccess={(label, count) =>
-            triggerToast(`${label} cobrada · ${count} pedido${count === 1 ? "" : "s"} 💸`)
-          }
+          gatewayProvider={gatewayProvider}
+          onSettled={(label) => triggerToast(`${label} cobrada 💸`)}
         />
+
+        {orderChargeTarget && (
+          <ChargeDialog
+            target={orderChargeTarget}
+            gatewayProvider={gatewayProvider}
+            onClose={() => setOrderChargeTarget(null)}
+            onSettled={(label) => triggerToast(`${label} cobrado 💸`)}
+          />
+        )}
 
         <section>
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">

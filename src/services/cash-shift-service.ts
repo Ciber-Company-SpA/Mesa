@@ -10,6 +10,12 @@ export type CurrentShift = {
   sales: number
   tips: number
   orders: number
+  /** Desglose por método (incluye propinas de cada vía). */
+  salesCash: number
+  salesCard: number
+  salesOnline: number
+  /** Efectivo que debería haber en el cajón: apertura + cobros en efectivo. */
+  expectedCash: number
 }
 
 type CurrentShiftRpcResult = {
@@ -19,12 +25,19 @@ type CurrentShiftRpcResult = {
   sales: number
   tips: number
   orders: number
+  sales_cash: number
+  sales_card: number
+  sales_online: number
+  expected_cash: number
 } | null
 
 type CloseShiftRpcResult = {
   id: number
   expected: number
   closing: number
+  cash_sales: number
+  card_sales: number
+  online_sales: number
 }
 
 export async function getCurrentShift(): Promise<Result<CurrentShift | null>> {
@@ -43,6 +56,10 @@ export async function getCurrentShift(): Promise<Result<CurrentShift | null>> {
     sales: result.sales ?? 0,
     tips: result.tips ?? 0,
     orders: result.orders ?? 0,
+    salesCash: result.sales_cash ?? 0,
+    salesCard: result.sales_card ?? 0,
+    salesOnline: result.sales_online ?? 0,
+    expectedCash: result.expected_cash ?? result.opening_amount ?? 0,
   })
 }
 
@@ -62,10 +79,19 @@ export async function openShift(opening: number): Promise<Result<{ id: number }>
   return ok({ id })
 }
 
+export type CloseShiftResult = {
+  id: number
+  expected: number
+  closing: number
+  cashSales: number
+  cardSales: number
+  onlineSales: number
+}
+
 export async function closeShift(
   closing: number,
   notes: string
-): Promise<Result<{ id: number; expected: number; closing: number }>> {
+): Promise<Result<CloseShiftResult>> {
   if (!Number.isFinite(closing) || closing < 0) return fail("Monto contado inválido")
 
   const supabase = await createSupabaseServerClient()
@@ -83,5 +109,8 @@ export async function closeShift(
     id: result.id,
     expected: result.expected ?? 0,
     closing: result.closing ?? 0,
+    cashSales: result.cash_sales ?? 0,
+    cardSales: result.card_sales ?? 0,
+    onlineSales: result.online_sales ?? 0,
   })
 }

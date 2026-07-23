@@ -3,8 +3,8 @@
 import type { FormEvent } from "react"
 import { useMemo, useState } from "react"
 import { useCashShift } from "@/hooks/useCashShift"
-import { closeShift, openShift } from "@/services/cash-shift-service"
-import { OnlinePaymentsSection } from "@/components/waiter/OnlinePaymentsSection"
+import { closeShift, openShift, type CloseShiftResult } from "@/services/cash-shift-service"
+import { PaymentsTodaySection } from "@/components/charge/PaymentsTodaySection"
 
 const clpFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -21,7 +21,7 @@ function parseAmount(raw: string): number {
   return digits ? Number.parseInt(digits, 10) : 0
 }
 
-type CloseResult = { id: number; expected: number; closing: number }
+type CloseResult = CloseShiftResult
 
 export default function CajaPage() {
   const { shift, loading, reload } = useCashShift()
@@ -189,6 +189,41 @@ export default function CajaPage() {
               </div>
             </section>
 
+            {/* Desglose por método: solo el efectivo debe estar en el cajón. */}
+            <section className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-5 py-4 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                  💵 Efectivo
+                </p>
+                <p className="mt-2 text-xl font-extrabold leading-none tracking-tight text-emerald-800 tabular-nums">
+                  {formatCLP(shift.salesCash)}
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-emerald-700/80">
+                  En cajón (con apertura): {formatCLP(shift.expectedCash)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50/60 px-5 py-4 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-sky-700">
+                  💳 Tarjeta
+                </p>
+                <p className="mt-2 text-xl font-extrabold leading-none tracking-tight text-sky-800 tabular-nums">
+                  {formatCLP(shift.salesCard)}
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-sky-700/80">POS físico</p>
+              </div>
+              <div className="rounded-2xl border border-orange-200 bg-orange-50/60 px-5 py-4 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+                  📱 En línea
+                </p>
+                <p className="mt-2 text-xl font-extrabold leading-none tracking-tight text-orange-800 tabular-nums">
+                  {formatCLP(shift.salesOnline)}
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-orange-700/80">
+                  Va a la cuenta de la pasarela
+                </p>
+              </div>
+            </section>
+
             {openedAtLabel && (
               <p className="text-xs font-semibold text-stone-500">
                 Turno abierto desde{" "}
@@ -252,8 +287,8 @@ export default function CajaPage() {
           </>
         )}
 
-        {/* Pagos en línea: independientes del turno de caja (no son efectivo). */}
-        <OnlinePaymentsSection />
+        {/* Pagos del día (todos los métodos) con su boleta. */}
+        <PaymentsTodaySection />
       </div>
     </main>
   )
