@@ -50,6 +50,7 @@ export default async function BoletaPage({
             simulated: doc.simulated,
           }}
           emisor={{ rut: emisor.rut, razonSocial: emisor.razonSocial }}
+          officialPdfHref={`/api/dte-pdf?payment=${Number(paymentId)}`}
         />
       </div>
 

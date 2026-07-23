@@ -16,6 +16,7 @@ import {
   getDocumentForView,
   deleteDocument,
   annulDocument,
+  getDteProviderInfo,
   type TaxDocument,
 } from "@/services/dte-service"
 import { DTE_LABEL_BY_CODE } from "@/lib/dte/types"
@@ -539,6 +540,8 @@ function PaymentAccountSection() {
 function TaxDocumentsSection() {
   const [docs, setDocs] = useState<TaxDocument[]>([])
   const [loading, setLoading] = useState(true)
+  // true = adaptador simulado (rótulos de prueba); false = proveedor real.
+  const [dteSimulated, setDteSimulated] = useState(true)
   const [amount, setAmount] = useState("10000")
   const [emitting, setEmitting] = useState(false)
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null)
@@ -602,6 +605,10 @@ function TaxDocumentsSection() {
 
   useEffect(() => {
     load()
+    getDteProviderInfo().then((res) => {
+      if (res.ok) setDteSimulated(res.data.simulated)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial única
   }, [])
 
   async function emitTest() {
@@ -637,7 +644,12 @@ function TaxDocumentsSection() {
         return
       }
       const label = docType === "factura" ? "Factura" : "Boleta"
-      setFeedback({ kind: "ok", message: `${label} simulada emitida (folio ${result.data.folio}).` })
+      setFeedback({
+        kind: "ok",
+        message: dteSimulated
+          ? `${label} simulada emitida (folio ${result.data.folio}).`
+          : `${label} emitida${result.data.folio != null ? ` (folio ${result.data.folio})` : ""} — estado SII: ${result.data.status === "accepted" ? "aceptada" : "en trámite"}.`,
+      })
       await load()
     } finally {
       setEmitting(false)
@@ -648,17 +660,28 @@ function TaxDocumentsSection() {
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
       <h3 className="text-lg font-bold text-stone-900">Documentos tributarios</h3>
       <p className="mt-1 text-xs font-medium text-stone-500">
-        Historial de boletas y facturas emitidas. La emisión real se activa al
-        integrar el proveedor y certificar ante el SII.
+        {dteSimulated
+          ? "Historial de boletas y facturas emitidas. La emisión real se activa al integrar el proveedor y certificar ante el SII."
+          : "Historial de boletas y facturas emitidas por el proveedor conectado."}
       </p>
 
-      {/* Panel de simulación (solo para validar el flujo) */}
-      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
-          Modo simulación
+      {/* Panel de emisión manual (con proveedor real emite documentos válidos) */}
+      <div
+        className={`mt-5 rounded-2xl border p-4 ${
+          dteSimulated ? "border-amber-200 bg-amber-50/60" : "border-stone-200 bg-stone-50/60"
+        }`}
+      >
+        <p
+          className={`text-xs font-bold uppercase tracking-wider ${
+            dteSimulated ? "text-amber-700" : "text-stone-600"
+          }`}
+        >
+          {dteSimulated ? "Modo simulación" : "Emisión manual"}
         </p>
-        <p className="mt-1 text-xs text-amber-700/90">
-          Emite un documento de prueba para validar el circuito. NO es un documento válido ante el SII.
+        <p className={`mt-1 text-xs ${dteSimulated ? "text-amber-700/90" : "text-stone-500"}`}>
+          {dteSimulated
+            ? "Emite un documento de prueba para validar el circuito. NO es un documento válido ante el SII."
+            : "Emite una boleta o factura fuera del flujo de cobro (p. ej. una venta por encargo)."}
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div>
@@ -738,7 +761,7 @@ function TaxDocumentsSection() {
           >
             {emitting
               ? "Emitiendo…"
-              : `Emitir ${docType === "factura" ? "factura" : "boleta"} de prueba (simulación)`}
+              : `Emitir ${docType === "factura" ? "factura" : "boleta"}${dteSimulated ? " de prueba (simulación)" : ""}`}
           </button>
         </div>
         {feedback && (

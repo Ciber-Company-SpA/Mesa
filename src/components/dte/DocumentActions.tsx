@@ -17,6 +17,9 @@ type Props = {
     simulated: boolean
   }
   emisor: { rut: string; razonSocial: string }
+  /** Link al PDF oficial del proveedor (con timbre real). Solo con proveedor
+   *  DTE real; tiene prioridad sobre el print HTML. */
+  officialPdfHref?: string | null
 }
 
 /** XML representativo del documento (para el modo simulado). NO es un DTE válido. */
@@ -52,7 +55,7 @@ function buildXml(d: Props["doc"], emisor: Props["emisor"]): string {
 </DTE>`
 }
 
-export function DocumentActions({ doc, emisor }: Props) {
+export function DocumentActions({ doc, emisor, officialPdfHref }: Props) {
   function print() {
     // Marca el body para que el @media print muestre solo el documento
     // (data-print-root), sirva desde la página o desde el modal de vista previa.
@@ -83,11 +86,13 @@ export function DocumentActions({ doc, emisor }: Props) {
     URL.revokeObjectURL(url)
   }
 
+  const pdfHref = doc.pdfUrl ?? (!doc.simulated ? officialPdfHref : null)
+
   return (
     <div data-print-hide className="flex flex-wrap gap-3 print:hidden">
-      {doc.pdfUrl ? (
+      {pdfHref ? (
         <a
-          href={doc.pdfUrl}
+          href={pdfHref}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
@@ -103,13 +108,17 @@ export function DocumentActions({ doc, emisor }: Props) {
           Imprimir / Guardar PDF
         </button>
       )}
-      <button
-        type="button"
-        onClick={downloadXml}
-        className="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-50"
-      >
-        Descargar XML
-      </button>
+      {/* El XML stub solo tiene sentido en simulación; con proveedor real se
+          ofrece únicamente si hay xmlUrl verdadero. */}
+      {(doc.simulated || doc.xmlUrl) && (
+        <button
+          type="button"
+          onClick={downloadXml}
+          className="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-50"
+        >
+          Descargar XML
+        </button>
+      )}
     </div>
   )
 }

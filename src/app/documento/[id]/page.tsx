@@ -30,7 +30,11 @@ export default async function DocumentoPage({
         <a href="/admin/pagos" className="text-sm font-semibold text-stone-500 transition hover:text-orange-600">
           ← Volver a Pagos
         </a>
-        <DocumentActions doc={doc} emisor={{ rut: emisor.rut, razonSocial: emisor.razonSocial }} />
+        <DocumentActions
+          doc={doc}
+          emisor={{ rut: emisor.rut, razonSocial: emisor.razonSocial }}
+          officialPdfHref={`/api/dte-pdf?doc=${doc.id}`}
+        />
       </div>
 
       <DocumentView doc={doc} emisor={emisor} />

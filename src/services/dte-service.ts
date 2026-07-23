@@ -1,9 +1,10 @@
 "use server"
 
 import { requireCurrentAdmin } from "@/services/auth-guard"
-import { getDteAdapter, DTE_SII_CODE, type DteType } from "@/lib/dte"
+import { getDteAdapter, isDteSimulated, DTE_SII_CODE, type DteType } from "@/lib/dte"
 import { logger } from "@/lib/logger"
 import { ok, fail, type Result } from "@/services/result"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 export type TaxDocument = {
   id: number
@@ -84,6 +85,40 @@ function mapRow(r: Row): TaxDocument {
   }
 }
 
+/**
+ * Worker perezoso de estado SII: con proveedor REAL, re-consulta los
+ * documentos que quedaron 'pending' (máx. 5 por carga, best-effort) antes de
+ * listarlos. El SII no manda webhooks — este sondeo al abrir el panel es lo
+ * que resuelve los "en trámite".
+ */
+async function refreshPendingDocs(supabase: SupabaseClient, rows: Row[]): Promise<boolean> {
+  if (isDteSimulated()) return false
+  const adapter = getDteAdapter()
+  const pending = rows
+    .filter((r) => r.sii_status === "pending" && r.track_id && !r.track_id.startsWith("SIM-"))
+    .slice(0, 5)
+
+  let changed = false
+  for (const row of pending) {
+    try {
+      const res = await adapter.checkStatus(row.track_id as string)
+      if (res.status === "accepted" || res.status === "rejected") {
+        const { error } = await supabase.rpc("dte_update_status", {
+          p_id: row.id,
+          p_sii_status: res.status,
+          p_folio: res.folio ?? null,
+          p_pdf_url: res.pdfUrl ?? null,
+          p_xml_url: res.xmlUrl ?? null,
+        })
+        if (!error) changed = true
+      }
+    } catch {
+      // best-effort: el siguiente listado lo reintenta
+    }
+  }
+  return changed
+}
+
 export async function listTaxDocuments(): Promise<Result<TaxDocument[]>> {
   const auth = await requireCurrentAdmin()
   if (!auth.ok) return fail(auth.error)
@@ -91,7 +126,16 @@ export async function listTaxDocuments(): Promise<Result<TaxDocument[]>> {
 
   const { data, error } = await supabase.rpc("get_my_tax_documents")
   if (error) return fail("No se pudieron cargar los documentos tributarios")
-  return ok(((data ?? []) as Row[]).map(mapRow))
+  let rows = (data ?? []) as Row[]
+
+  // Sondeo perezoso de pendientes (solo proveedor real); si algo cambió,
+  // se relee para devolver los estados frescos.
+  if (await refreshPendingDocs(supabase, rows)) {
+    const { data: fresh } = await supabase.rpc("get_my_tax_documents")
+    if (fresh) rows = fresh as Row[]
+  }
+
+  return ok(rows.map(mapRow))
 }
 
 export type DteEmisorInfo = {
@@ -290,6 +334,13 @@ export async function emitDocument(input: EmitInput): Promise<Result<{ id: numbe
   }
 
   return ok({ id: docId as number, status: res.status, folio: res.folio ?? null })
+}
+
+/** Proveedor DTE activo (para que la UI adapte rótulos de simulación). */
+export async function getDteProviderInfo(): Promise<Result<{ simulated: boolean; provider: string }>> {
+  const auth = await requireCurrentAdmin()
+  if (!auth.ok) return fail(auth.error)
+  return ok({ simulated: isDteSimulated(), provider: getDteAdapter().name })
 }
 
 /**

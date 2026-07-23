@@ -103,8 +103,9 @@ export class LibreDteAdapter implements DteAdapter {
     }
 
     try {
-      // 1) DTE temporal
-      const emitirRes = await fetch(`${api}/dte/documentos/emitir`, {
+      // 1) DTE temporal. normalizar=1: LibreDTE completa y cuadra los montos
+      // (IVA, totales) desde el Detalle — clave porque emitimos una línea.
+      const emitirRes = await fetch(`${api}/dte/documentos/emitir?normalizar=1&formato=json&links=0&email=0`, {
         method: "POST",
         headers,
         body: JSON.stringify(buildDteJson(input)),
@@ -115,8 +116,9 @@ export class LibreDteAdapter implements DteAdapter {
         return { status: "error", error: `LibreDTE (emitir): ${apiError(temp, emitirRes.status)}` }
       }
 
-      // 2) DTE real (firma + envío al SII)
-      const genRes = await fetch(`${api}/dte/documentos/generar`, {
+      // 2) DTE real (firma + envío al SII). retry: reintentos internos del
+      // proveedor contra el SII antes de responder.
+      const genRes = await fetch(`${api}/dte/documentos/generar?getXML=0&links=0&email=0&retry=10`, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -172,5 +174,39 @@ export class LibreDteAdapter implements DteAdapter {
     } catch {
       return { status: "pending", trackId, error: "No se pudo contactar a LibreDTE (red/timeout)" }
     }
+  }
+
+  /**
+   * PDF oficial (representación impresa con timbre PDF417 real).
+   * La doc pública muestra /api/dte_emitidos/pdf y el módulo Dte expone
+   * /api/dte/dte_emitidos/pdf — se intentan ambas rutas (fallback).
+   */
+  async getPdf(trackId: string): Promise<{ data: ArrayBuffer; contentType: string } | null> {
+    const { hash, api } = config()
+    if (!hash) return null
+    const parts = trackId.split(":")
+    if (parts.length < 3) return null
+    const [emisor, dte, folio] = parts
+
+    const paths = [
+      `${api}/dte/dte_emitidos/pdf/${dte}/${folio}/${emisor}?formato=general&papelContinuo=0`,
+      `${api}/dte_emitidos/pdf/${dte}/${folio}/${emisor}?formato=general&papelContinuo=0`,
+    ]
+    for (const url of paths) {
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers: { Authorization: authHeader(hash) },
+          signal: AbortSignal.timeout(30_000),
+        })
+        const contentType = res.headers.get("content-type") ?? ""
+        if (res.ok && contentType.includes("pdf")) {
+          return { data: await res.arrayBuffer(), contentType: "application/pdf" }
+        }
+      } catch {
+        // probar la siguiente ruta
+      }
+    }
+    return null
   }
 }

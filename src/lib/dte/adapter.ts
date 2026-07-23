@@ -16,4 +16,8 @@ export interface DteAdapter {
   /** Consulta el estado de un documento en trámite (el SII responde por
    *  polling, no webhooks; por eso el worker de estado usa este método). */
   checkStatus(trackId: string): Promise<DteAdapterResult>
+
+  /** PDF oficial del documento (representación impresa con timbre) si el
+   *  proveedor lo genera. null = no disponible (la app usa su vista HTML). */
+  getPdf?(trackId: string): Promise<{ data: ArrayBuffer; contentType: string } | null>
 }
